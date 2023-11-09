@@ -1,26 +1,27 @@
 ---@class menuTab
+---@field IsMouseBtnTriggered fun(button)
 ---@field AddButton fun(menuName, buttonName, pos, sizeX, sizeY, sprite, pressFunc, renderFunc, notpressed, priority):EditorButton
+---@field AddTextBox fun(menuName, buttonName, pos, size, sprite, resultCheckFunc, onlyNumber, renderFunc, priority):EditorButton
+---@field AddGragZone fun(menuName, buttonName, pos, size, sprite, DragFunc, renderFunc, priority):EditorButton
 ---@field GetButton fun(menuName, buttonName, noError):EditorButton
 ---@field ButtonSetHintText fun(menuName, buttonName, text, NoError)
 ---@field RemoveButton fun(menuName, buttonName, NoError)
+---@field FastCreatelist fun(Menuname, Pos, XSize, params, pressFunc, up)
+---@field ShowWindow fun(menuName, pos, size, color )
+---@field CloseWindow fun(MenuName)
+---@field SetWindowSize fun(wind:Window, size:Vector)
+---@field RenderCustomTextBox fun(pos, size, isSel)
+---@field RenderCustomButton fun(pos, size, isSel)
 ---@field RenderButtonHintText function
 ---@field SelectedMenu any
 ---@field IsStickyMenu boolean
 ---@field MouseHintText string
 ---@field MousePos Vector
----@field ShowWindow fun(menuName, pos, size, color )
 ---@field HandleWindowControl function
 ---@field RenderWindows function
----@field CloseWindow fun(MenuName)
 ---@field Callbacks table
----@field RenderCustomTextBox fun(pos, size, isSel)
----@field AddTextBox fun(menuName, buttonName, pos, size, sprite, resultCheckFunc, onlyNumber, renderFunc, priority):EditorButton
 ---@field OnFreePos boolean
----@field IsMouseBtnTriggered fun(button)
----@field RenderCustomButton fun(pos, size, isSel)
----@field FastCreatelist fun(Menuname, Pos, XSize, params, pressFunc, up)
 ---@field ScrollOffset Vector
----@field SetWindowSize fun(wind:Window, size:Vector)
 
 return function(mod)
 
@@ -56,6 +57,32 @@ local Input = Input
 local Vector = Vector
 local font = Font()
 font:Load("font/upheaval.fnt")
+local TextBoxFont = Font()
+TextBoxFont:Load("font/pftempestasevencondensed.fnt")
+
+local function GetCurrentModPath() -- взято из epiphany
+	if not debug then
+		--use some very hacky trickery to get the path to this mod
+		local _, err = pcall(require, "")
+		local _, basePathStart = string.find(err, "no file '", 1)
+		local _, modPathStart = string.find(err, "no file '", basePathStart)
+		local modPathEnd, _ = string.find(err, ".lua'", modPathStart)
+		local modPath = string.sub(err, modPathStart+1, modPathEnd-1)
+		modPath = string.gsub(modPath, "\\", "/")
+
+		return modPath
+	else
+		local _, _err = pcall(require, "")	-- require a file that doesn't exist
+		-- Mod:Log(_err)
+		for str in _err:gmatch("no file '.*/mods/.-.lua'\n") do
+			return str:sub(1, -7):sub(10)
+		end
+	end
+end
+local path = GetCurrentModPath()
+TextBoxFont:Load(path .. "resources/font_e/pftempestasevencondensed_noShadow.fnt")
+
+
 
 local function utf8_Sub(str, x, y)
 	local x2, y2
@@ -313,6 +340,9 @@ end)
 ---@field IsTextBox boolean
 ---@field text string
 ---@field visible boolean
+---@field isDragZone boolean
+---@field dragPrePos Vector
+---@field dragCurPos Vector
 
 ---@return nil|EditorButton
 function menuTab.GetButton(menuName, buttonName, NoError)
@@ -547,6 +577,38 @@ function menuTab.AddTextBox(menuName, buttonName, pos, size, sprite, resultCheck
     end
 end
 
+menuTab.SelectedDragZone = nil
+
+---@return EditorButton|nil
+function menuTab.AddGragZone(menuName, buttonName, pos, size, sprite, DragFunc, renderFunc, priority)
+    if menuName and buttonName then
+		menuTab.MenuData[menuName] = menuTab.MenuData[menuName] or {sortList = {}, Buttons = {}}
+		local menu = menuTab.MenuData[menuName]
+		if menu.Buttons[buttonName] then
+			menuTab.RemoveButton(menuName, buttonName)
+		end
+		menu.sortList = menu.sortList or {}
+		menu.Buttons = menu.Buttons or {}
+		menu.Buttons[buttonName] = {name = buttonName, pos = pos, posref = Vector(pos.X,pos.Y), x = size.X, y = size.Y, spr = sprite, 
+			func = DragFunc, render = renderFunc, canPressed = true, visible = true, isDragZone = true,
+			dragPrePos = Vector(0,0), dragCurPos = Vector(0,0)
+		}
+		
+		priority = priority or 0
+		local Spos = #menu.sortList+1
+		for i=#menu.sortList,1,-1 do
+			if menu.sortList[i].Priority <= priority then
+				break
+			else
+				Spos = Spos-1
+			end
+		end
+		table.insert(menu.sortList, Spos, {btn = buttonName, Priority = priority})
+		return menu.Buttons[buttonName]
+    end
+end
+
+
 
 
 menuTab.Keyboard = {}
@@ -577,18 +639,19 @@ menuTab.Keyboard.Chars.CharBtnList = { en = {
 		[32] = " ", [259] = -1, [261] = -1,
 	},
 }
+
 menuTab.Keyboard.Chars.ShiftCharBtnList = { en = {
 		[48] = ")",[49] = "!",[50] = "@",[51] = "#",[52] = "$",[53] = "%",[54] = "^",[55] = "&",[56] = "*",[57] = "(",
-		[65] = "a", [66] = "b",[67] = "c",[68] = "d",[69] = "e",[70] = "f",[71] = "g",[72] = "h",[73] = "i",[74] = "j",[75] = "k",
-		[76] = "l",[77] = "m",[78] = "n",[79] = "o",[80] = "p",[81] = "q",[82] = "r",[83] = "s",[84] = "t",[85] = "u",[86] = "v",[87] = "w",
-		[88] = "x",[89] = "y",[90] = "z",[47] = "?",[44] = "<",[45] = "_",[46] = ">",[333] = "-" ,[61] = "+",
+		[65] = "A", [66] = "B",[67] = "C",[68] = "D",[69] = "E",[70] = "F",[71] = "G",[72] = "H",[73] = "I",[74] = "J",[75] = "K",
+		[76] = "L",[77] = "M",[78] = "N",[79] = "O",[80] = "P",[81] = "Q",[82] = "R",[83] = "S",[84] = "T",[85] = "U",[86] = "V",[87] = "W",
+		[88] = "X",[89] = "Y",[90] = "Z",[47] = "?",[44] = "<",[45] = "_",[46] = ">",[333] = "-" ,[61] = "+",
 		[32] = " ", [259] = -1, [261] = -1,
 	},
 	ru = {
 		[48] = ")",[49] = "!",[50] = "@",[51] = "#",[52] = "$",[53] = "%",[54] = "^",[55] = "&",[56] = "*",[57] = "(", [61] = "+",
-		[65] = "ф", [66] = "и",[67] = "с",[68] = "в",[69] = "у",[70] = "а",[71] = "п",[72] = "р",[73] = "ш",[74] = "о",[75] = "л",
-		[76] = "д",[77] = "ь",[78] = "т",[79] = "щ",[80] = "з",[81] = "й",[82] = "к",[83] = "ы",[84] = "е",[85] = "г",[86] = "м",[87] = "ц",
-		[88] = "ч",[89] = "н",[90] = "я",[47] = ",",[44] = "б",[45] = "-",[46] = "ю",[333] = "-" , [91] = "х",[93] = "ъ", 
+		[65] = "Ф", [66] = "И",[67] = "С",[68] = "В",[69] = "У",[70] = "А",[71] = "П",[72] = "Р",[73] = "Ш",[74] = "О",[75] = "Л",
+		[76] = "Д",[77] = "Ь",[78] = "Т",[79] = "Щ",[80] = "З",[81] = "Й",[82] = "К",[83] = "Ы",[84] = "Е",[85] = "Г",[86] = "М",[87] = "Ц",
+		[88] = "Ч",[89] = "Н",[90] = "Я",[47] = ",",[44] = "Б",[45] = "-",[46] = "Ю",[333] = "-" , [91] = "Х",[93] = "Ъ", 
 		[32] = " ", [259] = -1, [261] = -1,
 	},
 }
@@ -854,7 +917,7 @@ function menuTab.OpenTextbox(menu, button, onlyNumber, resultCheckFunc, startTex
 
 	menuTab.TextboxPopup.KeyLogic = function(MousePos)
 		mousePosi = MousePos
-	
+
 		if (menuTab.IsMouseBtnTriggered(0) or menuTab.IsMouseBtnTriggered(1)) 
 		--and menuTab.MenuButtons[Menuname].TextBox.spr:GetFrame() == 0 then
 		and not menuTab.GetButton(menu, button).IsSelected
@@ -866,6 +929,8 @@ function menuTab.OpenTextbox(menu, button, onlyNumber, resultCheckFunc, startTex
 				menuTab.CloseTextbox()
 			elseif type(result) == "string" then
 				menuTab.TextboxPopup.errorMes = result
+				menuTab.GetButton(menu, button).errorMes = result
+				menuTab.GetButton(menu, button).showError = 60
 				menuTab.CloseTextbox()
 			end
 		end
@@ -965,7 +1030,7 @@ function menuTab.OpenTextbox(menu, button, onlyNumber, resultCheckFunc, startTex
 				ctrlVPressed = true
 				ignoreKeybord = true
 				newChar = Isaac.GetClipboard and Isaac.GetClipboard()
-			elseif not (Input.IsButtonPressed(Keyboard.KEY_LEFT_CONTROL,0) or Input.IsButtonPressed(Keyboard.KEY_V,0)) then
+			elseif not (Input.IsButtonPressed(Keyboard.KEY_LEFT_CONTROL,0) and Input.IsButtonPressed(Keyboard.KEY_V,0)) then
 				ctrlVPressed = false
 			else
 				ignoreKeybord = true
@@ -1035,14 +1100,14 @@ function menuTab.CloseTextbox()
 end
 
 function menuTab.RenderTextBoxButton(button, pos)
-	font:DrawStringScaledUTF8(menuTab.TextboxPopup.Text,pos.X+3,pos.Y+2,0.5,0.5,KColor(0.1,0.1,0.2,1),0,false)
+	TextBoxFont:DrawStringScaledUTF8(menuTab.TextboxPopup.Text,pos.X+3,pos.Y,1,1,KColor(0.1,0.1,0.2,1),0,false)
 	if menuTab.TextboxPopup.InFocus then
-		local poloskaPos = font:GetStringWidthUTF8(utf8_Sub(menuTab.TextboxPopup.Text, 0, menuTab.TextboxPopup.TextPos))
-		UIs.TextEdPos:Render(pos+Vector(3+poloskaPos/2,1))
+		local poloskaPos = TextBoxFont:GetStringWidthUTF8(utf8_Sub(menuTab.TextboxPopup.Text, 0, menuTab.TextboxPopup.TextPos))
+		UIs.TextEdPos:Render(pos+Vector(3+poloskaPos,1))
 		UIs.TextEdPos:Update()
 	end
 	
-	if type(menuTab.TextboxPopup.errorMes) == "string" then
+	--[[if type(menuTab.TextboxPopup.errorMes) == "string" then
 		local renderPos = pos + Vector(92,-20)
 
 		font:DrawStringScaledUTF8(menuTab.TextboxPopup.errorMes,renderPos.X+0.5,renderPos.Y-0.5,0.5,0.5,KColor(1,1,1,1),1,true)
@@ -1051,7 +1116,7 @@ function menuTab.RenderTextBoxButton(button, pos)
 		font:DrawStringScaledUTF8(menuTab.TextboxPopup.errorMes,renderPos.X-0.5,renderPos.Y-0.5,0.5,0.5,KColor(1,1,1,1),1,true)
 
 		font:DrawStringScaledUTF8(menuTab.TextboxPopup.errorMes,renderPos.X,renderPos.Y,0.5,0.5,KColor(1,0.2,0.2,1),1,true)
-	end
+	end]]
 end
 
 function menuTab.RenderButtonHintText(text, pos)
@@ -1122,11 +1187,18 @@ function menuTab.RenderCustomButton(pos, size, isSel)
 		else
 			UIs.ButtonBG:SetFrame(0)
 		end
+
+		UIs.ButtonBG.Scale = Vector(size.X, size.Y/14)
+		UIs.ButtonBG:RenderLayer(1, pos+Vector(0, -size.Y/14), Vector(0,1), Vector(0,1))
+
+		UIs.ButtonBG.Scale = Vector(size.X, 1)
+		UIs.ButtonBG:RenderLayer(1, pos+Vector(1,-15), Vector(0,15))
+		UIs.ButtonBG.Scale = Vector(size.X, 1)
+		UIs.ButtonBG:RenderLayer(1, pos+Vector(1,size.Y-16), Vector(0,15))
+
+
 		UIs.ButtonBG.Scale = Vector(1,size.Y/16)
 		UIs.ButtonBG:RenderLayer(0, pos)
-
-		UIs.ButtonBG.Scale = Vector(size.X, size.Y/16)
-		UIs.ButtonBG:RenderLayer(1, pos+Vector(1,0))
 
 		UIs.ButtonBG.Scale = Vector(1,size.Y/16)
 		UIs.ButtonBG:RenderLayer(0, pos+ Vector(size.X,0))
@@ -1161,7 +1233,29 @@ function menuTab.RenderMenuButtons(menuName)
 					if IstextboxMenu and menuTab.TextboxPopup.TargetBtn[2] == btn.name then
 						menuTab.RenderTextBoxButton(btn, btn.pos)
 					elseif btn.text then
-						font:DrawStringScaledUTF8(btn.text, btn.pos.X+3, btn.pos.Y+2, 0.5,0.5,KColor(0.1,0.1,0.2,1),0,false)
+						TextBoxFont:DrawStringScaledUTF8(btn.text, btn.pos.X+3, btn.pos.Y, 1,1,KColor(0.1,0.1,0.2,1),0,false)
+					end
+					--menuTab.GetButton(menu, button).errorMes = result
+					--menuTab.GetButton(menu, button).showError = 60
+					if btn.errorMes and type(btn.errorMes) == "string" then
+						if not btn.showError or btn.showError < 0 then
+							btn.errorMes = nil
+							btn.showError = nil
+						else
+							local alpha = btn.showError < 10 and (btn.showError/10) or 1
+							local aplha = btn.showError > 10 and 1 or alpha/3
+
+							local renderPos = btn.pos + Vector(btn.x/2,-20)
+
+							font:DrawStringScaledUTF8(btn.errorMes,renderPos.X+0.5,renderPos.Y-0.5,0.5,0.5,KColor(1,1,1,aplha),1,true)
+							font:DrawStringScaledUTF8(btn.errorMes,renderPos.X-0.5,renderPos.Y+0.5,0.5,0.5,KColor(1,1,1,aplha),1,true)
+							font:DrawStringScaledUTF8(btn.errorMes,renderPos.X+0.5,renderPos.Y+0.5,0.5,0.5,KColor(1,1,1,aplha),1,true)
+							font:DrawStringScaledUTF8(btn.errorMes,renderPos.X-0.5,renderPos.Y-0.5,0.5,0.5,KColor(1,1,1,aplha),1,true)
+
+							font:DrawStringScaledUTF8(btn.errorMes,renderPos.X,renderPos.Y,0.5,0.5,KColor(1,0.2,0.2,alpha),1,true)
+							btn.showError = btn.showError - 1
+						end
+						
 					end
 				end
 			end
@@ -1210,6 +1304,7 @@ function menuTab.DetectSelectedButtonActuale()
 			--local onceTouch = false
 			local somethingPressed = false
 			for i, dt in pairs(menuTab.MenuData[menu].sortList) do
+				---@type EditorButton
 				local k = menuTab.MenuData[menu].Buttons[dt.btn]
 				if not k then
 					print("Not exist Button ", k, menu, dt.btn)
@@ -1232,7 +1327,14 @@ function menuTab.DetectSelectedButtonActuale()
 						if not k.BlockPress then
 							somethingPressed = true
 							if menuTab.IsMouseBtnTriggered(0) and not menuTab.MouseDoNotPressOnButtons then
-								k.func(0)
+								if k.isDragZone then
+									menuTab.SelectedDragZone = k
+									--k.dragPrePos = k.dragPrePos or mousePos/1
+									--k.dragCurPos = mousePos
+									k.dragPreMousePos =  mousePos/1
+								else
+									k.func(0)
+								end
 								break
 							elseif menuTab.IsMouseBtnTriggered(1) and not menuTab.MouseDoNotPressOnButtons then
 								k.func(1)
@@ -1262,6 +1364,27 @@ function menuTab.DetectSelectedButtonActuale()
 	end
 	DetectSelectedButtonBuffer = {}
 	DetectSelectedButtonBufferRef = {}
+
+	if menuTab.SelectedDragZone then
+		local k = menuTab.SelectedDragZone
+		if Input.IsMouseBtnPressed(0) then
+			k.dragCurPos = k.dragPrePos + mousePos - k.dragPreMousePos
+			k.func(0, k.dragCurPos, k.dragPrePos)
+		else
+			--k.dragPrePos = Vector(0,0)
+			k.dragPreMousePos = mousePos/1 -- k.dragPrePos
+			k.dragPrePos = k.dragCurPos
+			menuTab.SelectedDragZone = nil
+		end
+
+		--[[if window.MovingByMouse and not Input.IsButtonPressed(Keyboard.KEY_SPACE, 0) and not menuTab.ScrollListIsOpen then
+			local offset = mousePos - window.MouseOldPos
+			window.pos = window.OldPos + offset
+		else
+			window.MouseOldPos = mousePos/1
+			window.OldPos = window.pos/1
+		end]]
+	end
 end
 
 function menuTab.HandleWindowControl()

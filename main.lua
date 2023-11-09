@@ -57,9 +57,53 @@ local function TabDeepCopy(tbl)
 end
 
 Menu.strings = {
-	["default"] = {en = "default", ru = "обычные"},
+	["Room Name:"] = {en = "Room Name:", ru = "Имя Комнаты:"},
+	["Grid:"] = {en = "Grid:", ru = "Клетка:"},
+	["ToLog1"] = {en = "To", ru = "В"},
+	["ToLog2"] = {en = "Log", ru = "Лог"},
+	["TestRun1"] = {en = "Test", ru = "Тест."},
+	["TestRun2"] = {en = "run", ru = "прогон"},
+	["Cancel"] = {en = "Cancel", ru = "Отмена"},
+	["Ok"] = {en = "Ok", ru = "Ок"},
+	["emptyField"] = {en = "the field is empty", ru = "поле пустое"},
+	["rooms"] = {en = "rooms", ru = "комнаты"},
 	["incorrectNumber"] = {en = "number is incorrect", ru = "число некорректно"},
+	["ExistRoomName"] = {en = "a room with this name already exists", ru = "комната с таким именем уже существует"},
+	["Transition Name"] = {en = "The name of this transition", ru = "Имя данного перехода"},
+	["Transition Target"] = {en = "Room name to transition", ru = "Имя комнаты для перехода"},
+	["Transition TargetPoint"] = {en = "Name of the linked spawn point", ru = "Имя связанной точки спавна"},
+	["Back"] = {en = "Back", ru = "Назад"},
+	["newroom"] = {en = "New room", ru = "Новая комната"},
+	["anotherFile"] = {en = "another file", ru = "другой файл"},
+	["anm2FileFail"] = {en = "file not found", ru = "файл не найден"},
+	["AnmFile"] = {en = "animation file", ru = "файл с анимациями"},
+	["AnimName"] = {en = "name of the animation", ru = "название анимации"},
+	["Auto"] = {en = "Auto", ru = "Авто"},
+	["layer"] = {en = "layer", ru = "слой"},
+	["Rotation"] = {en = "Rotation", ru = "Поворот"},
+	["use_alt_skin"] = {en = "use an alt skin", ru = "использовать альт. окрас"},
+
+	["DefSpawnPoint"] = {en = "There must be only one DEF spawn point in the room", ru = "В комнате должна быть только одна DEF точка спавна"},
+	["addEnvitext1"] = {en = "green square should completely", ru = "зелёный квадрат должен полностью"},
+	["addEnvitext2"] = {en = "cover the sprite", ru = "закрывать спрайт"},
+	["addEnviVisualBox"] = {en = "visual size of the sprite", ru = "визуальная коробка спрайта"},
+	["addEnviSize"] = {en = "size", ru = "размер"},
+	["addEnviPivot"] = {en = "offset", ru = "смещение"},
+	["addEnviPos"] = {en = "position", ru = "позиция"},
+	["spawnpoint_name"] = {en = "The name of this spawn point", ru = "Имя данной точки спавна"},
+	["special_obj_name"] = {en = "name", ru = "Имя"},
+	["nameTarget"] = {en = "target name", ru = "Имя цели"},
+	["collisionMode"] = {en = "collision mode", ru = "режим коллизии"},
+	["collisionMode1"] = {en = "along the edges", ru = "по краям"},
+	["collisionMode2"] = {en = "only inside", ru = "только внутри"},
+	["Scriptname"] = {en = "Script name", ru = "название скрипта"},
+
+	["roomlist_hint"] = {en = nil, ru = "открывает список загруженных комнат"},
+	["triggerNoTarget"] = {en = "Doesn't have a target", ru = "Отсутствует цель"},
+	["ObjBlockedbyObj"] = {en = "overlapped on object layer [3]", ru = "перекрыто на слое объектов [3]"},
+
 }
+
 local function GetStr(str)
 	if Menu.strings[str] then
 		return Menu.strings[str][Options.Language] or Menu.strings[str].en or str
@@ -107,11 +151,11 @@ UIs.Editbtn = GenSprite("gfx/editor/ui copy.anm2","editthis")
 
 local shouldReturnMouseControl
 local function blockPlayerShot()
-	if Options.MouseControl == true then
-		shouldReturnMouseControl = true
-		Options.MouseControl = false
-		Isaac.GetPlayer().ControlsCooldown = math.max(Isaac.GetPlayer().ControlsCooldown, 1)
-	end
+	--if Options.MouseControl == true then
+	--	shouldReturnMouseControl = true
+	--	Options.MouseControl = false
+	--	Isaac.GetPlayer().ControlsCooldown = math.max(Isaac.GetPlayer().ControlsCooldown, 1)
+	--end
 end
 
 
@@ -133,7 +177,20 @@ function Menu.DebugMenuRender(off, mousepos)
 	
 end
 
+do
+	local PosForBtn = Vector(222,5)
 
+	function WORSTDEBUGMENU.AddButtonOnDebugBar(buttonName, size, sprite, pressFunc, renderFunc)
+		local curPos = PosForBtn/1
+		local self
+		self = WORSTDEBUGMENU.wma.AddButton("__debug_menu", buttonName, curPos, size.X, size.Y, sprite, pressFunc, pressFunc)
+		self.posfunc = function()
+			self.pos = Vector(curPos.X, curPos.Y+WORSTDEBUGMENU.MainOffset)
+		end
+		PosForBtn.X = PosForBtn.X + size.X + 2
+		return self
+	end
+end
 
 local grab1
 local grab2
@@ -909,8 +966,8 @@ do --UIs.GridSpawner
 			GridSpawner.GridName = arg2
 		end, false)
 		
-		Menu.wma.ScrollOffset.X = self.Offset.X or Menu.wma.ScrollOffset.X
-		Menu.wma.ScrollOffset.Y = self.Offset.Y or Menu.wma.ScrollOffset.Y
+		Menu.wma.ScrollOffset.X = self.Offset and self.Offset.X or Menu.wma.ScrollOffset.X
+		Menu.wma.ScrollOffset.Y = self.Offset and self.Offset.Y or Menu.wma.ScrollOffset.Y
 
 	end, function(pos)
 		Menu.wma.RenderCustomTextBox(pos, Vector(self.x,14), self.IsSelected)
@@ -1034,6 +1091,111 @@ do --UIs.GridSpawner
 
 
 end
+
+do
+	function UIs.Box48() return GenSprite("gfx/editor/ui copy.anm2","контейнер") end
+	--WORSTDEBUGMENU.AddButtonOnDebugBar(buttonName, size, sprite, pressFunc, renderFunc)
+
+	Menu.AnimTest = {name = "Anim_Test", size = Vector(166,186), btn = {}, anim = {anm2 = "", animation = "", col = Color(1,1,1,1)}}
+	local AnimTest = Menu.AnimTest
+	local sizev = AnimTest.size
+
+	AnimTest.anim.spr = GenSprite("gfx/editor/ui copy.anm2","режим_сетки")   --Sprite()
+	AnimTest.anim.RenderPos = Vector(0,0)
+
+	local self
+	self = WORSTDEBUGMENU.AddButtonOnDebugBar("Anim_Test_Menu", Vector(32,32), UIs.AnimTaste, function(button) 
+		if button ~= 0 then return end
+		blockPlayerShot()
+		---@type Window
+		AnimTest.wind = Menu.wma.ShowWindow(AnimTest.name, self.pos+Vector(0,15), sizev)
+	end, nil)
+	
+	--[[local self
+	self = Menu.wma.AddButton(AnimTest.name, "preview", Vector(22,32), 32, 32, UIs.Box48(), function(button) 
+		if button ~= 0 then return end
+	end,
+	function(pos)
+		AnimTest.anim.spr:Render(pos+Vector(16,16))
+	end, true)]]
+
+	local si = Vector(140,48)
+	local self
+	self = Menu.wma.AddGragZone(AnimTest.name, "preview", Vector(12,12), si, nil, function(button, newpos, prepos)
+		if button ~= 0 then return end
+		AnimTest.anim.RenderPos = newpos
+	end, function(pos)
+		Menu.wma.RenderCustomButton(pos, si, self.IsSelected)
+		AnimTest.anim.spr:Render(pos+Vector(60,24)+AnimTest.anim.RenderPos)
+		if Isaac.GetFrameCount() % 2 == 0 then
+			AnimTest.anim.spr:Update()
+		end
+
+		if self.IsSelected then
+			local sc = AnimTest.anim.col
+			AnimTest.anim.spr.Color = Color(sc.R, sc.G, sc.B, sc.A /2 )
+		else
+			local sc = AnimTest.anim.col
+			AnimTest.anim.spr.Color = Color(sc.R, sc.G, sc.B, sc.A )
+		end
+	end)
+
+	AnimTest.btn.anm2 = Menu.wma.AddTextBox(AnimTest.name, "anm2", Vector(12,92), Vector(140,16), nil, 
+	function(result)
+		if not result then
+			return true
+		else
+			if #result < 1 or not string.find(result,"%S") then
+				return GetStr("emptyField")
+			end
+			--local ret = true
+			if not string.find(result, ".anm2") then
+				result = result .. ".anm2"
+				--ret = false
+				--AnimTest.btn.anm2.text = result
+			end
+			
+			local tespt = Sprite()
+			tespt:Load(result, true)
+			if tespt:GetDefaultAnimation() == "" then
+				return GetStr("anm2FileFail")
+			end
+			AnimTest.anim.anm2 = (result) 
+			AnimTest.anim.spr:Load(result, true)
+			AnimTest.anim.spr:Play(AnimTest.anim.spr:GetDefaultAnimation() )
+			AnimTest.anim.animation = AnimTest.anim.spr:GetDefaultAnimation()
+			AnimTest.btn.anim.text = AnimTest.anim.animation
+			--self.text = AnimTest.TVS[2]
+			return true
+		end
+	end, false, function(pos)
+		font:DrawStringScaledUTF8(GetStr("AnmFile"),pos.X+1,pos.Y-9,0.5,0.5,KColor(0.1,0.1,0.2,1),0,false)
+	end)
+	AnimTest.btn.anm2.text = "gfx/"
+
+	AnimTest.btn.anim = Menu.wma.AddTextBox(AnimTest.name, "anim", Vector(12,120), Vector(140,16), nil, 
+	function(result)
+		if not result then
+			return true
+		else
+			if #result < 1 or not string.find(result,"%S") then
+				return GetStr("emptyField")
+			end
+			AnimTest.anim.spr:Play(result, true )
+			if AnimTest.anim.spr:GetAnimation() == result then
+				AnimTest.anim.animation = AnimTest.anim.spr:GetDefaultAnimation()
+				return true
+			end
+			return false
+		end
+	end, false, function(pos)
+		font:DrawStringScaledUTF8(GetStr("AnimName"),pos.X+1,pos.Y-9,0.5,0.5,KColor(0.1,0.1,0.2,1),0,false)
+	end)
+	AnimTest.btn.anim.text = ""
+
+
+end
+
 
 
 
