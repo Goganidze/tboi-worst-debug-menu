@@ -3,6 +3,7 @@
 ---@field AddButton fun(menuName, buttonName, pos, sizeX, sizeY, sprite, pressFunc, renderFunc, notpressed, priority):EditorButton
 ---@field AddTextBox fun(menuName, buttonName, pos, size, sprite, resultCheckFunc, onlyNumber, renderFunc, priority):EditorButton
 ---@field AddGragZone fun(menuName, buttonName, pos, size, sprite, DragFunc, renderFunc, priority):EditorButton
+---@field AddGragFloat fun(menuName, buttonName, pos, size, sprite, dragSpr, DragFunc, renderFunc, priority):EditorButton
 ---@field GetButton fun(menuName, buttonName, noError):EditorButton
 ---@field ButtonSetHintText fun(menuName, buttonName, text, NoError)
 ---@field RemoveButton fun(menuName, buttonName, NoError)
@@ -291,7 +292,7 @@ function UIs.ButtonWide() return GenSprite("gfx/editor/ui copy.anm2","кнопк
 function UIs.Erase() return GenSprite("gfx/editor/ui copy.anm2","стереть") end
 function UIs.TextBoxSmol() return GenSprite("gfx/editor/ui copy.anm2","конт_текста_smol") end
 ]]
-function UIs.Var_Sel() return GenSprite("gfx/editor/ui copy.anm2","sel_var") end
+function UIs.Var_Sel()    end
 --[[
 function UIs.Edit_Button() return GenSprite("gfx/editor/ui copy.anm2","кнопка_редакта") end
 function UIs.FlagBtn() return GenSprite("gfx/editor/ui copy.anm2","кнопка флага") end
@@ -340,28 +341,44 @@ end)
 ---@field IsTextBox boolean
 ---@field text string
 ---@field visible boolean
----@field isDragZone boolean
----@field dragPrePos Vector
----@field dragCurPos Vector
+---@field isDragZone boolean?
+---@field dragPrePos Vector?
+---@field dragCurPos Vector?
+---@field isDrager boolean?
+---@field dragtype integer?
+---@field dragspr Sprite?
+
+---@class EditorMenu
+---@field sortList table<integer, {["btn"]:any, ["Priority"]:integer, }>
+---@field somethingPressed boolean
+---@field Buttons table<string, EditorButton>
+---@field CalledByWindow Window?
+
+---@return EditorMenu?
+function menuTab.GetMenu(menuName)
+	if menuTab.MenuData[menuName] then
+		return menuTab.MenuData[menuName]
+	end
+end
 
 ---@return nil|EditorButton
-function menuTab.GetButton(menuName, buttonName, NoError)
+function menuTab.GetButton(menuName, buttonName, Error)
 	if not menuTab.MenuData[menuName] then
-		if NoError then return end
+		if not Error then return end
 		error("This menu does not exist",2)
 	elseif not menuTab.MenuData[menuName].Buttons[buttonName] then
-		if NoError then return end
+		if not Error then return end
 		error("This button does not exist",2)
 	end
 	return menuTab.MenuData[menuName] and menuTab.MenuData[menuName].Buttons[buttonName]
 end
 
-function menuTab.GetButtons(menuName, NoError)
+function menuTab.GetButtons(menuName, Error)
 	if not menuTab.MenuData[menuName] then
-		if NoError then return end
+		if not Error then return end
 		error("This menu does not exist",2)
 	elseif not menuTab.MenuData[menuName].Buttons then
-		if NoError then return end
+		if not Error then return end
 		error("This button does not exist",2)
 	end
 	return menuTab.MenuData[menuName] and menuTab.MenuData[menuName].Buttons
@@ -475,16 +492,13 @@ end
 ---@field OldPos Vector
 ---@field Removed boolean
 ---@field plashka EditorButton
+---@field SubMenus table?
+---@field somethingPressed boolean
+menuTab.WindowMeta = {}
+menuTab.WindowMetaTable = {__index = menuTab.WindowMeta}
+--TSJDNHC.FGrid.__index = TSJDNHC.Grid
 
----@param wind Window
----@param size Vector
-function menuTab.SetWindowSize(wind, size)
-	if wind and size and size.X then
-		wind.size = size
-		wind.plashka.x = size.X
-		wind.plashka.y = size.Y
-	end
-end
+
 
 menuTab.Windows = {menus = {}, order = {}}
 
@@ -503,19 +517,21 @@ function menuTab.ShowWindow(menuName, pos, size, color )
 		menuTab.Windows.menus[menuName] = {pos = pos, size = size, color = color, MouseOldPos = menuTab.MousePos, OldPos = Vector(pos.X,pos.Y)}
 		menuTab.Windows.order[#menuTab.Windows.order+1] = menuName
 
-		if not menuTab.GetButton(menuName, "__close", true) then
+		if not menuTab.GetButton(menuName, "__close") then
 			local self
 			self = menuTab.AddButton(menuName, "__close", Vector(size.X-16,0), 16, 8, UIs.CloseBtn() , function(button) 
 				if button ~= 0 then return end
 				menuTab.CloseWindow(menuName)
 			end)
 		end
-		if not menuTab.GetButton(menuName, "__blockplashka", true) then
+		if not menuTab.GetButton(menuName, "__blockplashka") then
 			local self
 			self = menuTab.AddButton(menuName, "__blockplashka", Vector(0,0), size.X, size.Y, nilspr, nilfunc , nil, nil, 10)
 			self.BlockPress = true
 			menuTab.Windows.menus[menuName].plashka = self
 		end
+
+		setmetatable(menuTab.Windows.menus[menuName], menuTab.WindowMetaTable)
 
 		return menuTab.Windows.menus[menuName]
 	end
@@ -525,6 +541,50 @@ function menuTab.CloseWindow(menuName)
 	menuTab.Windows.menus[menuName].Removed = true
 	menuTab.Windows.menus[menuName] = nil
 end
+
+---@param wind Window
+---@param size Vector
+function menuTab.WindowMeta.SetSize(wind, size)
+	if wind and size and size.X then
+		wind.size = size
+		wind.plashka.x = size.X
+		wind.plashka.y = size.Y
+	end
+end
+
+---@param wind Window
+---@param MenuName any
+---@param Add boolean
+function menuTab.WindowMeta.SetSubMenu(wind, MenuName, Add) --useless
+	wind.SubMenus = wind.SubMenus or {}
+	if Add == false then
+		wind.SubMenus[MenuName] = nil
+	else
+		wind.SubMenus[MenuName] = Add and {visible = false}
+	end
+end
+
+---@param wind Window
+---@param MenuName any
+---@param Vis boolean
+function menuTab.WindowMeta.SetSubMenuVisible(wind, MenuName, Vis)
+	wind.SubMenus = wind.SubMenus or {}
+	if not wind.SubMenus[MenuName] then
+		menuTab.WindowMeta.SetSubMenu(wind, MenuName, true)
+	end
+	wind.SubMenus[MenuName].visible = Vis
+end
+
+---@param wind Window
+---@param MenuName any
+function menuTab.WindowMeta.IsSubMenuVisible(wind, MenuName)
+	wind.SubMenus = wind.SubMenus or {}
+	if not wind.SubMenus[MenuName] then
+		menuTab.WindowMeta.SetSubMenu(wind, MenuName, false)
+	end
+	return wind.SubMenus[MenuName].visible
+end
+
 
 ---@return EditorButton|nil
 function menuTab.AddTextBox(menuName, buttonName, pos, size, sprite, resultCheckFunc, onlyNumber, renderFunc, priority)
@@ -592,6 +652,39 @@ function menuTab.AddGragZone(menuName, buttonName, pos, size, sprite, DragFunc, 
 		menu.Buttons[buttonName] = {name = buttonName, pos = pos, posref = Vector(pos.X,pos.Y), x = size.X, y = size.Y, spr = sprite, 
 			func = DragFunc, render = renderFunc, canPressed = true, visible = true, isDragZone = true,
 			dragPrePos = Vector(0,0), dragCurPos = Vector(0,0)
+		}
+		
+		priority = priority or 0
+		local Spos = #menu.sortList+1
+		for i=#menu.sortList,1,-1 do
+			if menu.sortList[i].Priority <= priority then
+				break
+			else
+				Spos = Spos-1
+			end
+		end
+		table.insert(menu.sortList, Spos, {btn = buttonName, Priority = priority})
+		return menu.Buttons[buttonName]
+    end
+end
+
+function UIs.DefDragBG() return GenSprite("gfx/editor/ui copy.anm2","def_drag") end
+function UIs.DefDragDrager() return GenSprite("gfx/editor/ui copy.anm2","drag_drager") end
+
+---@return EditorButton|nil
+function menuTab.AddGragFloat(menuName, buttonName, pos, size, sprite, dragSpr, DragFunc, renderFunc, startValue, priority)
+    if menuName and buttonName then
+		startValue = startValue or 1
+		menuTab.MenuData[menuName] = menuTab.MenuData[menuName] or {sortList = {}, Buttons = {}}
+		local menu = menuTab.MenuData[menuName]
+		if menu.Buttons[buttonName] then
+			menuTab.RemoveButton(menuName, buttonName)
+		end
+		menu.sortList = menu.sortList or {}
+		menu.Buttons = menu.Buttons or {}
+		menu.Buttons[buttonName] = {name = buttonName, pos = pos, posref = Vector(pos.X,pos.Y), x = size.X, y = size.Y, spr = sprite, 
+			func = DragFunc, render = renderFunc, canPressed = true, visible = true, isDrager = true, dragtype = 1, dragspr = UIs.DefDragDrager(),
+			dragPrePos = Vector(startValue*size.X,0), dragCurPos = Vector(startValue*size.X,0)
 		}
 		
 		priority = priority or 0
@@ -921,7 +1014,7 @@ function menuTab.OpenTextbox(menu, button, onlyNumber, resultCheckFunc, startTex
 		if (menuTab.IsMouseBtnTriggered(0) or menuTab.IsMouseBtnTriggered(1)) 
 		--and menuTab.MenuButtons[Menuname].TextBox.spr:GetFrame() == 0 then
 		and not menuTab.GetButton(menu, button).IsSelected
-		or Input.IsButtonPressed(Keyboard.KEY_ENTER, 0) then
+		then
 			menuTab.TextboxPopup.InFocus = false
 
 			local result = menuTab.TextboxPopup.ResultCheck(menuTab.TextboxPopup.Text)
@@ -932,6 +1025,16 @@ function menuTab.OpenTextbox(menu, button, onlyNumber, resultCheckFunc, startTex
 				menuTab.GetButton(menu, button).errorMes = result
 				menuTab.GetButton(menu, button).showError = 60
 				menuTab.CloseTextbox()
+			end
+		end
+		if Input.IsButtonPressed(Keyboard.KEY_ENTER, 0)  then
+			local result = menuTab.TextboxPopup.ResultCheck(menuTab.TextboxPopup.Text)
+			if result == true then
+				menuTab.CloseTextbox()
+			elseif type(result) == "string" then
+				menuTab.TextboxPopup.errorMes = result
+				menuTab.GetButton(menu, button).errorMes = result
+				menuTab.GetButton(menu, button).showError = 60
 			end
 		end
 		if menuTab.TextboxPopup.InFocus then
@@ -1163,9 +1266,22 @@ function menuTab.RenderCustomMenuBack(pos, size, col)
 	end
 end
 
+UIs.TextBoxBG2v = GenSprite("gfx/editor/ui copy.anm2", "custom textbox_bg")
+
 function menuTab.RenderCustomTextBox(pos, size, isSel)
 	if pos and size then
 		if isSel then
+			UIs.TextBoxBG2v:SetFrame(1)
+		else
+			UIs.TextBoxBG2v:SetFrame(0)
+		end
+		UIs.TextBoxBG2v.Scale = Vector(size.X/2 ,size.Y/2)
+		UIs.TextBoxBG2v:RenderLayer(0, pos)
+
+		UIs.TextBoxBG2v.Scale = Vector(size.X/2 ,size.Y/2-1)
+		UIs.TextBoxBG2v:RenderLayer(1, pos+Vector(1,1))
+
+		--[[if isSel then
 			UIs.TextBoxBG:SetFrame(1)
 		else
 			UIs.TextBoxBG:SetFrame(0)
@@ -1177,12 +1293,26 @@ function menuTab.RenderCustomTextBox(pos, size, isSel)
 		UIs.TextBoxBG:RenderLayer(1, pos+Vector(1,0))
 
 		UIs.TextBoxBG.Scale = Vector(1,size.Y/16)
-		UIs.TextBoxBG:RenderLayer(0, pos+ Vector(size.X,0))
+		UIs.TextBoxBG:RenderLayer(0, pos+ Vector(size.X,0))]]
 	end
 end
+
+UIs.ButtonBG2v = GenSprite("gfx/editor/ui copy.anm2", "custom button_bg")
+
 function menuTab.RenderCustomButton(pos, size, isSel)
 	if pos and size then
 		if isSel then
+			UIs.ButtonBG2v:SetFrame(1)
+		else
+			UIs.ButtonBG2v:SetFrame(0)
+		end
+		UIs.ButtonBG2v.Scale = Vector(size.X/2 ,size.Y/2)
+		UIs.ButtonBG2v:RenderLayer(0, pos)
+
+		UIs.ButtonBG2v.Scale = Vector(size.X/2-1 ,size.Y/2-1)
+		UIs.ButtonBG2v:RenderLayer(1, pos+Vector(1,1))
+
+		--[[if isSel then
 			UIs.ButtonBG:SetFrame(1)
 		else
 			UIs.ButtonBG:SetFrame(0)
@@ -1201,7 +1331,7 @@ function menuTab.RenderCustomButton(pos, size, isSel)
 		UIs.ButtonBG:RenderLayer(0, pos)
 
 		UIs.ButtonBG.Scale = Vector(1,size.Y/16)
-		UIs.ButtonBG:RenderLayer(0, pos+ Vector(size.X,0))
+		UIs.ButtonBG:RenderLayer(0, pos+ Vector(size.X,0))]]
 	end
 end
 
@@ -1255,13 +1385,16 @@ function menuTab.RenderMenuButtons(menuName)
 							font:DrawStringScaledUTF8(btn.errorMes,renderPos.X,renderPos.Y,0.5,0.5,KColor(1,0.2,0.2,alpha),1,true)
 							btn.showError = btn.showError - 1
 						end
-						
 					end
 				end
 			end
 
 			if btn.render then
 				btn.render(btn.pos, btn.visible)
+			end
+			if btn.isDrager then
+				local pos = btn.pos + btn.dragCurPos 
+				btn.dragspr:Render(pos+Vector(0,-2))
 			end
 		end
 
@@ -1322,6 +1455,9 @@ function menuTab.DetectSelectedButtonActuale()
 							end
 						else
 							k.IsSelected = k.IsSelected + 1
+							if k.isDrager and mousePos.X > k.dragCurPos.X-3 and mousePos.X < k.dragCurPos.X+3 then
+								k.dragspr:SetFrame(1)
+							end
 						end
 
 						if not k.BlockPress then
@@ -1332,6 +1468,11 @@ function menuTab.DetectSelectedButtonActuale()
 									--k.dragPrePos = k.dragPrePos or mousePos/1
 									--k.dragCurPos = mousePos
 									k.dragPreMousePos =  mousePos/1
+								elseif k.isDrager then
+									menuTab.SelectedDrager = k
+									k.dragPrePos = Vector(mousePos.X-k.pos.X,0)
+									--k.dragCurPos = Vector(mousePos.X,0)
+									k.dragPreMousePos = mousePos/1
 								else
 									k.func(0)
 								end
@@ -1349,6 +1490,9 @@ function menuTab.DetectSelectedButtonActuale()
 							if k.spr then
 								k.spr:SetFrame(0)
 							end
+							if k.dragspr then
+								k.dragspr:SetFrame(0)
+							end
 						end
 					end
 				end
@@ -1356,7 +1500,13 @@ function menuTab.DetectSelectedButtonActuale()
 					menuTab.MouseHintText = k.hintText
 				end
 			end
+			print(menu, menuTab.MenuData[menu].somethingPressed, somethingPressed)
 			menuTab.MenuData[menu].somethingPressed = somethingPressed
+			local wind =  menuTab.MenuData[menu].CalledByWindow
+			if wind then
+				wind.somethingPressed = wind.somethingPressed or somethingPressed
+			end
+			menuTab.MenuData[menu].CalledByWindow = nil
 		end
 		--if menuTab.MouseDoNotPressOnButtons then
 		menuTab.MouseDoNotPressOnButtons = nil
@@ -1377,13 +1527,20 @@ function menuTab.DetectSelectedButtonActuale()
 			menuTab.SelectedDragZone = nil
 		end
 
-		--[[if window.MovingByMouse and not Input.IsButtonPressed(Keyboard.KEY_SPACE, 0) and not menuTab.ScrollListIsOpen then
-			local offset = mousePos - window.MouseOldPos
-			window.pos = window.OldPos + offset
+	elseif menuTab.SelectedDrager then
+		local k = menuTab.SelectedDrager
+		if Input.IsMouseBtnPressed(0) then
+			k.dragCurPos.X = k.dragPrePos.X + mousePos.X - k.dragPreMousePos.X
+			k.dragCurPos.X = math.min( k.x, math.max( 0, k.dragCurPos.X))
+			local proc = k.dragCurPos.X / k.x
+			k.func(0, proc, k.dragPrePos.X / k.x)
 		else
-			window.MouseOldPos = mousePos/1
-			window.OldPos = window.pos/1
-		end]]
+			--k.dragPrePos = Vector(0,0)
+			k.dragPreMousePos = mousePos/1 -- k.dragPrePos
+			k.dragPrePos = k.dragCurPos
+			menuTab.SelectedDrager = nil
+		end
+
 	end
 end
 
@@ -1399,8 +1556,19 @@ function menuTab.HandleWindowControl()
 		---@type Window
 		local window = wind.menus[ menuName ]
 
+		--menuTab.CurrentWindowControl = window
+
 		if order == 1 then
+			if window.SubMenus then
+				for name, tab in pairs(window.SubMenus) do
+					if tab.visible then
+						menuTab.DetectSelectedButton(name)
+						menuTab.GetMenu(name).CalledByWindow = window
+					end
+				end
+			end
 			menuTab.DetectSelectedButton(menuName)
+			menuTab.GetMenu(menuName).CalledByWindow = window
 		end
 		if window.plashka then
 			window.plashka.x = window.size.X
@@ -1424,9 +1592,18 @@ function menuTab.HandleWindowControl()
 				
 			end
 			if order ~= 1 then
+				if window.SubMenus then
+					for name, tab in pairs(window.SubMenus) do
+						if tab.visible then
+							menuTab.DetectSelectedButton(name)
+							menuTab.GetMenu(name).CalledByWindow = window
+						end
+					end
+				end
 				menuTab.DetectSelectedButton(menuName, true)
+				menuTab.GetMenu(menuName).CalledByWindow = window
 			end
-			if menuTab.IsMouseBtnTriggered(0) and not menuTab.MenuData[menuName].somethingPressed then
+			if menuTab.IsMouseBtnTriggered(0) and not window.somethingPressed then
 				window.MovingByMouse = true
 			elseif not Input.IsMouseBtnPressed(0) then
 				window.MovingByMouse = false
@@ -1439,6 +1616,8 @@ function menuTab.HandleWindowControl()
 				window.InFocus = nil
 			end
 		end
+		window.somethingPressed = nil
+		--menuTab.CurrentWindowControl = nil
 	end
 end
 
@@ -1470,8 +1649,29 @@ function menuTab.RenderWindows()
 				k.pos = window.pos + k.posref
 			end
 		end
+		if window.SubMenus then
+			for name, tab in pairs(window.SubMenus) do
+				if tab.visible then
+					---@type table<integer, EditorButton>?
+					local buttons = menuTab.GetButtons(name)
+					if buttons then
+						for i,k in pairs(buttons) do
+							k.pos = window.pos + k.posref
+						end
+					end
+				end
+			end
+		end
 
 		menuTab.RenderMenuButtons(menuName)
+
+		if window.SubMenus then
+			for name, tab in pairs(window.SubMenus) do
+				if tab.visible then
+					menuTab.RenderMenuButtons(name)
+				end
+			end
+		end
 
 		Isaac.RunCallbackWithParam(menuTab.Callbacks.WINDOW_POST_RENDER, menuName, window.pos, window)
 		--if i~=1 then

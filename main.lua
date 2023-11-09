@@ -1096,7 +1096,7 @@ do
 	function UIs.Box48() return GenSprite("gfx/editor/ui copy.anm2","контейнер") end
 	--WORSTDEBUGMENU.AddButtonOnDebugBar(buttonName, size, sprite, pressFunc, renderFunc)
 
-	Menu.AnimTest = {name = "Anim_Test", size = Vector(166,186), btn = {}, anim = {anm2 = "", animation = "", col = Color(1,1,1,1)}}
+	Menu.AnimTest = {name = "Anim_Test", subnames = {}, size = Vector(166,186), btn = {}, anim = {anm2 = "", animation = "", col = Color(1,1,1,1)}}
 	local AnimTest = Menu.AnimTest
 	local sizev = AnimTest.size
 
@@ -1109,6 +1109,10 @@ do
 		blockPlayerShot()
 		---@type Window
 		AnimTest.wind = Menu.wma.ShowWindow(AnimTest.name, self.pos+Vector(0,15), sizev)
+		for i,k in pairs(AnimTest.subnames) do
+			AnimTest.wind:SetSubMenuVisible(k, false)
+		end
+		AnimTest.wind:SetSubMenuVisible(AnimTest.subnames.file, true)
 	end, nil)
 	
 	--[[local self
@@ -1140,7 +1144,23 @@ do
 		end
 	end)
 
-	AnimTest.btn.anm2 = Menu.wma.AddTextBox(AnimTest.name, "anm2", Vector(12,92), Vector(140,16), nil, 
+	AnimTest.subnames.file = "Anim_Test_file"
+
+	local self
+	self = Menu.wma.AddButton(AnimTest.name, "fileset", Vector(12,67), 32, 12, nil, function(button) 
+		if button ~= 0 then return end
+		blockPlayerShot()
+		for i,k in pairs(AnimTest.subnames) do
+			AnimTest.wind:SetSubMenuVisible(k, false)
+		end
+		AnimTest.wind:SetSubMenuVisible(AnimTest.subnames.file, true)
+	end,
+	function(pos)
+		Menu.wma.RenderCustomButton(pos, Vector(self.x, self.y), self.IsSelected)
+		font:DrawStringScaledUTF8(GetStr("file"),pos.X+16,pos.Y+1,0.5,0.5,KColor(0.1,0.1,0.2,1),1,true)
+	end)
+
+	AnimTest.btn.anm2 = Menu.wma.AddTextBox(AnimTest.subnames.file, "anm2", Vector(12,92), Vector(140,16), nil, 
 	function(result)
 		if not result then
 			return true
@@ -1151,8 +1171,6 @@ do
 			--local ret = true
 			if not string.find(result, ".anm2") then
 				result = result .. ".anm2"
-				--ret = false
-				--AnimTest.btn.anm2.text = result
 			end
 			
 			local tespt = Sprite()
@@ -1173,7 +1191,7 @@ do
 	end)
 	AnimTest.btn.anm2.text = "gfx/"
 
-	AnimTest.btn.anim = Menu.wma.AddTextBox(AnimTest.name, "anim", Vector(12,120), Vector(140,16), nil, 
+	AnimTest.btn.anim = Menu.wma.AddTextBox(AnimTest.subnames.file, "anim", Vector(12,120), Vector(140,16), nil, 
 	function(result)
 		if not result then
 			return true
@@ -1192,6 +1210,59 @@ do
 		font:DrawStringScaledUTF8(GetStr("AnimName"),pos.X+1,pos.Y-9,0.5,0.5,KColor(0.1,0.1,0.2,1),0,false)
 	end)
 	AnimTest.btn.anim.text = ""
+
+
+	UIs.ColorDrager = GenSprite("gfx/editor/ui copy.anm2", "color_drag")
+	local nilspr = Sprite()
+
+	AnimTest.subnames.color = "Anim_Test_color"
+
+	local self
+	self = Menu.wma.AddButton(AnimTest.name, "colorset", Vector(46,67), 32, 12, nil, function(button) 
+		if button ~= 0 then return end
+		blockPlayerShot()
+		for i,k in pairs(AnimTest.subnames) do
+			AnimTest.wind:SetSubMenuVisible(k, false)
+		end
+		AnimTest.wind:SetSubMenuVisible(AnimTest.subnames.color, true)
+	end,
+	function(pos)
+		Menu.wma.RenderCustomButton(pos, Vector(self.x, self.y), self.IsSelected)
+		font:DrawStringScaledUTF8(GetStr("color"),pos.X+16,pos.Y+1,0.5,0.5,KColor(0.1,0.1,0.2,1),1,true)
+	end)
+
+	local self
+	self = Menu.wma.AddGragFloat(AnimTest.subnames.color, "red", Vector(12,92), Vector(140,12), nilspr, nil, 
+	function(button, value, oldvalue)
+		if button ~= 0 then return end
+		AnimTest.anim.col.R = value
+	end, function(pos)
+		UIs.ColorDrager:RenderLayer(0, pos)
+	end)
+	local self
+	self = Menu.wma.AddGragFloat(AnimTest.subnames.color, "green", Vector(12,105), Vector(140,12), nilspr, nil, 
+	function(button, value, oldvalue)
+		if button ~= 0 then return end
+		AnimTest.anim.col.G = value
+	end, function(pos)
+		UIs.ColorDrager:RenderLayer(1, pos)
+	end)
+	local self
+	self = Menu.wma.AddGragFloat(AnimTest.subnames.color, "blue", Vector(12,118), Vector(140,12), nilspr, nil, 
+	function(button, value, oldvalue)
+		if button ~= 0 then return end
+		AnimTest.anim.col.B = value
+	end, function(pos)
+		UIs.ColorDrager:RenderLayer(2, pos)
+	end)
+	local self
+	self = Menu.wma.AddGragFloat(AnimTest.subnames.color, "alpha", Vector(12,131), Vector(140,12), nilspr, nil, 
+	function(button, value, oldvalue)
+		if button ~= 0 then return end
+		AnimTest.anim.col.A = value
+	end, function(pos)
+		UIs.ColorDrager:RenderLayer(3, pos)
+	end)
 
 
 end
