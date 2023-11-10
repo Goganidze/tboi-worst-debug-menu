@@ -113,6 +113,11 @@ Menu.strings = {
 	["triggerNoTarget"] = {en = "Doesn't have a target", ru = "Отсутствует цель"},
 	["ObjBlockedbyObj"] = {en = "overlapped on object layer [3]", ru = "перекрыто на слое объектов [3]"},
 
+	["scale"] = {en = "scale", ru = "размер"},
+	["frame"] = {en = "frame", ru = "кадр"},
+	["animation"] = {en = "animation", ru = "анимация"},
+	["color"] = {en = "color", ru = "цвет"},
+	["file"] = {en = "file", ru = "файл"},
 }
 
 local function GetStr(str)
@@ -1327,7 +1332,7 @@ do
 		if button ~= 0 then return end
 		AnimTest.anim.col.R = value
 	end, function(pos)
-		font:DrawStringScaledUTF8(GetStr("color"),pos.X+3,pos.Y-9,0.5,0.5,KColor(0.1,0.1,0.2,1),0,false)
+		font:DrawStringScaledUTF8("color",pos.X+3,pos.Y-9,0.5,0.5,KColor(0.1,0.1,0.2,1),0,false)
 		font:DrawStringScaledUTF8(math.ceil(AnimTest.anim.col.R * 255), pos.X-10,pos.Y-1,0.5,0.5,KColor(0.1,0.1,0.2,1),1,true)
 		UIs.ColorDrager:RenderLayer(0, pos)
 	end)
@@ -1487,7 +1492,7 @@ do
 	end, true,
 	function(pos)
 		--Menu.wma.RenderCustomTextBox(pos, Vector(self.x, self.y), self.IsSelected)
-		font:DrawStringScaledUTF8(GetStr("scale"),pos.X-50,pos.Y+3,0.5,0.5,KColor(0.1,0.1,0.2,1),0,false)
+		font:DrawStringScaledUTF8(GetStr("scale"),pos.X-52,pos.Y+3,0.5,0.5,KColor(0.1,0.1,0.2,1),0,false)
 		font:DrawStringScaledUTF8("X",pos.X-13,pos.Y-2,1,1,KColor(0.1,0.1,0.2,1),0,false)
 		self.text = string.format("%.2f", AnimTest.anim.spr.Scale.X)
 	end)
@@ -1534,7 +1539,7 @@ do
 		if button ~= 0 then return end
 		AnimTest.anim.spr.Scale = Vector(AnimTest.anim.spr.Scale.X, AnimTest.anim.spr.Scale.Y-0.1)
 	end)
-	vG.Y = vG.Y+22 + self.y
+	vG.Y = vG.Y+28 + self.y
 
 	local self
 	self = Menu.wma.AddGragFloat(AnimTest.subnames.anim, "rotation", Vector(20,vG.Y), Vector(160,10), nil, nil, 
@@ -1542,7 +1547,7 @@ do
 		if button ~= 0 then return end
 		AnimTest.anim.spr.Rotation = value*359
 	end, function(pos)
-		font:DrawStringScaledUTF8(GetStr("rotation"),pos.X+3,pos.Y-9,0.5,0.5,KColor(0.1,0.1,0.2,1),0,false)
+		font:DrawStringScaledUTF8(GetStr("Rotation"),pos.X+3,pos.Y-9,0.5,0.5,KColor(0.1,0.1,0.2,1),0,false)
 		Menu.wma.RenderCustomTextBox(pos, Vector(self.x, self.y-2), self.IsSelected)
 		local rot = math.ceil(AnimTest.anim.spr.Rotation) -- string.format("%.2f", AnimTest.anim.spr.Rotation)
 		font:DrawStringScaledUTF8(rot .. "°",pos.X-8,pos.Y-1,0.5,0.5,KColor(0.1,0.1,0.2,1),1,true)
