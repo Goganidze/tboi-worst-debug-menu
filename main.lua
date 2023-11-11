@@ -24,12 +24,16 @@ WORSTDEBUGMENU = RegisterMod("piss shit poop and menu", 1)
 local game = Game()
 local font = Font()
 font:Load("font/upheaval.fnt")
+local TextBoxFont = Font()
+TextBoxFont:Load("font/pftempestasevencondensed.fnt")
 
 WORSTDEBUGMENU.wma = include("worst gui api")
 ---@type menuTab
 WORSTDEBUGMENU.wma = WORSTDEBUGMENU.wma(WORSTDEBUGMENU)
 
 local Menu = WORSTDEBUGMENU
+
+TextBoxFont = Menu.wma.TextBoxFont
 
 local function GenSprite(gfx,anim,frame)
 	if gfx and anim then
@@ -89,6 +93,7 @@ Menu.strings = {
 	["anm2FileFail"] = {en = "file not found", ru = "файл не найден"},
 	["AnmFile"] = {en = "animation file", ru = "файл с анимациями"},
 	["AnimName"] = {en = "name of the animation", ru = "название анимации"},
+	["AnimOVerlayName"] = {en = "name of the overlay", ru = "название оверлейной анимации"},
 	["Auto"] = {en = "Auto", ru = "Авто"},
 	["layer"] = {en = "layer", ru = "слой"},
 	["Rotation"] = {en = "Rotation", ru = "Поворот"},
@@ -115,6 +120,7 @@ Menu.strings = {
 
 	["scale"] = {en = "scale", ru = "размер"},
 	["frame"] = {en = "frame", ru = "кадр"},
+	['overlay frame'] = {en = "overlay frame", ru = "кадр оверлея"},
 	["animation"] = {en = "animation", ru = "анимация"},
 	["color"] = {en = "color", ru = "цвет"},
 	["file"] = {en = "file", ru = "файл"},
@@ -190,10 +196,10 @@ function Menu.DebugMenuRender(off, mousepos)
 	UIs.MenuUp.Color = Color(1,1,1,1)
 
 	if not WORSTDEBUGMENU.showMainMenu then
-		WORSTDEBUGMENU.wma.DetectSelectedButton("__debug_menu_grab")
+		WORSTDEBUGMENU.wma.DetectMenuButtons("__debug_menu_grab")
 		WORSTDEBUGMENU.wma.RenderMenuButtons("__debug_menu_grab")
 	else
-		WORSTDEBUGMENU.wma.DetectSelectedButton("__debug_menu")
+		WORSTDEBUGMENU.wma.DetectMenuButtons("__debug_menu")
 		WORSTDEBUGMENU.wma.RenderMenuButtons("__debug_menu")
 	end
 	
@@ -284,12 +290,12 @@ do
 		self.pos = Vector(52, 5+WORSTDEBUGMENU.MainOffset)
 	end
 
-	local self
+	--[[local self
 	self = WORSTDEBUGMENU.wma.AddButton("_debugcmd", "plashka", Vector(0,0), sizev.X, sizev.Y, Sprite() , function(button) 
 		if button ~= 0 then return end
 		--debugcmd.CanMove = true
 	end, nil, nil, 10)
-	self.BlockPress = true
+	self.BlockPress = true]]
 	---------
 	for i=1,14 do
 		local self
@@ -1116,11 +1122,13 @@ end
 
 do
 	function UIs.Box48() return GenSprite("gfx/editor/ui copy.anm2","контейнер") end
-	UIs.play = GenSprite("gfx/editor/ui copy.anm2","play btn")
-	UIs.pause = GenSprite("gfx/editor/ui copy.anm2","pause btn")
+	function UIs.play() return GenSprite("gfx/editor/ui copy.anm2","play btn") end
+	function UIs.pause() return GenSprite("gfx/editor/ui copy.anm2","pause btn") end
+	UIs.ubratOverlay = GenSprite("gfx/editor/ui copy.anm2","erazer")
+	UIs.pomenyatOverlay = GenSprite("gfx/editor/ui copy.anm2","две закруглённые стрелки")
 	--WORSTDEBUGMENU.AddButtonOnDebugBar(buttonName, size, sprite, pressFunc, renderFunc)
 
-	Menu.AnimTest = {name = "Anim_Test", subnames = {}, size = Vector(166+24,186), btn = {}, anim = {anm2 = "", animation = "", 
+	Menu.AnimTest = {name = "Anim_Test", subnames = {}, size = Vector(166+24,196), btn = {}, anim = {anm2 = "", animation = "", 
 	col = Color(1,1,1,1), colorize = Color(1,1,1,0)}}
 	local AnimTest = Menu.AnimTest
 	local sizev = AnimTest.size
@@ -1138,14 +1146,23 @@ do
 			AnimTest.wind:SetSubMenuVisible(k, false)
 		end
 		AnimTest.wind:SetSubMenuVisible(AnimTest.subnames.file, true)
+		AnimTest.wind:SetSize(AnimTest.size+Vector(0,16))
 	end, nil)
 	
 	local function UpdateLstFrame()
 		AnimTest.anim.lastFrame = 0
 		local frame = AnimTest.anim.spr:GetFrame()
+		local overframe = AnimTest.anim.spr:GetOverlayFrame()
+
 		AnimTest.anim.spr:SetLastFrame()
 		AnimTest.anim.lastFrame = AnimTest.anim.spr:GetFrame()
-		AnimTest.anim.spr:SetFrame(frame)
+		local anim = AnimTest.anim.spr:GetAnimation()
+		AnimTest.anim.spr:Play(AnimTest.anim.spr:GetOverlayAnimation(), true)
+		AnimTest.anim.spr:SetLastFrame()
+		AnimTest.anim.lastOverlayFrame = AnimTest.anim.spr:GetFrame()
+
+		AnimTest.anim.spr:Play(anim, true)
+		AnimTest.anim.spr:SetFrame(frame)  --lastOverlayFrame
 	end
 	UpdateLstFrame()
 
@@ -1163,6 +1180,9 @@ do
 			AnimTest.anim.spr:Update()
 			if AnimTest.anim.AutoPlay and not AnimTest.anim.OnPause and AnimTest.anim.spr:IsFinished(AnimTest.anim.spr:GetAnimation()) then
 				AnimTest.anim.spr:Play(AnimTest.anim.spr:GetAnimation(), true)
+			end --AutoOverlayPlay
+			if AnimTest.anim.AutoOverlayPlay and not AnimTest.anim.OnOverlayPause and AnimTest.anim.spr:IsOverlayFinished(AnimTest.anim.spr:GetOverlayAnimation()) then
+				AnimTest.anim.spr:PlayOverlay(AnimTest.anim.spr:GetOverlayAnimation(), true)
 			end
 		end
 
@@ -1190,13 +1210,13 @@ do
 
 	local v = GetPlace(AnimTest.name) --cutscenes/credits.anm2
 	local self
-	self = Menu.wma.AddButton(AnimTest.name, "play", Vector(12,v.Y), 16, 16, UIs.play, function(button) 
+	self = Menu.wma.AddButton(AnimTest.name, "play", Vector(12,v.Y), 16, 16, UIs.play(), function(button) 
 		if button ~= 0 then return end
 		blockPlayerShot()
 		AnimTest.anim.spr:Play(AnimTest.anim.spr:GetAnimation(), true)
 	end)
 	local self
-	self = Menu.wma.AddButton(AnimTest.name, "pause", Vector(30,v.Y), 16, 16, UIs.pause, function(button) 
+	self = Menu.wma.AddButton(AnimTest.name, "pause", Vector(30,v.Y), 16, 16, UIs.pause(), function(button) 
 		if button ~= 0 then return end
 		blockPlayerShot()
 		
@@ -1223,6 +1243,46 @@ do
 			self.spr.Color = Color(1,1,1,1)
 		end
 	end)
+
+	local self ----------------------------------------
+	self = Menu.wma.AddButton(AnimTest.name, "Oplay", Vector(70,v.Y), 16, 16, UIs.play(), function(button) 
+		if button ~= 0 then return end
+		blockPlayerShot()
+		AnimTest.anim.spr:PlayOverlay(AnimTest.anim.spr:GetOverlayAnimation(), true)
+	end, function(pos)
+		TextBoxFont:DrawStringScaledUTF8("o",pos.X+1,pos.Y+6,1,1,KColor(0.19,0.2,0.21,1),1,true)
+	end)
+	local self
+	self = Menu.wma.AddButton(AnimTest.name, "Opause", Vector(88,v.Y), 16, 16, UIs.pause(), function(button) 
+		if button ~= 0 then return end
+		blockPlayerShot()
+		
+		if not AnimTest.anim.spr:IsOverlayPlaying() then
+			AnimTest.anim.OnOverlayPause = false
+			local frame = AnimTest.anim.spr:GetOverlayFrame()
+			AnimTest.anim.spr:PlayOverlay(AnimTest.anim.spr:GetOverlayAnimation(), true)
+			AnimTest.anim.spr:SetOverlayFrame(frame)	
+		else
+			AnimTest.anim.spr:StopOverlay()
+			AnimTest.anim.OnOverlayPause = true
+		end
+	end, function(pos)
+		TextBoxFont:DrawStringScaledUTF8("o",pos.X+1,pos.Y+6,1,1,KColor(0.19,0.2,0.21,1),1,true)
+	end)
+	local self
+	self = Menu.wma.AddButton(AnimTest.name, "Oautoplay", Vector(106,v.Y), 16, 16, UIs.reset(), function(button) 
+		if button ~= 0 then return end
+		blockPlayerShot()
+		AnimTest.anim.AutoOverlayPlay = not AnimTest.anim.AutoOverlayPlay
+	end, function(pos)
+		if AnimTest.anim.AutoOverlayPlay then
+			UIs.Var_Sel:Render(pos+Vector(2,0))
+			self.spr.Color = Color(1,1,1,.5)
+			self.spr:RenderLayer(1,pos)
+			self.spr.Color = Color(1,1,1,1)
+		end
+		TextBoxFont:DrawStringScaledUTF8("o",pos.X+1,pos.Y+6,1,1,KColor(0.19,0.2,0.21,1),1,true)
+	end)
 	TakePlace(AnimTest.name, Vector(0,self.y+2))
 
 
@@ -1238,7 +1298,7 @@ do
 			AnimTest.wind:SetSubMenuVisible(k, false)
 		end
 		AnimTest.wind:SetSubMenuVisible(AnimTest.subnames.file, true)
-		AnimTest.wind:SetSize(AnimTest.size)
+		AnimTest.wind:SetSize(AnimTest.size+Vector(0,14))
 		UpdateLstFrame()
 	end,
 	function(pos)
@@ -1270,6 +1330,8 @@ do
 			AnimTest.anim.spr:Play(AnimTest.anim.spr:GetDefaultAnimation() )
 			AnimTest.anim.animation = AnimTest.anim.spr:GetDefaultAnimation()
 			AnimTest.btn.anim.text = AnimTest.anim.animation
+			AnimTest.btn.overlay.text = ""
+			AnimTest.anim.overlayPriority = nil
 			--self.text = AnimTest.TVS[2]
 			UpdateLstFrame()
 			return true
@@ -1300,7 +1362,48 @@ do
 		font:DrawStringScaledUTF8(GetStr("AnimName"),pos.X+1,pos.Y-9,0.5,0.5,KColor(0.1,0.1,0.2,1),0,false)
 	end)
 	AnimTest.btn.anim.text = ""
-	vG.Y = vG.Y+16 + AnimTest.btn.anim.y
+	vG.Y = vG.Y+12 + AnimTest.btn.anim.y
+
+	AnimTest.btn.overlay = Menu.wma.AddTextBox(AnimTest.subnames.file, "overlay_anim", Vector(12,vG.Y), Vector(166,16), nil, 
+	function(result)
+		if not result then
+			return true
+		else
+			if #result < 1 or not string.find(result,"%S") then
+				return GetStr("emptyField")
+			end
+			AnimTest.anim.spr:PlayOverlay(result, true )
+			UpdateLstFrame()
+			if AnimTest.anim.spr:GetOverlayAnimation() == result then
+				AnimTest.anim.overlay = AnimTest.anim.spr:GetDefaultAnimation()
+				return true
+			end
+			return false
+		end
+	end, false, function(pos)
+		font:DrawStringScaledUTF8(GetStr("AnimOVerlayName"),pos.X+1,pos.Y-9,0.5,0.5,KColor(0.1,0.1,0.2,1),0,false)
+	end)
+	AnimTest.btn.overlay.text = ""
+	vG.Y = vG.Y+0 + AnimTest.btn.anim.y
+
+	local self
+	self = Menu.wma.AddButton(AnimTest.subnames.file, "overlayclear", Vector(12,vG.Y+5), 16, 16, UIs.ubratOverlay, function(button) 
+		if button ~= 0 then return end
+		blockPlayerShot()
+		AnimTest.anim.spr:RemoveOverlay()
+		AnimTest.btn.overlay.text = ""
+	end)
+	local self
+	self = Menu.wma.AddButton(AnimTest.subnames.file, "overlaylayer", Vector(30,vG.Y+5), 16, 16, UIs.pomenyatOverlay, function(button) 
+		if button ~= 0 then return end
+		blockPlayerShot()
+		AnimTest.anim.spr:SetOverlayRenderPriority(not AnimTest.anim.overlayPriority)
+		AnimTest.anim.overlayPriority = not AnimTest.anim.overlayPriority
+	end)
+	vG.Y = vG.Y+18 + self.y
+	--UIs.ubratOverlay = GenSprite("gfx/editor/ui copy.anm2","erazer")
+	--UIs.pomenyatOverlay
+
 
 
 	UIs.ColorDrager = GenSprite("gfx/editor/ui copy.anm2", "color_drag")
@@ -1318,16 +1421,17 @@ do
 			AnimTest.wind:SetSubMenuVisible(k, false)
 		end
 		AnimTest.wind:SetSubMenuVisible(AnimTest.subnames.color, true)
-		AnimTest.wind:SetSize(Vector(AnimTest.size.X, 186 + 40))
+		AnimTest.wind:SetSize(Vector(AnimTest.size.X, AnimTest.size.Y + 34))
 	end,
 	function(pos)
 		Menu.wma.RenderCustomButton(pos, Vector(self.x, self.y), self.IsSelected)
 		font:DrawStringScaledUTF8(GetStr("color"),pos.X+16,pos.Y+1,0.5,0.5,KColor(0.1,0.1,0.2,1),1,true)
 	end)
 	vG.Y = vG.Y+18 + self.y
+	local leftv = 24
 	
 	local self
-	self = Menu.wma.AddGragFloat(AnimTest.subnames.color, "red", Vector(20,vG.Y), Vector(136/2,10), nilspr, nil, 
+	self = Menu.wma.AddGragFloat(AnimTest.subnames.color, "red", Vector(leftv,vG.Y), Vector(136/2,10), nilspr, nil, 
 	function(button, value, oldvalue)
 		if button ~= 0 then return end
 		AnimTest.anim.col.R = value
@@ -1337,7 +1441,7 @@ do
 		UIs.ColorDrager:RenderLayer(0, pos)
 	end)
 	local self
-	self = Menu.wma.AddGragFloat(AnimTest.subnames.color, "redO", Vector(20+69+20,vG.Y), Vector(136/2,10), nilspr, nil, 
+	self = Menu.wma.AddGragFloat(AnimTest.subnames.color, "redO", Vector(leftv+69+20,vG.Y), Vector(136/2,10), nilspr, nil, 
 	function(button, value, oldvalue)
 		if button ~= 0 then return end
 		AnimTest.anim.col.RO = value
@@ -1348,7 +1452,7 @@ do
 	end, 0)
 	vG.Y = vG.Y+2 + self.y
 	local self
-	self = Menu.wma.AddGragFloat(AnimTest.subnames.color, "green", Vector(20,vG.Y), Vector(136/2,10), nilspr, nil, 
+	self = Menu.wma.AddGragFloat(AnimTest.subnames.color, "green", Vector(leftv,vG.Y), Vector(136/2,10), nilspr, nil, 
 	function(button, value, oldvalue)
 		if button ~= 0 then return end
 		AnimTest.anim.col.G = value
@@ -1357,7 +1461,7 @@ do
 		UIs.ColorDrager:RenderLayer(1, pos)
 	end)
 	local self
-	self = Menu.wma.AddGragFloat(AnimTest.subnames.color, "greenO", Vector(20+69+20,vG.Y), Vector(136/2,10), nilspr, nil, 
+	self = Menu.wma.AddGragFloat(AnimTest.subnames.color, "greenO", Vector(leftv+69+20,vG.Y), Vector(136/2,10), nilspr, nil, 
 	function(button, value, oldvalue)
 		if button ~= 0 then return end
 		AnimTest.anim.col.GO = value
@@ -1367,7 +1471,7 @@ do
 	end, 0)
 	vG.Y = vG.Y+2 + self.y
 	local self
-	self = Menu.wma.AddGragFloat(AnimTest.subnames.color, "blue", Vector(20,vG.Y), Vector(136/2,10), nilspr, nil, 
+	self = Menu.wma.AddGragFloat(AnimTest.subnames.color, "blue", Vector(leftv,vG.Y), Vector(136/2,10), nilspr, nil, 
 	function(button, value, oldvalue)
 		if button ~= 0 then return end
 		AnimTest.anim.col.B = value
@@ -1376,7 +1480,7 @@ do
 		UIs.ColorDrager:RenderLayer(2, pos)
 	end)
 	local self
-	self = Menu.wma.AddGragFloat(AnimTest.subnames.color, "blueO", Vector(20+69+20,vG.Y), Vector(136/2,10), nilspr, nil, 
+	self = Menu.wma.AddGragFloat(AnimTest.subnames.color, "blueO", Vector(leftv+69+20,vG.Y), Vector(136/2,10), nilspr, nil, 
 	function(button, value, oldvalue)
 		if button ~= 0 then return end
 		AnimTest.anim.col.BO = value
@@ -1386,7 +1490,7 @@ do
 	end, 0)
 	vG.Y = vG.Y+2 + self.y
 	local self
-	self = Menu.wma.AddGragFloat(AnimTest.subnames.color, "alpha", Vector(20,vG.Y), Vector(136/2,10), nilspr, nil, 
+	self = Menu.wma.AddGragFloat(AnimTest.subnames.color, "alpha", Vector(leftv,vG.Y), Vector(136/2,10), nilspr, nil, 
 	function(button, value, oldvalue)
 		if button ~= 0 then return end
 		AnimTest.anim.col.A = value
@@ -1399,7 +1503,7 @@ do
 	vG.Y = vG.Y+18 + self.y  --colorize
 	
 	local self
-	self = Menu.wma.AddGragFloat(AnimTest.subnames.color, "redOf", Vector(20,vG.Y), Vector(136/2,10), nilspr, nil, 
+	self = Menu.wma.AddGragFloat(AnimTest.subnames.color, "redOf", Vector(leftv,vG.Y), Vector(136/2,10), nilspr, nil, 
 	function(button, value, oldvalue)
 		if button ~= 0 then return end
 		AnimTest.anim.colorize.R = value
@@ -1410,7 +1514,7 @@ do
 	end)
 	vG.Y = vG.Y+2 + self.y
 	local self
-	self = Menu.wma.AddGragFloat(AnimTest.subnames.color, "greenOf", Vector(20,vG.Y), Vector(136/2,10), nilspr, nil, 
+	self = Menu.wma.AddGragFloat(AnimTest.subnames.color, "greenOf", Vector(leftv,vG.Y), Vector(136/2,10), nilspr, nil, 
 	function(button, value, oldvalue)
 		if button ~= 0 then return end
 		AnimTest.anim.colorize.G = value
@@ -1420,7 +1524,7 @@ do
 	end)
 	vG.Y = vG.Y+2 + self.y
 	local self
-	self = Menu.wma.AddGragFloat(AnimTest.subnames.color, "blueOf", Vector(20,vG.Y), Vector(136/2,10), nilspr, nil, 
+	self = Menu.wma.AddGragFloat(AnimTest.subnames.color, "blueOf", Vector(leftv,vG.Y), Vector(136/2,10), nilspr, nil, 
 	function(button, value, oldvalue)
 		if button ~= 0 then return end
 		AnimTest.anim.colorize.B = value
@@ -1430,7 +1534,7 @@ do
 	end)
 	vG.Y = vG.Y+2 + self.y
 	local self
-	self = Menu.wma.AddGragFloat(AnimTest.subnames.color, "alphaOf", Vector(20,vG.Y), Vector(136/2,10), nilspr, nil, 
+	self = Menu.wma.AddGragFloat(AnimTest.subnames.color, "alphaOf", Vector(leftv,vG.Y), Vector(136/2,10), nilspr, nil, 
 	function(button, value, oldvalue)
 		if button ~= 0 then return end
 		AnimTest.anim.colorize.A = value
@@ -1470,6 +1574,24 @@ do
 		font:DrawStringScaledUTF8(AnimTest.anim.spr:GetFrame() or "",pos.X-8,pos.Y-1,0.5,0.5,KColor(0.1,0.1,0.2,1),1,true)
 		Menu.wma.RenderCustomTextBox(pos, Vector(self.x, self.y-2), self.IsSelected)
 		self.dragCurPos.X = ((AnimTest.anim.spr:GetFrame()/AnimTest.anim.lastFrame)) * self.x
+	end, 0)
+	vG.Y = vG.Y+8 + self.y
+	local self
+	self = Menu.wma.AddGragFloat(AnimTest.subnames.anim, "overlayframe", Vector(20,vG.Y), Vector(160,10), nil, nil, 
+	function(button, value, oldvalue)
+		if button ~= 0 then return end
+		AnimTest.anim.spr:SetOverlayFrame(math.floor(value*AnimTest.anim.lastOverlayFrame+0.5))
+	end, function(pos)
+		font:DrawStringScaledUTF8(GetStr("overlay frame"),pos.X+3,pos.Y-9,0.5,0.5,KColor(0.1,0.1,0.2,1),0,false)
+		---@diagnostic disable-next-line
+		font:DrawStringScaledUTF8(AnimTest.anim.spr:GetOverlayFrame() or "",pos.X-8,pos.Y-1,0.5,0.5,KColor(0.1,0.1,0.2,1),1,true)
+		Menu.wma.RenderCustomTextBox(pos, Vector(self.x, self.y-2), self.IsSelected)
+		local frame = AnimTest.anim.spr:GetOverlayFrame()
+		if frame == -1 then
+			self.dragCurPos.X = 0
+		else
+			self.dragCurPos.X = ((AnimTest.anim.spr:GetOverlayFrame()/AnimTest.anim.lastOverlayFrame)) * self.x
+		end
 	end, 0)
 	vG.Y = vG.Y+2 + self.y
 
@@ -1550,7 +1672,7 @@ do
 		font:DrawStringScaledUTF8(GetStr("Rotation"),pos.X+3,pos.Y-9,0.5,0.5,KColor(0.1,0.1,0.2,1),0,false)
 		Menu.wma.RenderCustomTextBox(pos, Vector(self.x, self.y-2), self.IsSelected)
 		local rot = math.ceil(AnimTest.anim.spr.Rotation) -- string.format("%.2f", AnimTest.anim.spr.Rotation)
-		font:DrawStringScaledUTF8(rot .. "°",pos.X-8,pos.Y-1,0.5,0.5,KColor(0.1,0.1,0.2,1),1,true)
+		font:DrawStringScaledUTF8(rot,pos.X-8,pos.Y-1,0.5,0.5,KColor(0.1,0.1,0.2,1),1,true)
 	end, 0)
 	vG.Y = vG.Y+2 + self.y
 	
