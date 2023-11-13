@@ -1567,8 +1567,6 @@ function menuTab.DetectSelectedButtonActuale()
 		local list = DetectSelectedButtonBuffer[ahhoh]
 		local menu = list[1]   --DetectSelectedButtonBuffer[ahhoh]
 		local button = list[2]
-		print(menu, button)
-		PrintTab(button)
 		--if type(menuTab.MenuData[menu]) == "table" then
 		if type(button) == "table" then
 
@@ -1576,7 +1574,6 @@ function menuTab.DetectSelectedButtonActuale()
 			--for i, dt in pairs(menuTab.MenuData[menu].sortList) do
 			---@param k EditorButton
 			for i, k in pairs(button) do
-				--print(menu, k.name)
 
 				---@type EditorButton
 				--local k = menuTab.MenuData[menu].Buttons[dt.btn]
