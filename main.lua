@@ -174,6 +174,8 @@ function UIs.CCCCCCCC() return GenSprite("gfx/editor/ui copy.anm2","брос") e
 function UIs.Chlen_1() return GenSprite("gfx/editor/ui copy.anm2","1 chel") end
 function UIs.CounterUpSmol() return GenSprite("gfx/editor/ui copy.anm2","поднять_smol") end
 function UIs.CounterDownSmol() return GenSprite("gfx/editor/ui copy.anm2","опустить_smol") end
+function UIs.PrePage16() return GenSprite("gfx/editor/ui copy.anm2","лево_smol") end
+function UIs.NextPage16() return GenSprite("gfx/editor/ui copy.anm2","право_smol") end
 
 
 
@@ -1677,6 +1679,128 @@ do
 	vG.Y = vG.Y+2 + self.y
 	
 end
+
+do
+	local config = Isaac.GetItemConfig()
+	local itemsize = config:GetCollectibles().Size
+	--function UIs.Box48() return GenSprite("gfx/editor/ui copy.anm2","контейнер") end
+	function UIs.poisk() return GenSprite("gfx/editor/ui copy2.anm2","поиск") end
+	UIs.itemlist = GenSprite("gfx/editor/ui copy2.anm2","item list")
+	--WORSTDEBUGMENU.AddButtonOnDebugBar(buttonName, size, sprite, pressFunc, renderFunc)
+
+	Menu.ItemList = {name = "Item_List", subnames = {}, size = Vector(250,156), btn = {}, poisk = {text = ""}, list = {}, page = 1}
+	local ItemList = Menu.ItemList
+	local sizev = ItemList.size
+
+	local gridposZero = Vector(10,30)
+	local nilspr = Sprite()
+	local v16 = Vector(16,16+8) * .5
+	local v5 = Vector(.5,.5)
+	function ItemList.GetList(num)
+		local start = (num-1) * 70 -- 21 * 4
+		for j=0, 4 do
+			for x=1, 14 do
+				local id = start + j*14 + x
+				local item = config:GetCollectible(id)
+				local btnstr = j..","..x
+				--print(j,x, id, item)
+				if item and id <= itemsize then
+					local spr = GenSprite("gfx/005.100_collectible.anm2","PlayerPickup")
+					spr:ReplaceSpritesheet(1, item.GfxFileName)
+					spr:LoadGraphics()
+					spr.Offset = v16
+					spr.Scale = v5
+					local pos = gridposZero + Vector((x-1)*33, j*33) * .5
+					Menu.wma.AddButton(ItemList.name, btnstr , pos, 16, 16, UIs.EmptyBtn(), function(button)
+						if button == 0 then
+							Isaac.GetPlayer():AddCollectible(id, 20)
+						elseif button == 1 then
+							Isaac.GetPlayer():RemoveCollectible(id)
+						end
+					end,
+					function(pos)
+						--Menu.wma.RenderCustomButton(pos, Vector(self.x, self.y), self.IsSelected)
+						spr:Render(pos)
+					end)
+				else
+					Menu.wma.RemoveButton(ItemList.name, btnstr)
+				end
+			end
+		end
+		if ItemList.page > 1 then
+			local self
+			self = Menu.wma.AddButton(ItemList.name, "pre", Vector(10,130), 16, 16, UIs.PrePage16(), function(button) 
+				if button ~= 0 then return end
+				ItemList.page = ItemList.page - 1
+				ItemList.GetList(ItemList.page)
+			end)
+		else
+			Menu.wma.RemoveButton(ItemList.name, "pre")
+		end
+		
+		if ((ItemList.page) * 70) < itemsize then
+			local self
+			self = Menu.wma.AddButton(ItemList.name, "next", Vector(224,130), 16, 16, UIs.NextPage16(), function(button) 
+				if button ~= 0 then return end
+				ItemList.page = ItemList.page + 1
+				ItemList.GetList(ItemList.page)
+			end)
+		else
+			Menu.wma.RemoveButton(ItemList.name, "next")
+		end
+	end
+
+
+	local self
+	self = WORSTDEBUGMENU.AddButtonOnDebugBar("Item_List_Menu", Vector(32,32), UIs.itemlist, function(button) 
+		if button ~= 0 then return end
+		blockPlayerShot()
+		---@type Window
+		ItemList.wind = Menu.wma.ShowWindow(ItemList.name, self.pos+Vector(0,15), sizev)
+		for i,k in pairs(ItemList.subnames) do
+			ItemList.wind:SetSubMenuVisible(k, false)
+		end
+		ItemList.GetList(ItemList.page)
+		
+		if ItemList.page > 1 then
+			local self
+			self = Menu.wma.AddButton(ItemList.name, "pre", Vector(10,130), 16, 16, UIs.PrePage16(), function(button) 
+				if button ~= 0 then return end
+				ItemList.page = ItemList.page - 1
+				ItemList.GetList(ItemList.page)
+			end)
+		end
+		if (ItemList.page) * 70 < itemsize then
+			local self
+			self = Menu.wma.AddButton(ItemList.name, "next", Vector(224,130), 16, 16, UIs.NextPage16(), function(button) 
+				if button ~= 0 then return end
+				ItemList.page = ItemList.page + 1
+				ItemList.GetList(ItemList.page)
+			end)
+		end
+	end, nil)
+
+	local self
+	self = Menu.wma.AddButton(ItemList.name, "поиск", Vector(10,12), 16, 16, UIs.poisk(), function(button) 
+		if button ~= 0 then return end
+	end)
+	--UIs.PrePage16()
+
+	--[[local self
+	self = Menu.wma.AddButton(ItemList.name, "next", Vector(224,130), 16, 16, UIs.NextPage16(), function(button) 
+		if button ~= 0 then return end
+		ItemList.page = ItemList.page + 1
+		ItemList.GetList(ItemList.page)
+	end)
+	local self
+	self = Menu.wma.AddButton(ItemList.name, "pre", Vector(10,130), 16, 16, UIs.PrePage16(), function(button) 
+		if button ~= 0 then return end
+		ItemList.page = ItemList.page - 1
+		ItemList.GetList(ItemList.page)
+	end)]]
+end
+
+
 
 
 
