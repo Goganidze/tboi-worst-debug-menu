@@ -423,10 +423,9 @@ function menuTab.ButtonSetHintText(menuName, buttonName, text, NoError)
 		error("This button does not exist",2)
 	end
 	if menuTab.MenuData[menuName].Buttons[buttonName] then
-		local BoxWidth = 150
+		local BoxWidth = 450
 		local str = {}
 		if BoxWidth ~= 0 then
-			local maxWidth = 0
 			local spaceLeft = BoxWidth
 			local words = {}
 			for word in string.gmatch(text, '([^ ]+)') do --Split string into individual words
@@ -448,15 +447,19 @@ function menuTab.ButtonSetHintText(menuName, buttonName, text, NoError)
 					text = ""
 					text = words[i].." " --text.."\n"..
 				else --Word is fine
-					maxWidth = math.max(BoxWidth-spaceLeft, maxWidth)
 					spaceLeft = spaceLeft - wordLength
 					text = text..words[i].." "
 				end
-				maxWidth = math.max(BoxWidth-spaceLeft+2, maxWidth)
+				--maxWidth = math.max(BoxWidth-spaceLeft, maxWidth)
 			end
 			str[#str+1] = text
-			str.Width = maxWidth
 		end
+		local maxlenght = 0
+		for i=1,#str do
+			local text = str[i]
+			maxlenght = math.max(font:GetStringWidthUTF8(text)*0.5, maxlenght)
+		end
+		str.Width = maxlenght
 		--for i,k in pairs(str) do
 		--	Isaac.DebugString(i .. k)
 		--end

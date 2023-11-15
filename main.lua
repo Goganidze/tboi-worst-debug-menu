@@ -1696,32 +1696,92 @@ do
 	local nilspr = Sprite()
 	local v16 = Vector(16,16+8) * .5
 	local v5 = Vector(.5,.5)
+
+	ItemList.IsGen = false
+	function ItemList.PreGenList()
+		if ItemList.IsGen and ItemList.poisk.text == "" then
+			ItemList.list = ItemList.MainList
+		end
+
+		ItemList.list = {}
+		for i=1, itemsize do
+			local id = i
+			local item = config:GetCollectible(id)
+			if item then
+				local itemname = item.Name
+				itemname = string.gsub(itemname, "_", " ")
+				itemname = string.gsub(itemname, "#", "")
+				itemname = string.gsub(itemname, "NAME", "")
+
+				local desc = item.Description
+				if ItemList.poisk.text == "" 
+				or string.find(string.lower(itemname), string.lower(ItemList.poisk.text))
+				or string.find(string.lower(desc), string.lower(ItemList.poisk.text)) then
+					ItemList.list[#ItemList.list+1] = {Name = itemname, Description = desc, id = id}
+				end
+			end
+		end
+		if not ItemList.IsGen then
+			ItemList.IsGen = true
+			ItemList.MainList = TabDeepCopy(ItemList.list)
+		end
+	end
+
+	local ItemTypeToStr = {
+		--ItemConfig.
+		{en = "PASSIVE", ru = "ПАССИВНЫЙ"},
+		{},
+		{en = "ACTIVE", ru = "АКТИВНЫЙ"},
+		{en = "FAMILIAR", ru = "СПУТНИК"},
+	}
+
 	function ItemList.GetList(num)
 		local start = (num-1) * 70 -- 21 * 4
+		--local num = 0
 		for j=0, 4 do
 			for x=1, 14 do
-				local id = start + j*14 + x
-				local item = config:GetCollectible(id)
+				local index = start + j*14 + x
+
+				local item = ItemList.list[index] --config:GetCollectible(id)
+				--local id = item.id
 				local btnstr = j..","..x
-				--print(j,x, id, item)
-				if item and id <= itemsize then
+				
+				if item  then
+					local id = item.id
+					local conf = config:GetCollectible(id)
+					local itemname = item.Name
+					--itemname = string.gsub(itemname, "_", " ")
+					--itemname = string.gsub(itemname, "#", "")
+					--itemname = string.gsub(itemname, "NAME", "")
+
+					local desc = item.Description
+
 					local spr = GenSprite("gfx/005.100_collectible.anm2","PlayerPickup")
-					spr:ReplaceSpritesheet(1, item.GfxFileName)
+					local gfx = conf.GfxFileName
+					spr:ReplaceSpritesheet(1, gfx)
 					spr:LoadGraphics()
 					spr.Offset = v16
 					spr.Scale = v5
 					local pos = gridposZero + Vector((x-1)*33, j*33) * .5
-					Menu.wma.AddButton(ItemList.name, btnstr , pos, 16, 16, UIs.EmptyBtn(), function(button)
+					local self
+					self = Menu.wma.AddButton(ItemList.name, btnstr , pos, 16, 16, UIs.EmptyBtn(), function(button)
 						if button == 0 then
-							Isaac.GetPlayer():AddCollectible(id, 20)
+							--Isaac.GetPlayer():AddCollectible(id, 20)
+							ItemList.item = {index = 0, add = true, id = id}
 						elseif button == 1 then
-							Isaac.GetPlayer():RemoveCollectible(id)
+							--Isaac.GetPlayer():RemoveCollectible(id)
+							ItemList.item = {index = 0, remove = true, id = id}
 						end
 					end,
 					function(pos)
 						--Menu.wma.RenderCustomButton(pos, Vector(self.x, self.y), self.IsSelected)
 						spr:Render(pos)
 					end)
+					local typeitem = ItemTypeToStr[conf.Type][Options.Language] or ItemTypeToStr[conf.Type].en
+					local text = "ID: " .. id .." \n " 
+					.. "TYPE: " .. typeitem .." \n " .." \n " 
+					.. itemname .." \n " .. desc
+					Menu.wma.ButtonSetHintText(ItemList.name, btnstr, text)
 				else
 					Menu.wma.RemoveButton(ItemList.name, btnstr)
 				end
@@ -1738,7 +1798,7 @@ do
 			Menu.wma.RemoveButton(ItemList.name, "pre")
 		end
 		
-		if ((ItemList.page) * 70) < itemsize then
+		if ((ItemList.page) * 70) < #ItemList.list then
 			local self
 			self = Menu.wma.AddButton(ItemList.name, "next", Vector(224,130), 16, 16, UIs.NextPage16(), function(button) 
 				if button ~= 0 then return end
@@ -1750,6 +1810,16 @@ do
 		end
 	end
 
+	Menu:AddCallback(ModCallbacks.MC_POST_UPDATE, function()
+		if ItemList.item then
+			if ItemList.item.add then
+				Isaac.GetPlayer(ItemList.item.index):AddCollectible(ItemList.item.id, 20)
+			elseif ItemList.item.remove then
+				Isaac.GetPlayer(ItemList.item.index):RemoveCollectible(ItemList.item.id)
+			end
+			ItemList.item = nil
+		end
+	end)
 
 	local self
 	self = WORSTDEBUGMENU.AddButtonOnDebugBar("Item_List_Menu", Vector(32,32), UIs.itemlist, function(button) 
@@ -1760,6 +1830,10 @@ do
 		for i,k in pairs(ItemList.subnames) do
 			ItemList.wind:SetSubMenuVisible(k, false)
 		end
+		if not ItemList.IsGen then
+			ItemList.PreGenList()
+		end
+
 		ItemList.GetList(ItemList.page)
 		
 		if ItemList.page > 1 then
@@ -1783,6 +1857,9 @@ do
 	local self
 	self = Menu.wma.AddButton(ItemList.name, "поиск", Vector(10,12), 16, 16, UIs.poisk(), function(button) 
 		if button ~= 0 then return end
+		ItemList.page = 1
+		ItemList.PreGenList()
+		ItemList.GetList(ItemList.page)
 	end)
 	--UIs.PrePage16()
 
@@ -1798,6 +1875,29 @@ do
 		ItemList.page = ItemList.page - 1
 		ItemList.GetList(ItemList.page)
 	end)]]
+
+	local self
+	self = Menu.wma.AddTextBox(ItemList.name, "poisktext", Vector(28,12), Vector(128, 16), nil, 
+	function(result) 
+		if not result then
+			return true
+		else
+			if #result < 1 or not string.find(result,"%S") then
+				--return GetStr("emptyField")
+				result = ""
+			end
+			ItemList.poisk.text = result
+			ItemList.page = 1
+			ItemList.PreGenList()
+			ItemList.GetList(ItemList.page)
+			return true
+		end
+	end, false,
+	function(pos)
+		--Menu.wma.RenderCustomTextBox(pos, Vector(self.x, self.y), self.IsSelected)
+		--font:DrawStringScaledUTF8("Y",pos.X-13,pos.Y-2,1,1,KColor(0.1,0.1,0.2,1),0,false)
+	end)
+	self.text = ""
 end
 
 
