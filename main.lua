@@ -1,23 +1,10 @@
---[[if WORSTDEBUGMENU and WORSTDEBUGMENU.wma then
-	--WORSTDEBUGMENU.wma.UIs = nil
-	if WORSTDEBUGMENU.wma.UIs then
-		for i,k in pairs(WORSTDEBUGMENU.wma.UIs) do
-			WORSTDEBUGMENU.wma.UIs[i] = nil
-		end
+local ibackthis = {}
+if WORSTDEBUGMENU then
+	if WORSTDEBUGMENU.ItemList.ModsPath then
+		ibackthis.ModsPath = WORSTDEBUGMENU.ItemList.ModsPath
+		ibackthis.CardIdToPath = WORSTDEBUGMENU.ItemList.CardIdToPath
 	end
-	if WORSTDEBUGMENU.UIs then
-		for i,k in pairs(WORSTDEBUGMENU.UIs) do
-			WORSTDEBUGMENU.UIs[i] = nil
-		end
-	end
-	if WORSTDEBUGMENU.wma.MenuData then
-		for i,k in pairs(WORSTDEBUGMENU.wma.MenuData) do
-			WORSTDEBUGMENU.wma.MenuData[i] = nil
-		end
-	end
-	WORSTDEBUGMENU = {}
-	Isaac.ExecuteCommand("clearcache")
-end]]
+end
 
 WORSTDEBUGMENU = RegisterMod("piss shit poop and menu", 1)
 
@@ -1683,72 +1670,157 @@ end
 do
 	local config = Isaac.GetItemConfig()
 	local itemsize = config:GetCollectibles().Size
+	local trinkesize = config:GetTrinkets().Size
+	local cardsize = config:GetCards().Size
 	--function UIs.Box48() return GenSprite("gfx/editor/ui copy.anm2","контейнер") end
 	function UIs.poisk() return GenSprite("gfx/editor/ui copy2.anm2","поиск") end
 	UIs.itemlist = GenSprite("gfx/editor/ui copy2.anm2","item list")
 	--WORSTDEBUGMENU.AddButtonOnDebugBar(buttonName, size, sprite, pressFunc, renderFunc)
 
-	Menu.ItemList = {name = "Item_List", subnames = {}, size = Vector(250,156), btn = {}, poisk = {text = ""}, list = {}, page = 1}
+	Menu.ItemList = {name = "Item_List", subnames = {}, size = Vector(250,156), btn = {}, poisk = {text = ""}, curtype = "col", list = {}, page = 1,
+	MainList = {}}
 	local ItemList = Menu.ItemList
 	local sizev = ItemList.size
 
 	local gridposZero = Vector(10,30)
 	local nilspr = Sprite()
 	local v16 = Vector(16,16+8) * .5
+	local v16c = Vector(16,16) * .5
 	local v5 = Vector(.5,.5)
 
-	ItemList.IsGen = false
-	function ItemList.PreGenList()
-		if ItemList.IsGen and ItemList.poisk.text == "" then
-			ItemList.list = ItemList.MainList
-		end
-
-		ItemList.list = {}
-		for i=1, itemsize do
-			local id = i
-			local item = config:GetCollectible(id)
-			if item then
-				local itemname = item.Name
-				itemname = string.gsub(itemname, "_", " ")
-				itemname = string.gsub(itemname, "#", "")
-				itemname = string.gsub(itemname, "NAME", "")
-
-				local desc = item.Description
-				if ItemList.poisk.text == "" 
-				or string.find(string.lower(itemname), string.lower(ItemList.poisk.text))
-				or string.find(string.lower(desc), string.lower(ItemList.poisk.text)) then
-					ItemList.list[#ItemList.list+1] = {Name = itemname, Description = desc, id = id}
-				end
-			end
-		end
-		if not ItemList.IsGen then
-			ItemList.IsGen = true
-			ItemList.MainList = TabDeepCopy(ItemList.list)
-		end
+	---@return "col" | "trin" | "card"
+	local function IsType()
+		return ItemList.curtype
 	end
 
 	local ItemTypeToStr = {
 		--ItemConfig.
 		{en = "PASSIVE", ru = "ПАССИВНЫЙ"},
-		{},
+		{en = "TRINKET", ru = "БРЕЛОК"},
 		{en = "ACTIVE", ru = "АКТИВНЫЙ"},
 		{en = "FAMILIAR", ru = "СПУТНИК"},
 	}
 
-	function ItemList.GetList(num)
+	ItemList.IsGen = false
+	function ItemList.PreGenList()
+		if ItemList.MainList[IsType()] and ItemList.poisk.text == "" then
+			ItemList.list[IsType()] = ItemList.MainList[IsType()]
+		end
+		
+		ItemList.list[IsType()] = {}
+		local list = ItemList.list[IsType()]
+		if IsType() == "col" then
+			for i=1, itemsize do
+				local id = i
+				local item = config:GetCollectible(id)
+				if item then
+					local itemname = item.Name
+					itemname = string.gsub(itemname, "_", " ")
+					itemname = string.gsub(itemname, "#", "")
+					itemname = string.gsub(itemname, "NAME", "")
+
+					local desc = item.Description
+					if ItemList.poisk.text == "" 
+					or string.find(string.lower(itemname), string.lower(ItemList.poisk.text))
+					or string.find(string.lower(desc), string.lower(ItemList.poisk.text)) then
+						local conf = config:GetCollectible(id)
+						local hint = "ID: " .. id .." \n " 
+						.. "TYPE: " .. (ItemTypeToStr[conf.Type][Options.Language] or ItemTypeToStr[conf.Type].en) .." \n " .." \n " 
+						.. itemname .." \n " .. desc
+						list[#list+1] = {Name = itemname, Description = desc, id = id, hint = hint}
+					end
+				end
+			end
+		elseif IsType() == "trin" then
+			for i=1, trinkesize-1 do
+				local id = i
+				local item = config:GetTrinket(id)
+				if item then
+					local itemname = item.Name
+					itemname = string.gsub(itemname, "_", " ")
+					itemname = string.gsub(itemname, "#", "")
+					itemname = string.gsub(itemname, "NAME", "")
+
+					local desc = item.Description
+					if ItemList.poisk.text == "" 
+					or string.find(string.lower(itemname), string.lower(ItemList.poisk.text))
+					or string.find(string.lower(desc), string.lower(ItemList.poisk.text)) then
+						local conf = config:GetTrinket(id)
+						local hint = "ID: " .. id .." \n " 
+						.. "TYPE: " .. (ItemTypeToStr[conf.Type][Options.Language] or ItemTypeToStr[conf.Type].en) .." \n " .." \n " 
+						.. itemname .." \n " .. desc
+						list[#list+1] = {Name = itemname, Description = desc, id = id, hint = hint}
+					end
+				end
+			end
+		elseif IsType() == "card" then
+			for i=1, cardsize-1 do
+				local id = i
+				local item = config:GetCard(id)
+				if item then
+					local itemname = item.Name
+					itemname = string.gsub(itemname, "_", " ")
+					itemname = string.gsub(itemname, "#", "")
+					itemname = string.gsub(itemname, "NAME", "")
+
+					local desc = item.Description
+					if ItemList.poisk.text == "" 
+					or string.find(string.lower(itemname), string.lower(ItemList.poisk.text))
+					or string.find(string.lower(desc), string.lower(ItemList.poisk.text)) then
+						local conf = config:GetCard(id)
+						local hint = "ID: " .. id .." \n " 
+						--.. "TYPE: " .. (ItemTypeToStr[conf.CardType][Options.Language] or ItemTypeToStr[conf.CardType].en) .." \n " .." \n " 
+						.. itemname .." \n " .. desc
+						list[#list+1] = {Name = itemname, Description = desc, id = id, hint = hint}
+					end
+				end
+			end
+		end
+		if not ItemList.MainList[IsType()] then
+			--ItemList.IsGen = true
+			ItemList.MainList[IsType()] = TabDeepCopy(ItemList.list[IsType()])
+		end
+	end
+
+	function ItemList.tryMakeCardSprite(id, name)
+		if ItemList.CardIdToPath[id] then
+			local path = "mods/" .. ItemList.CardIdToPath[id] .. "/content/gfx/ui_cardfronts.anm2"
+			return GenSprite(path, name)
+		elseif ItemList.ModsPath then
+			for i=1, #ItemList.ModsPath do
+				local path = "mods/" .. ItemList.ModsPath[i] .. "/content/gfx/ui_cardfronts.anm2"
+				local spr = GenSprite(path, name)
+				if spr:GetAnimation() == name then
+					return spr
+				end
+			end
+		end
+	end
+	
+
+	function ItemList.GetCollectibleList(num)
 		local start = (num-1) * 70 -- 21 * 4
 		--local num = 0
+		local typ = IsType()
 		for j=0, 4 do
 			for x=1, 14 do
 				local index = start + j*14 + x
 
-				local item = ItemList.list[index] --config:GetCollectible(id)
+				local item = ItemList.list[typ][index] --config:GetCollectible(id)
 				--local id = item.id
 				local btnstr = j..","..x
 				
 				if item  then
 					local id = item.id
-					local conf = config:GetCollectible(id)
+					
+					local conf --= config:GetCollectible(id)
+					if typ == "col" then
+						conf = config:GetCollectible(id)
+					elseif typ == "trin" then
+						conf = config:GetTrinket(id)
+					elseif typ == "card" then
+						conf = config:GetCard(id)
+					end
 					local itemname = item.Name
 					--itemname = string.gsub(itemname, "_", " ")
 					--itemname = string.gsub(itemname, "#", "")
@@ -1756,31 +1828,55 @@ do
 
 					local desc = item.Description
 
-					local spr = GenSprite("gfx/005.100_collectible.anm2","PlayerPickup")
-					local gfx = conf.GfxFileName
-					spr:ReplaceSpritesheet(1, gfx)
-					spr:LoadGraphics()
-					spr.Offset = v16
-					spr.Scale = v5
+					local spr --= GenSprite("gfx/005.100_collectible.anm2","PlayerPickup")
+					if typ == "col" then
+						spr = GenSprite("gfx/005.100_collectible.anm2","PlayerPickup")
+						local gfx = conf.GfxFileName
+						spr:ReplaceSpritesheet(1, gfx)
+						spr:LoadGraphics()
+						spr.Offset = v16
+						spr.Scale = v5
+					elseif typ == "trin" then
+						spr = GenSprite("gfx/005.350_trinket.anm2","Idle")
+						local gfx = conf.GfxFileName
+						spr:ReplaceSpritesheet(0, gfx)
+						spr:LoadGraphics()
+						spr.Offset = v16
+						spr.Scale = v5
+					elseif typ == "card" then
+						if id < 98 then
+							spr = GenSprite("gfx/editor/cards.anm2", "апчхи", id-1)
+							spr.Scale = v5
+						else
+							spr = ItemList.tryMakeCardSprite(id, conf.HudAnim)
+							spr.Scale = v5
+							spr.Offset = v16c
+						end
+					end
 					local pos = gridposZero + Vector((x-1)*33, j*33) * .5
 					local self
 					self = Menu.wma.AddButton(ItemList.name, btnstr , pos, 16, 16, UIs.EmptyBtn(), function(button)
 						if button == 0 then
 							--Isaac.GetPlayer():AddCollectible(id, 20)
-							ItemList.item = {index = 0, add = true, id = id}
+							ItemList.item = {type = typ, index = 0, add = true, id = id}
 						elseif button == 1 then
 							--Isaac.GetPlayer():RemoveCollectible(id)
-							ItemList.item = {index = 0, remove = true, id = id}
+							ItemList.item = {type = typ, index = 0, remove = true, id = id}
 						end
 					end,
 					function(pos)
 						--Menu.wma.RenderCustomButton(pos, Vector(self.x, self.y), self.IsSelected)
 						spr:Render(pos)
 					end)
-					local typeitem = ItemTypeToStr[conf.Type][Options.Language] or ItemTypeToStr[conf.Type].en
-					local text = "ID: " .. id .." \n " 
-					.. "TYPE: " .. typeitem .." \n " .." \n " 
-					.. itemname .." \n " .. desc
+					local text = item.hint
+					--[[if typ == "col" or typ == "trin" then
+						local typeitem = ItemTypeToStr[conf.Type][Options.Language] or ItemTypeToStr[conf.Type].en
+						text = "ID: " .. id .." \n " 
+						.. "TYPE: " .. typeitem .." \n " .." \n " 
+						.. itemname .." \n " .. desc
+					elseif typ == "trin" then
+
+					end]]
 					Menu.wma.ButtonSetHintText(ItemList.name, btnstr, text)
 				else
 					Menu.wma.RemoveButton(ItemList.name, btnstr)
@@ -1792,18 +1888,18 @@ do
 			self = Menu.wma.AddButton(ItemList.name, "pre", Vector(10,130), 16, 16, UIs.PrePage16(), function(button) 
 				if button ~= 0 then return end
 				ItemList.page = ItemList.page - 1
-				ItemList.GetList(ItemList.page)
+				ItemList.GetCollectibleList(ItemList.page)
 			end)
 		else
 			Menu.wma.RemoveButton(ItemList.name, "pre")
 		end
 		
-		if ((ItemList.page) * 70) < #ItemList.list then
+		if ((ItemList.page) * 70) < #ItemList.list[typ] then
 			local self
 			self = Menu.wma.AddButton(ItemList.name, "next", Vector(224,130), 16, 16, UIs.NextPage16(), function(button) 
 				if button ~= 0 then return end
 				ItemList.page = ItemList.page + 1
-				ItemList.GetList(ItemList.page)
+				ItemList.GetCollectibleList(ItemList.page)
 			end)
 		else
 			Menu.wma.RemoveButton(ItemList.name, "next")
@@ -1812,10 +1908,23 @@ do
 
 	Menu:AddCallback(ModCallbacks.MC_POST_UPDATE, function()
 		if ItemList.item then
-			if ItemList.item.add then
-				Isaac.GetPlayer(ItemList.item.index):AddCollectible(ItemList.item.id, 20)
-			elseif ItemList.item.remove then
-				Isaac.GetPlayer(ItemList.item.index):RemoveCollectible(ItemList.item.id)
+			if ItemList.item.type == "col" then
+				if ItemList.item.add then
+					Isaac.GetPlayer(ItemList.item.index):AddCollectible(ItemList.item.id, 20)
+				elseif ItemList.item.remove then
+					Isaac.GetPlayer(ItemList.item.index):RemoveCollectible(ItemList.item.id)
+				end
+			elseif ItemList.item.type == "trin" then
+				if ItemList.item.add then
+					Isaac.GetPlayer(ItemList.item.index):AddTrinket(ItemList.item.id)
+				elseif ItemList.item.remove then
+					Isaac.GetPlayer(ItemList.item.index):TryRemoveTrinket(ItemList.item.id)
+				end
+			elseif ItemList.item.type == "card" then
+				if ItemList.item.add then
+					Isaac.GetPlayer(ItemList.item.index):AddCard(ItemList.item.id)
+				elseif ItemList.item.remove then
+				end
 			end
 			ItemList.item = nil
 		end
@@ -1834,14 +1943,14 @@ do
 			ItemList.PreGenList()
 		end
 
-		ItemList.GetList(ItemList.page)
+		ItemList.GetCollectibleList(ItemList.page)
 		
 		if ItemList.page > 1 then
 			local self
 			self = Menu.wma.AddButton(ItemList.name, "pre", Vector(10,130), 16, 16, UIs.PrePage16(), function(button) 
 				if button ~= 0 then return end
 				ItemList.page = ItemList.page - 1
-				ItemList.GetList(ItemList.page)
+				ItemList.GetCollectibleList(ItemList.page)
 			end)
 		end
 		if (ItemList.page) * 70 < itemsize then
@@ -1849,7 +1958,7 @@ do
 			self = Menu.wma.AddButton(ItemList.name, "next", Vector(224,130), 16, 16, UIs.NextPage16(), function(button) 
 				if button ~= 0 then return end
 				ItemList.page = ItemList.page + 1
-				ItemList.GetList(ItemList.page)
+				ItemList.GetCollectibleList(ItemList.page)
 			end)
 		end
 	end, nil)
@@ -1859,7 +1968,35 @@ do
 		if button ~= 0 then return end
 		ItemList.page = 1
 		ItemList.PreGenList()
-		ItemList.GetList(ItemList.page)
+		ItemList.GetCollectibleList(ItemList.page)
+	end)
+
+	UIs.ItemList_col = GenSprite("gfx/editor/ui copy2.anm2","itemlist_collectible")
+	local self
+	self = Menu.wma.AddButton(ItemList.name, "collectible", Vector(158,12), 16, 16, UIs.ItemList_col, function(button) 
+		if button ~= 0 then return end
+		ItemList.page = 1
+		ItemList.curtype = "col"
+		ItemList.PreGenList()
+		ItemList.GetCollectibleList(ItemList.page)
+	end)
+	UIs.ItemList_trink = GenSprite("gfx/editor/ui copy2.anm2","itemlist_trinket")
+	local self
+	self = Menu.wma.AddButton(ItemList.name, "trinket", Vector(176,12), 16, 16, UIs.ItemList_trink, function(button) 
+		if button ~= 0 then return end
+		ItemList.page = 1
+		ItemList.curtype = "trin"
+		ItemList.PreGenList()
+		ItemList.GetCollectibleList(ItemList.page)
+	end)
+	UIs.ItemList_card = GenSprite("gfx/editor/ui copy2.anm2","itemlist_card")
+	local self
+	self = Menu.wma.AddButton(ItemList.name, "card", Vector(194,12), 16, 16, UIs.ItemList_card, function(button) 
+		if button ~= 0 then return end
+		ItemList.page = 1
+		ItemList.curtype = "card"
+		ItemList.PreGenList()
+		ItemList.GetCollectibleList(ItemList.page)
 	end)
 	--UIs.PrePage16()
 
@@ -1889,7 +2026,7 @@ do
 			ItemList.poisk.text = result
 			ItemList.page = 1
 			ItemList.PreGenList()
-			ItemList.GetList(ItemList.page)
+			ItemList.GetCollectibleList(ItemList.page)
 			return true
 		end
 	end, false,
@@ -1898,6 +2035,54 @@ do
 		--font:DrawStringScaledUTF8("Y",pos.X-13,pos.Y-2,1,1,KColor(0.1,0.1,0.2,1),0,false)
 	end)
 	self.text = ""
+
+	--Это может сломать запуск?
+	function ItemList.TryGenCardpathList()
+		local calls = Isaac.GetCallbacks(ModCallbacks.MC_USE_CARD)
+		ItemList.CardIdToPath = {}
+		ItemList.ModsPath = {}
+		local mods = {}
+		
+		for i=1, #calls do
+			local cal = calls[i]
+			mods[cal.Mod] = mods[cal.Mod] or {path = -1, ids = {}}
+
+			if mods[cal.Mod].path == -1 then
+				local ok, gg = pcall(cal.Function)
+				if gg then
+					local fz,fx = string.find(gg,"mods/%S+/")
+					if fz and fx then
+						local path = string.sub(gg,fz+5,fx-1)
+						if path then
+							mods[cal.Mod].path = path
+							ItemList.ModsPath[#ItemList.ModsPath+1] = path
+						end
+					end
+				end
+			end
+			
+			if cal.Param then
+				mods[cal.Mod].ids[cal.Param] = true
+			--	ItemList.CardIdToPath[cal.Param] = mods[cal.Mod].path
+			end
+		end
+		for i,k in pairs(mods) do
+			if k.path ~= -1 then
+				for id in pairs(k.ids) do
+					ItemList.CardIdToPath[id] = k.path
+				end
+			end
+		end
+	end
+	if not Isaac.GetPlayer() then
+		ItemList.TryGenCardpathList()
+	elseif ibackthis.ModsPath then
+		ItemList.ModsPath = ibackthis.ModsPath
+		ItemList.CardIdToPath = ibackthis.CardIdToPath
+	end
+
+
+
 end
 
 
