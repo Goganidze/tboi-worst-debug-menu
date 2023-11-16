@@ -1685,7 +1685,7 @@ do
 	local gridposZero = Vector(10,30)
 	local nilspr = Sprite()
 	local v16 = Vector(16,16+8) * .5
-	local v16c = Vector(16,16) * .5
+	local v16c = Vector(16,17) * .5
 	local v5 = Vector(.5,.5)
 
 	---@return "col" | "trin" | "card"
@@ -1795,6 +1795,7 @@ do
 				end
 			end
 		end
+		return nilspr
 	end
 	
 
