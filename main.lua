@@ -1,3 +1,114 @@
+local TryGetPathForCard = true  --set false to disable unpredictable code
+
+
+--[[
+
+
+AddButton: Adds a button to the menu.
+		menuName: Any type. The name of the menu.
+		buttonName: Any type. The name of the button.
+		pos: Vector. The position of the button.
+		sizeX: Number. The size of the button in the x-axis.
+		sizeY: Number. The size of the button in the y-axis.
+		sprite: Sprite. The sprite of the button.
+		pressFunc: Function. The function to be executed when the button is pressed. This function takes an integer argument representing the button.
+		renderFunc: Function. The function to render the button. This function takes a Vector argument representing the position.
+		notpressed: Boolean. Indicates whether the button is not pressed.
+		priority: Integer. The priority of the button.
+		Returns: EditorButton. The button added to the menu.
+
+AddTextBox: Adds a text box to the menu.
+		menuName: Any type. The name of the menu.
+		buttonName: Any type. The name of the button.
+		pos: Vector. The position of the text box.
+		size: Vector. The size of the text box.
+		sprite: Sprite. The sprite of the text box.
+		resultCheckFunc: Function. The function to check the result. This function takes a string argument representing the result.
+		onlyNumber: Boolean. Indicates whether only numbers are allowed.
+		renderFunc: Function. The function to render the text box. This function takes a Vector argument representing the position.
+		priority: Integer. The priority of the text box.
+		Returns: EditorButton. The text box added to the menu.
+		
+AddGragZone: Adds a drag zone to the menu.
+		menuName: Any type. The name of the menu.
+		buttonName: Any type. The name of the button.
+		pos: Vector. The position of the drag zone.
+		size: Vector. The size of the drag zone.
+		sprite: Sprite. The sprite of the drag zone.
+		DragFunc: Function. The function to drag the zone. This function takes a button, value, and old value as arguments.
+		renderFunc: Function. The function to render the drag zone. This function takes a Vector argument representing the position.
+		priority: Integer. The priority of the drag zone.
+		Returns: EditorButton. The drag zone added to the menu.
+
+AddGragFloat: Adds a float to the menu.
+menuName: Any type. The name of the menu.
+buttonName: Any type. The name of the button.
+pos: Vector. The position of the float.
+size: Vector. The size of the float.
+sprite: Sprite. The sprite of the float.
+dragSpr: Sprite. The sprite of the drag.
+DragFunc: Function. The function to drag the float. This function takes a button, value, and old value as arguments.
+renderFunc: Function. The function to render the float. This function takes a Vector argument representing the position.
+startValue: Any type. The start value of the float.
+priority: Integer. The priority of the float.
+Returns: EditorButton. The float added to the menu.
+GetButton: Gets a button from the menu.
+menuName: Any type. The name of the menu.
+buttonName: Any type. The name of the button.
+noError: Boolean. Indicates whether to throw an error if the button is not found.
+Returns: EditorButton. The button from the menu.
+ButtonSetHintText: Sets the hint text for a button.
+menuName: Any type. The name of the menu.
+buttonName: Any type. The name of the button.
+text: String. The hint text.
+NoError: Boolean. Indicates whether to throw an error if the button is not found.
+RemoveButton: Removes a button from the menu.
+menuName: Any type. The name of the menu.
+buttonName: Any type. The name of the button.
+NoError: Boolean. Indicates whether to throw an error if the button is not found.
+FastCreatelist: Fast creates a list.
+Menuname: Any type. The name of the menu.
+Pos: Vector. The position of the list.
+XSize: Number. The size of the list in the x-axis.
+params: Any type. The parameters for the list.
+pressFunc: Function. The function to be executed when the list is pressed.
+up: Boolean. Indicates whether the list is up.
+ShowWindow: Shows a window.
+menuName: Any type. The name of the menu.
+pos: Vector. The position of the window.
+size: Vector. The size of the window.
+color: Any type. The color of the window.
+CloseWindow: Closes a window.
+MenuName: Any type. The name of the menu.
+SetWindowSize: Sets the size of a window.
+wind: Window. The window to be resized.
+size: Vector. The new size of the window.
+RenderCustomTextBox: Renders a custom text box.
+pos: Vector. The position of the text box.
+size: Vector. The size of the text box.
+isSel: Boolean. Indicates whether the text box is selected.
+RenderCustomButton: Renders a custom button.
+pos: Vector. The position of the button.
+size: Vector. The size of the button.
+isSel: Boolean. Indicates whether the button is selected.
+RenderButtonHintText: Renders the hint text for a button.
+SelectedMenu: Any type. Represents the currently selected menu.
+IsStickyMenu: Boolean. Indicates whether the menu
+
+
+
+
+
+
+
+
+
+
+]]
+
+
+
+
 local ibackthis = {}
 if WORSTDEBUGMENU then
 	if WORSTDEBUGMENU.ItemList.ModsPath then
@@ -14,9 +125,10 @@ font:Load("font/upheaval.fnt")
 local TextBoxFont = Font()
 TextBoxFont:Load("font/pftempestasevencondensed.fnt")
 
+---@type wga_menu
 WORSTDEBUGMENU.wma = include("worst gui api")
----@type menuTab
-WORSTDEBUGMENU.wma = WORSTDEBUGMENU.wma(WORSTDEBUGMENU)
+---@type wga_menu
+--WORSTDEBUGMENU.wma = WORSTDEBUGMENU.wma(WORSTDEBUGMENU)
 
 local Menu = WORSTDEBUGMENU
 
@@ -111,6 +223,11 @@ Menu.strings = {
 	["animation"] = {en = "animation", ru = "анимация"},
 	["color"] = {en = "color", ru = "цвет"},
 	["file"] = {en = "file", ru = "файл"},
+
+	["playerindex"] = {en = "player", ru = "игрок"},
+
+	["debug_cmd_hint"] = {en = "",
+		ru = "Открывает окно быстрого доступа \n к консольной команде \"debug\" "}
 }
 
 local function GetStr(str)
@@ -278,6 +395,7 @@ do
 	self.posfunc = function()
 		self.pos = Vector(52, 5+WORSTDEBUGMENU.MainOffset)
 	end
+	Menu.wma.ButtonSetHintText("__debug_menu", "debugcmd_Menu", GetStr("debug_cmd_hint"))
 
 	--[[local self
 	self = WORSTDEBUGMENU.wma.AddButton("_debugcmd", "plashka", Vector(0,0), sizev.X, sizev.Y, Sprite() , function(button) 
@@ -387,11 +505,12 @@ do
 				--DrawStringScaledBreakline(font, Isaac_Tower.editor.MouseHintText, pos.X, pos.Y, 0.5, 0.5, KColor(0.1,0.1,0.2,1), 60, "Left")
 				Menu.wma.RenderButtonHintText(Menu.wma.MouseHintText, pos+Vector(8,8))
 			end
+
+			Menu.wma.LastOrderRender()
 		end
 
 		--local spr = GenSprite("gfx/editor/aaaatest.anm2", "1")
 		--spr:Render(Vector(200,200))
-
 
 	end
 
@@ -400,7 +519,7 @@ do
 end
 
 do
-	WORSTDEBUGMENU.StageSel = {name = "Stages_Selector", size = Vector(126,190), pos = Vector(87,35), btn = {}}
+	WORSTDEBUGMENU.StageSel = {name = "Stages_Selector", size = Vector(126,219), pos = Vector(87,35), btn = {}}
 	local StageSel = WORSTDEBUGMENU.StageSel
 	local sizev = StageSel.size
 
@@ -557,7 +676,9 @@ do
 					pos.Y = pos.Y + math.ceil(math.min(9,i)/2)*3
 
 					local spr = GenSprite2("stageapi/transition/progress.anm2", "Levels")
-					spr:ReplaceSpritesheet(2, stage.TransitionIcon)
+					if stage.TransitionIcon then
+						spr:ReplaceSpritesheet(2, stage.TransitionIcon or "")
+					end
 					spr:SetLayerFrame(2,1)
 					spr:LoadGraphics()
 
@@ -590,6 +711,8 @@ do
 			if button ~= 0 then return end
 			blockPlayerShot()
 			Menu.StageSel.DefaultSpawnButton()
+			local size = (#StageSel.btn*18 -30) + math.ceil(math.min(9,#StageSel.btn)/2)*3
+			StageSel.wind:SetSize(Vector(StageSel.wind.size.X, size))
 		end, function(pos)
 			Menu.wma.RenderCustomTextBox(pos, Vector(self.x, self.y), self.IsSelected)
 			font:DrawStringScaledUTF8(GetStr("default"),pos.X+2,pos.Y,0.5,0.5,KColor(0.1,0.1,0.2,1),0,false)
@@ -601,6 +724,9 @@ do
 			if button ~= 0 then return end
 			blockPlayerShot()
 			Menu.StageSel.StageAPISpawnButton()
+			local ypos = StageSel.StageAPI*18 + 24
+			local size = ypos + math.ceil(math.min(9,StageSel.StageAPI)/2)*3
+			StageSel.wind:SetSize(Vector(StageSel.wind.size.X, size))
 		end, function(pos)
 			Menu.wma.RenderCustomTextBox(pos, Vector(self.x, self.y), self.IsSelected)
 			font:DrawStringScaledUTF8("StageAPI",pos.X+2,pos.Y,0.5,0.5,KColor(0.1,0.1,0.2,1),0,false)
@@ -610,9 +736,9 @@ do
 
 	function Menu:StageSelectorPreRender(pos)
 		if not StageSel.StageAPI  then
-			local ypos = #StageSel.btn*18 -30
-			local size = ypos + math.ceil(math.min(9,#StageSel.btn)/2)*3
-			StageSel.wind.size.Y = size
+			--local ypos = #StageSel.btn*18 -30
+			--local size = ypos + math.ceil(math.min(9,#StageSel.btn)/2)*3
+			--StageSel.wind.size.Y = size
 
 			UIs.HintTextBG2.Color = Color(.5,.5,.5)
 			UIs.HintTextBG2.Scale = Vector(55, 1)
@@ -1565,6 +1691,7 @@ do
 		self.dragCurPos.X = ((AnimTest.anim.spr:GetFrame()/AnimTest.anim.lastFrame)) * self.x
 	end, 0)
 	vG.Y = vG.Y+8 + self.y
+	
 	local self
 	self = Menu.wma.AddGragFloat(AnimTest.subnames.anim, "overlayframe", Vector(20,vG.Y), Vector(160,10), nil, nil, 
 	function(button, value, oldvalue)
@@ -1584,9 +1711,6 @@ do
 	end, 0)
 	vG.Y = vG.Y+2 + self.y
 
-	--UIs.CounterUpSmol() return GenSprite("gfx/editor/ui copy.anm2","поднять_smol") end
-	--function UIs.CounterDownSmol(
-
 	local self
 	self = Menu.wma.AddTextBox(AnimTest.subnames.anim, "scale", Vector(60,vG.Y+4), Vector(32, 16), nil, 
 	function(result) 
@@ -1602,7 +1726,6 @@ do
 		end
 	end, true,
 	function(pos)
-		--Menu.wma.RenderCustomTextBox(pos, Vector(self.x, self.y), self.IsSelected)
 		font:DrawStringScaledUTF8(GetStr("scale"),pos.X-52,pos.Y+3,0.5,0.5,KColor(0.1,0.1,0.2,1),0,false)
 		font:DrawStringScaledUTF8("X",pos.X-13,pos.Y-2,1,1,KColor(0.1,0.1,0.2,1),0,false)
 		self.text = string.format("%.2f", AnimTest.anim.spr.Scale.X)
@@ -1678,7 +1801,7 @@ do
 	--WORSTDEBUGMENU.AddButtonOnDebugBar(buttonName, size, sprite, pressFunc, renderFunc)
 
 	Menu.ItemList = {name = "Item_List", subnames = {}, size = Vector(250,156), btn = {}, poisk = {text = ""}, curtype = "col", list = {}, page = 1,
-	MainList = {}}
+	MainList = {}, playerindex = 0, activeslot = 0}
 	local ItemList = Menu.ItemList
 	local sizev = ItemList.size
 
@@ -1768,8 +1891,7 @@ do
 					or string.find(string.lower(itemname), string.lower(ItemList.poisk.text))
 					or string.find(string.lower(desc), string.lower(ItemList.poisk.text)) then
 						local conf = config:GetCard(id)
-						local hint = "ID: " .. id .." \n " 
-						--.. "TYPE: " .. (ItemTypeToStr[conf.CardType][Options.Language] or ItemTypeToStr[conf.CardType].en) .." \n " .." \n " 
+						local hint = "ID: " .. id .." \n " .." \n "
 						.. itemname .." \n " .. desc
 						list[#list+1] = {Name = itemname, Description = desc, id = id, hint = hint}
 					end
@@ -1859,10 +1981,10 @@ do
 					self = Menu.wma.AddButton(ItemList.name, btnstr , pos, 16, 16, UIs.EmptyBtn(), function(button)
 						if button == 0 then
 							--Isaac.GetPlayer():AddCollectible(id, 20)
-							ItemList.item = {type = typ, index = 0, add = true, id = id}
+							ItemList.item = {type = typ, index = ItemList.playerindex, add = true, id = id}
 						elseif button == 1 then
 							--Isaac.GetPlayer():RemoveCollectible(id)
-							ItemList.item = {type = typ, index = 0, remove = true, id = id}
+							ItemList.item = {type = typ, index = ItemList.playerindex, remove = true, id = id}
 						end
 					end,
 					function(pos)
@@ -1911,9 +2033,13 @@ do
 		if ItemList.item then
 			if ItemList.item.type == "col" then
 				if ItemList.item.add then
-					Isaac.GetPlayer(ItemList.item.index):AddCollectible(ItemList.item.id, 20)
+					if ItemList.activeslot > 1 then
+						Isaac.GetPlayer(ItemList.item.index):SetPocketActiveItem(ItemList.item.id, ItemList.activeslot)
+					else
+						Isaac.GetPlayer(ItemList.item.index):AddCollectible(ItemList.item.id, -1, nil, ItemList.activeslot)
+					end
 				elseif ItemList.item.remove then
-					Isaac.GetPlayer(ItemList.item.index):RemoveCollectible(ItemList.item.id)
+					Isaac.GetPlayer(ItemList.item.index):RemoveCollectible(ItemList.item.id, nil, ItemList.activeslot)
 				end
 			elseif ItemList.item.type == "trin" then
 				if ItemList.item.add then
@@ -1999,20 +2125,28 @@ do
 		ItemList.PreGenList()
 		ItemList.GetCollectibleList(ItemList.page)
 	end)
-	--UIs.PrePage16()
 
-	--[[local self
-	self = Menu.wma.AddButton(ItemList.name, "next", Vector(224,130), 16, 16, UIs.NextPage16(), function(button) 
-		if button ~= 0 then return end
-		ItemList.page = ItemList.page + 1
-		ItemList.GetList(ItemList.page)
-	end)
 	local self
-	self = Menu.wma.AddButton(ItemList.name, "pre", Vector(10,130), 16, 16, UIs.PrePage16(), function(button) 
+	self = Menu.wma.AddButton(ItemList.name, "playerindex", Vector(28+34,130), 52, 16, nil, function(button) 
 		if button ~= 0 then return end
-		ItemList.page = ItemList.page - 1
-		ItemList.GetList(ItemList.page)
-	end)]]
+		ItemList.playerindex = (ItemList.playerindex + 1) % (game:GetNumPlayers())
+	end,
+	function(pos)
+		Menu.wma.RenderCustomButton(pos, Vector(self.x, self.y), self.IsSelected)
+		font:DrawStringScaledUTF8(GetStr("playerindex") .. " " .. ItemList.playerindex, pos.X+2,pos.Y+2,.5,.5,KColor(0.1,0.1,0.2,1),0,false)
+	end)
+
+	UIs.ActiveSlot = GenSprite("gfx/editor/ui copy2.anm2","slots")
+	UIs.ActiveSlotOverlay = GenSprite("gfx/editor/ui copy2.anm2","slots_ov")
+	local self
+	self = Menu.wma.AddButton(ItemList.name, "activeslot", Vector(116,130), 16, 16, UIs.ActiveSlot, function(button) 
+		if button ~= 0 then return end
+		ItemList.activeslot = (ItemList.activeslot + 1) % 4
+	end,
+	function(pos)
+		UIs.ActiveSlotOverlay:SetFrame(ItemList.activeslot)
+		UIs.ActiveSlotOverlay:Render(pos)
+	end)
 
 	local self
 	self = Menu.wma.AddTextBox(ItemList.name, "poisktext", Vector(28,12), Vector(128, 16), nil, 
@@ -2051,9 +2185,10 @@ do
 			if mods[cal.Mod].path == -1 then
 				local ok, gg = pcall(cal.Function)
 				if gg then
-					local fz,fx = string.find(gg,"mods/%S+/")
+					local fz,fx = string.find(gg,"mods/%S-/")
 					if fz and fx then
 						local path = string.sub(gg,fz+5,fx-1)
+						print("found path: ", path)
 						if path then
 							mods[cal.Mod].path = path
 							ItemList.ModsPath[#ItemList.ModsPath+1] = path
@@ -2061,7 +2196,7 @@ do
 					end
 				end
 			end
-			
+
 			if cal.Param then
 				mods[cal.Mod].ids[cal.Param] = true
 			--	ItemList.CardIdToPath[cal.Param] = mods[cal.Mod].path
@@ -2074,8 +2209,15 @@ do
 				end
 			end
 		end
+		local sfx = SFXManager()
+		local mun = -1
+		::loop::
+		mun = mun + 1
+		if not pcall(function() sfx:Stop(mun) end) and mun < 1300 then
+			goto loop
+		end
 	end
-	if not Isaac.GetPlayer() then
+	if not Isaac.GetPlayer() and TryGetPathForCard then
 		ItemList.TryGenCardpathList()
 	elseif ibackthis.ModsPath then
 		ItemList.ModsPath = ibackthis.ModsPath

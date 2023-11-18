@@ -1,7 +1,7 @@
----@class menuTab
+--[[--@class menuTab
 ---@field IsMouseBtnTriggered fun(button)
----@field AddButton fun(menuName, buttonName, pos, sizeX, sizeY, sprite, pressFunc, renderFunc, notpressed, priority):EditorButton
----@field AddTextBox fun(menuName, buttonName, pos, size, sprite, resultCheckFunc, onlyNumber, renderFunc, priority):EditorButton
+---@field AddButton fun(menuName:any, buttonName:any, pos:Vector, sizeX:number, sizeY:number, sprite:Sprite?, pressFunc:fun(button:integer), renderFunc:fun(pos:Vector), notpressed:boolean?, priority:integer?):EditorButton
+---@field AddTextBox fun(menuName:any, buttonName:any, pos:Vector, size:Vector, sprite:Sprite?, resultCheckFunc, onlyNumber, renderFunc, priority):EditorButton
 ---@field AddGragZone fun(menuName, buttonName, pos, size, sprite, DragFunc, renderFunc, priority):EditorButton
 ---@field AddGragFloat fun(menuName, buttonName, pos, size, sprite, dragSpr, DragFunc, renderFunc, startValue, priority):EditorButton
 ---@field GetButton fun(menuName, buttonName, noError):EditorButton
@@ -23,10 +23,27 @@
 ---@field Callbacks table
 ---@field OnFreePos boolean
 ---@field ScrollOffset Vector
+---@field LastOrderRender function
+---@field DetectSelectedButtonActuale function
+]]
 
-return function(mod)
-
-local menuTab = {}
+--return function(mod)
+---@class wga_menu
+---@field AddCallback function
+---@field RemoveCallback function
+---@field RenderButtonHintText function
+---@field SelectedMenu any
+---@field IsStickyMenu boolean
+---@field MouseHintText string
+---@field MousePos Vector
+---@field HandleWindowControl function
+---@field RenderWindows function
+---@field Callbacks table
+---@field OnFreePos boolean
+---@field ScrollOffset Vector
+---@field LastOrderRender function
+---@field DetectSelectedButtonActuale function
+local menuTab = RegisterMod("worst gui api: worst debug menu", 1)
 menuTab.Callbacks = {}
 local Callbacks = {
 	WINDOW_PRE_RENDER = {},
@@ -246,7 +263,6 @@ UIs.SpcEDIT_menu_Cen = GenSprite("gfx/editor/ui copy.anm2","всплывашка
 UIs.SpcEDIT_menu_Down = GenSprite("gfx/editor/ui copy.anm2","всплывашка_ручная",2)
 UIs.Flag = GenSprite("gfx/editor/ui copy.anm2","флажок")
 UIs.Hint_MouseMoving = GenSprite("gfx/editor/ui copy.anm2","hint_mouse_move")
-UIs.Hint_MouseMoving_Vert = GenSprite("gfx/editor/ui copy.anm2","hint_mouse_move",1)
 UIs.Hint_tileEdit = GenSprite("gfx/editor/ui copy.anm2","hint_tile_edit")
 UIs.RG_icon = GenSprite("gfx/editor/ui copy.anm2","рг")
 if Isaac_Tower and not Isaac_Tower.RG then
@@ -254,6 +270,7 @@ if Isaac_Tower and not Isaac_Tower.RG then
 	gray:SetColorize(1,1,1,1)
 	UIs.RG_icon.Color = gray
 end]]
+UIs.Hint_MouseMoving_Vert = GenSprite("gfx/editor/ui copy.anm2","hint_mouse_move",1)
 UIs.HintTextBG1 = GenSprite("gfx/editor/ui copy.anm2","фон_для_вспом_текста")
 UIs.HintTextBG2 = GenSprite("gfx/editor/ui copy.anm2","фон_для_вспом_текста",1)
 UIs.TextBoxBG = GenSprite("gfx/editor/ui copy.anm2","textbox_custom")
@@ -318,7 +335,7 @@ function menuTab.IsMouseBtnTriggered(button)
 		return MouseBtnIsPressed[button] == 1
 	end
 end
-mod:AddCallback(ModCallbacks.MC_POST_RENDER, function() -- MC_POST_UPDATE MC_POST_RENDER
+menuTab:AddCallback(ModCallbacks.MC_POST_RENDER, function() -- MC_POST_UPDATE MC_POST_RENDER
 	for i,k in pairs(MouseBtnIsPressed) do
 		if Input.IsMouseBtnPressed(i) then
 			MouseBtnIsPressed[i] = MouseBtnIsPressed[i] + 1
@@ -467,7 +484,7 @@ function menuTab.ButtonSetHintText(menuName, buttonName, text, NoError)
 	end
 end
 
----@return EditorButton|nil
+---@return EditorButton
 function menuTab.AddButton(menuName, buttonName, pos, sizeX, sizeY, sprite, pressFunc, renderFunc, notpressed, priority)
     if menuName and buttonName then
 		menuTab.MenuData[menuName] = menuTab.MenuData[menuName] or {sortList = {}, Buttons = {}}
@@ -741,7 +758,7 @@ end
 function UIs.DefDragBG() return GenSprite("gfx/editor/ui copy.anm2","def_drag") end
 function UIs.DefDragDrager() return  GenSprite("gfx/editor/ui copy.anm2","drag_drager") end
 
----@return EditorButton|nil
+---@return EditorButton
 function menuTab.AddGragFloat(menuName, buttonName, pos, size, sprite, dragSpr, DragFunc, renderFunc, startValue, priority)
     if menuName and buttonName then
 		startValue = startValue or 1
@@ -823,8 +840,10 @@ menuTab.Keyboard.Chars.ShiftCharBtnList = { en = {
 	},
 }
 
-menuTab.TextboxPopup = {MenuName = "TextboxPopup", OnlyNumber = false, Text = "", InFocus = true, TextPos = 0, lastChar = "",
-	TextPosMoveDelay = 0, errorMes = -1}
+menuTab.TextboxPopup = {MenuName = "TextboxPopup", OnlyNumber = false, Text = "", InFocus = false, TextPos = 0, lastChar = "",
+	TextPosMoveDelay = 0, errorMes = -1,
+	LongDelay = 20, shortDelay = 3, Delay = 0, DelayOn = true,
+}
 
 function menuTab.OpenTextboxPopup(onlyNumber, resultCheckFunc, startText) --tab, key, 
 	local Menuname = menuTab.TextboxPopup.MenuName
@@ -1062,8 +1081,8 @@ function menuTab.OpenTextboxPopup(onlyNumber, resultCheckFunc, startText) --tab,
 		end
 	end
 
-	mod:RemoveCallback(ModCallbacks.MC_INPUT_ACTION, menuTab.InputFilter)
-	mod:AddCallback(ModCallbacks.MC_INPUT_ACTION, menuTab.InputFilter)
+	menuTab:RemoveCallback(ModCallbacks.MC_INPUT_ACTION, menuTab.InputFilter)
+	menuTab:AddCallback(ModCallbacks.MC_INPUT_ACTION, menuTab.InputFilter)
 end
 
 function menuTab.OpenTextbox(menu, button, onlyNumber, resultCheckFunc, startText) --tab, key, 
@@ -1112,7 +1131,9 @@ function menuTab.OpenTextbox(menu, button, onlyNumber, resultCheckFunc, startTex
 			end
 		end
 		if menuTab.TextboxPopup.InFocus then
-			Isaac.GetPlayer().ControlsCooldown = math.max(Isaac.GetPlayer().ControlsCooldown, 3)
+			for index = 0, game:GetNumPlayers()-1 do
+				Isaac.GetPlayer(index).ControlsCooldown = math.max(Isaac.GetPlayer(index).ControlsCooldown, 3)
+			end
 
 
 			local mouseClickPos = mousePosi-buttonPos
@@ -1212,17 +1233,55 @@ function menuTab.OpenTextbox(menu, button, onlyNumber, resultCheckFunc, startTex
 			else
 				ignoreKeybord = true
 			end
+			--LongDelay = 30, shortDelay = 10, Delay = 0,
+			if menuTab.TextboxPopup.Delay > 0 then
+				menuTab.TextboxPopup.Delay = menuTab.TextboxPopup.Delay - 1
+				if menuTab.TextboxPopup.Delay == 0 then
+					menuTab.TextboxPopup.DelayOn = true
+				end
+			end
+
+			local lastkeyPressed
 			if not ignoreKeybord then
 				for btn,b in pairs(charTable) do
-					if Input.IsButtonPressed(btn,0) then
+					--[[if Input.IsButtonPressed(btn,0) then
 						if menuTab.TextboxPopup.lastChar ~= btn then
+							newChar = b
+							menuTab.TextboxPopup.lastChar = btn
+							menuTab.TextboxPopup.DelayOn = false
+							menuTab.TextboxPopup.Delay = menuTab.TextboxPopup.LongDelay
+						end
+						if menuTab.TextboxPopup.DelayOn and menuTab.TextboxPopup.Delay <= 0 then
+							menuTab.TextboxPopup.Delay = menuTab.TextboxPopup.shortDelay
 							newChar = b
 							menuTab.TextboxPopup.lastChar = btn
 						end
 					elseif menuTab.TextboxPopup.lastChar == btn then
+						
 						menuTab.TextboxPopup.lastChar = nil
+					end]]
+					if Input.IsButtonPressed(btn,0) then
+						lastkeyPressed = btn
 					end
 				end
+
+				if lastkeyPressed then
+					if menuTab.TextboxPopup.lastChar ~= lastkeyPressed then
+						newChar = charTable[lastkeyPressed]
+						menuTab.TextboxPopup.lastChar = lastkeyPressed
+						menuTab.TextboxPopup.DelayOn = false
+						menuTab.TextboxPopup.Delay = menuTab.TextboxPopup.LongDelay
+					end
+					if menuTab.TextboxPopup.DelayOn and menuTab.TextboxPopup.Delay <= 0 then
+						menuTab.TextboxPopup.Delay = menuTab.TextboxPopup.shortDelay
+						newChar = charTable[lastkeyPressed]
+						menuTab.TextboxPopup.lastChar = lastkeyPressed
+					end
+				else --if menuTab.TextboxPopup.lastChar == lastkeyPressed then
+					
+					menuTab.TextboxPopup.lastChar = nil
+				end
+
 			end
 			if newChar then
 				--local minusPos = utf8.offset(menuTab.TextboxPopup.Text, menuTab.TextboxPopup.TextPos-1)
@@ -1244,8 +1303,8 @@ function menuTab.OpenTextbox(menu, button, onlyNumber, resultCheckFunc, startTex
 		end
 	end
 
-	mod:RemoveCallback(ModCallbacks.MC_INPUT_ACTION, menuTab.InputFilter)
-	mod:AddCallback(ModCallbacks.MC_INPUT_ACTION, menuTab.InputFilter)
+	menuTab:RemoveCallback(ModCallbacks.MC_INPUT_ACTION, menuTab.InputFilter)
+	menuTab:AddCallback(ModCallbacks.MC_INPUT_ACTION, menuTab.InputFilter)
 end
 
 local blockact = {[ButtonAction.ACTION_FULLSCREEN]=true, [ButtonAction.ACTION_RESTART]=true, [ButtonAction.ACTION_MUTE]=true,
@@ -1255,7 +1314,7 @@ function menuTab.InputFilter(_, ent, InputHook, ButtonAction)
 		return false
 	end
 end
---mod:AddCallback(ModCallbacks.MC_INPUT_ACTION, menuTab.InputProxy)
+--menuTab:AddCallback(ModCallbacks.MC_INPUT_ACTION, menuTab.InputProxy)
 
 function menuTab.CloseTextboxPopup(accept)
 	if not accept then
@@ -1266,14 +1325,32 @@ function menuTab.CloseTextboxPopup(accept)
 
 		menuTab.TextboxPopup = {MenuName = "TextboxPopup", OnlyNumber = false, Text = "", InFocus = false, 
 			TextPos = 0, lastChar = "", TextPosMoveDelay = 0, errorMes = -1}
-		mod:RemoveCallback(ModCallbacks.MC_INPUT_ACTION, menuTab.InputFilter)
+			
+		menuTab:RemoveCallback(ModCallbacks.MC_INPUT_ACTION, menuTab.InputFilter)
 	end
 end
 
 function menuTab.CloseTextbox()
-	menuTab.TextboxPopup = {MenuName = "TextboxPopup", OnlyNumber = false, Text = "", InFocus = false, 
-		TextPos = 0, lastChar = "", TextPosMoveDelay = 0, errorMes = -1, TargetBtn = nil}
-	mod:RemoveCallback(ModCallbacks.MC_INPUT_ACTION, menuTab.InputFilter)
+	--menuTab.TextboxPopup = --{MenuName = "TextboxPopup", OnlyNumber = false, Text = "", InFocus = false, 
+		--TextPos = 0, lastChar = "", TextPosMoveDelay = 0, errorMes = -1, TargetBtn = nil}
+	--{MenuName = "TextboxPopup", OnlyNumber = false, Text = "", InFocus = false, TextPos = 0, lastChar = "",
+	--	TextPosMoveDelay = 0, errorMes = -1, TargetBtn = nil,
+	--	LongDelay = 10, shortDelay = 5, Delay = 0, DelayOn = true,
+	--}
+	menuTab.TextboxPopup.MenuName = "TextboxPopup"
+	menuTab.TextboxPopup.OnlyNumber = false
+	menuTab.TextboxPopup.Text = ""
+	menuTab.TextboxPopup.InFocus = false
+	menuTab.TextboxPopup.TextPos = 0
+	menuTab.TextboxPopup.lastChar = ""
+	menuTab.TextboxPopup.TextPosMoveDelay = 0
+	menuTab.TextboxPopup.errorMes = -1
+	menuTab.TextboxPopup.TargetBtn = nil
+	menuTab.TextboxPopup.Delay = 0
+	menuTab.TextboxPopup.DelayOn = true
+
+
+	menuTab:RemoveCallback(ModCallbacks.MC_INPUT_ACTION, menuTab.InputFilter)
 end
 
 function menuTab.RenderTextBoxButton(button, pos)
@@ -1288,13 +1365,23 @@ function menuTab.RenderTextBoxButton(button, pos)
 end
 
 function menuTab.RenderButtonHintText(text, pos)
+	local pos = pos/1
 	local Center = false
 	local BoxWidth = 0
     local line = 0
 	if type(text) == "table" then
+		local size = Vector(text.Width/2+2.5,18*#text/4+2.5)
+
+		if pos.X + size.X*2-2 > Isaac.GetScreenWidth() then
+			pos.X = pos.X - size.X*2 - 10
+		end
+		if pos.Y + size.Y*2-2 > Isaac.GetScreenHeight() then
+			pos.Y = pos.Y - size.Y*2 - 10
+		end
+
 		UIs.HintTextBG1.Color = Color(1,1,1,0.5)
 		UIs.HintTextBG2.Color = Color(1,1,1,0.5)
-		UIs.HintTextBG2.Scale = Vector(text.Width/2+2.5,18*#text/4+2.5)
+		UIs.HintTextBG2.Scale = size -- Vector(text.Width/2+2.5,18*#text/4+2.5)
 		UIs.HintTextBG2:Render(pos-Vector(2.5,2.5))
 		UIs.HintTextBG1.Scale = Vector(text.Width/2+1,18*#text/4+1)
 		UIs.HintTextBG1:Render(pos-Vector(1,1))
@@ -1804,8 +1891,10 @@ function menuTab.RenderWindows()
 
 		menuTab.RenderCustomMenuBack(window.pos,window.size, i==1 and Color(1,1,1,.5) or Color(.6,.6,.6,.5))
 
-		menuTab.CallDelayRenders(menuTab.Callbacks.WINDOW_POST_RENDER, menuName, window.pos, window)
-		Isaac.RunCallbackWithParam(menuTab.Callbacks.WINDOW_PRE_RENDER, menuName, window.pos, window)
+		if not window.IsHided then
+			menuTab.CallDelayRenders(menuTab.Callbacks.WINDOW_POST_RENDER, menuName, window.pos, window)
+			Isaac.RunCallbackWithParam(menuTab.Callbacks.WINDOW_PRE_RENDER, menuName, window.pos, window)
+		end
 
 		---@type table<integer, EditorButton>?
 		local buttons = menuTab.GetButtons(menuName)
@@ -1846,15 +1935,19 @@ function menuTab.RenderWindows()
 					end
 				end
 			end
-			menuTab.RenderMenuButtons(menuName)
+			--menuTab.RenderMenuButtons(menuName)
 
 			menuTab.RenderButton(menuName, window.hide)
 			menuTab.RenderButton(menuName, window.close)
+
+			menuTab.RenderMenuButtons(menuName)
+
+			menuTab.CallDelayRenders(menuTab.Callbacks.WINDOW_POST_RENDER, menuName, window.pos, window)
+			Isaac.RunCallbackWithParam(menuTab.Callbacks.WINDOW_POST_RENDER, menuName, window.pos, window)
 		end
 		
 
-		menuTab.CallDelayRenders(menuTab.Callbacks.WINDOW_POST_RENDER, menuName, window.pos, window)
-		Isaac.RunCallbackWithParam(menuTab.Callbacks.WINDOW_POST_RENDER, menuName, window.pos, window)
+		
 		--if i~=1 then
 		--	menuTab.RenderCustomMenuBack(window.pos,window.size, Color(.2,.2,.2,.5))
 		--end
@@ -1894,7 +1987,7 @@ function menuTab.FastCreatelist(Menuname, Pos, XSize, params, pressFunc, up)
 		if frame>1 and not Input.IsButtonPressed(Keyboard.KEY_SPACE, 0) and (menuTab.IsMouseBtnTriggered(0) or menuTab.IsMouseBtnTriggered(1)) then
 			menuTab.RemoveButton(Menuname, "_Listshadow")
 			menuTab.ScrollListIsOpen = false
-			mod:RemoveCallback(ModCallbacks.MC_INPUT_ACTION, menuTab.SpaceInputFilter)
+			menuTab:RemoveCallback(ModCallbacks.MC_INPUT_ACTION, menuTab.SpaceInputFilter)
 		else
 			local butPos
 			if up then
@@ -1986,12 +2079,12 @@ function menuTab.FastCreatelist(Menuname, Pos, XSize, params, pressFunc, up)
 		Lnum = Lnum + 1
 	end
 
-	mod:RemoveCallback(ModCallbacks.MC_INPUT_ACTION, menuTab.SpaceInputFilter)
-	mod:AddCallback(ModCallbacks.MC_INPUT_ACTION, menuTab.SpaceInputFilter)
+	menuTab:RemoveCallback(ModCallbacks.MC_INPUT_ACTION, menuTab.SpaceInputFilter)
+	menuTab:AddCallback(ModCallbacks.MC_INPUT_ACTION, menuTab.SpaceInputFilter)
 end
 local blockact = {[ButtonAction.ACTION_ITEM]=true}
 function menuTab.SpaceInputFilter(_, ent, InputHook, ButtonAction)
-	if menuTab.TextboxPopup.InFocus and not game:IsPaused() and blockact[ButtonAction] and (InputHook == 0 or InputHook == 1) then
+	if menuTab.ScrollListIsOpen and not game:IsPaused() and blockact[ButtonAction] and (InputHook == 0 or InputHook == 1) then
 		return false
 	end
 end
@@ -2015,6 +2108,22 @@ function menuTab.CallDelayRenders(callback, param, ...)
 	end
 end
 
+UIs.Hint_MouseMoving_Vert_white = GenSprite("gfx/editor/ui copy.anm2","hint_mouse_move",1)
+UIs.Hint_MouseMoving_Vert_white.Color = Color(0,0,0,1,1,1,1)
+
+function menuTab.LastOrderRender()
+	if menuTab.ScrollListIsOpen then
+		local pos = Vector(12, Isaac.GetScreenHeight()-22)
+		UIs.Hint_MouseMoving_Vert_white:Render(pos+Vector(0,1))
+		UIs.Hint_MouseMoving_Vert_white:Render(pos+Vector(0,-1))
+		UIs.Hint_MouseMoving_Vert_white:Render(pos+Vector(-1,0))
+		UIs.Hint_MouseMoving_Vert_white:Render(pos+Vector(1,0))
+		UIs.Hint_MouseMoving_Vert:Render(pos)
+	end
+	if menuTab.MouseSprite then
+		menuTab.MouseSprite:Render(menuTab.MousePos)
+	end
+end
 
 return menuTab
-end
+--end
