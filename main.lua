@@ -1,99 +1,6 @@
 local TryGetPathForCard = true  --set false to disable unpredictable code
 
 
---[[
-
-
-AddButton: Adds a button to the menu.
-		menuName: Any type. The name of the menu.
-		buttonName: Any type. The name of the button.
-		pos: Vector. The position of the button.
-		sizeX: Number. The size of the button in the x-axis.
-		sizeY: Number. The size of the button in the y-axis.
-		sprite: Sprite. The sprite of the button.
-		pressFunc: Function. The function to be executed when the button is pressed. This function takes an integer argument representing the button.
-		renderFunc: Function. The function to render the button. This function takes a Vector argument representing the position.
-		notpressed: Boolean. Indicates whether the button is not pressed.
-		priority: Integer. The priority of the button.
-		Returns: EditorButton. The button added to the menu.
-
-AddTextBox: Adds a text box to the menu.
-		menuName: Any type. The name of the menu.
-		buttonName: Any type. The name of the button.
-		pos: Vector. The position of the text box.
-		size: Vector. The size of the text box.
-		sprite: Sprite. The sprite of the text box.
-		resultCheckFunc: Function. The function to check the result. This function takes a string argument representing the result.
-		onlyNumber: Boolean. Indicates whether only numbers are allowed.
-		renderFunc: Function. The function to render the text box. This function takes a Vector argument representing the position.
-		priority: Integer. The priority of the text box.
-		Returns: EditorButton. The text box added to the menu.
-		
-AddGragZone: Adds a drag zone to the menu.
-		menuName: Any type. The name of the menu.
-		buttonName: Any type. The name of the button.
-		pos: Vector. The position of the drag zone.
-		size: Vector. The size of the drag zone.
-		sprite: Sprite. The sprite of the drag zone.
-		DragFunc: Function. The function to drag the zone. This function takes a button, value, and old value as arguments.
-		renderFunc: Function. The function to render the drag zone. This function takes a Vector argument representing the position.
-		priority: Integer. The priority of the drag zone.
-		Returns: EditorButton. The drag zone added to the menu.
-
-AddGragFloat: Adds a float to the menu.
-menuName: Any type. The name of the menu.
-buttonName: Any type. The name of the button.
-pos: Vector. The position of the float.
-size: Vector. The size of the float.
-sprite: Sprite. The sprite of the float.
-dragSpr: Sprite. The sprite of the drag.
-DragFunc: Function. The function to drag the float. This function takes a button, value, and old value as arguments.
-renderFunc: Function. The function to render the float. This function takes a Vector argument representing the position.
-startValue: Any type. The start value of the float.
-priority: Integer. The priority of the float.
-Returns: EditorButton. The float added to the menu.
-GetButton: Gets a button from the menu.
-menuName: Any type. The name of the menu.
-buttonName: Any type. The name of the button.
-noError: Boolean. Indicates whether to throw an error if the button is not found.
-Returns: EditorButton. The button from the menu.
-ButtonSetHintText: Sets the hint text for a button.
-menuName: Any type. The name of the menu.
-buttonName: Any type. The name of the button.
-text: String. The hint text.
-NoError: Boolean. Indicates whether to throw an error if the button is not found.
-RemoveButton: Removes a button from the menu.
-menuName: Any type. The name of the menu.
-buttonName: Any type. The name of the button.
-NoError: Boolean. Indicates whether to throw an error if the button is not found.
-FastCreatelist: Fast creates a list.
-Menuname: Any type. The name of the menu.
-Pos: Vector. The position of the list.
-XSize: Number. The size of the list in the x-axis.
-params: Any type. The parameters for the list.
-pressFunc: Function. The function to be executed when the list is pressed.
-up: Boolean. Indicates whether the list is up.
-ShowWindow: Shows a window.
-menuName: Any type. The name of the menu.
-pos: Vector. The position of the window.
-size: Vector. The size of the window.
-color: Any type. The color of the window.
-CloseWindow: Closes a window.
-MenuName: Any type. The name of the menu.
-SetWindowSize: Sets the size of a window.
-wind: Window. The window to be resized.
-size: Vector. The new size of the window.
-RenderCustomTextBox: Renders a custom text box.
-pos: Vector. The position of the text box.
-size: Vector. The size of the text box.
-isSel: Boolean. Indicates whether the text box is selected.
-RenderCustomButton: Renders a custom button.
-pos: Vector. The position of the button.
-size: Vector. The size of the button.
-isSel: Boolean. Indicates whether the button is selected.
-RenderButtonHintText: Renders the hint text for a button.
-SelectedMenu: Any type. Represents the currently selected menu.
-IsStickyMenu: Boolean. Indicates whether the menu
 
 
 
@@ -104,14 +11,52 @@ IsStickyMenu: Boolean. Indicates whether the menu
 
 
 
-]]
 
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+local Wtr = 20/13
 local ibackthis = {}
 if WORSTDEBUGMENU then
-	if WORSTDEBUGMENU.ItemList.ModsPath then
+	if WORSTDEBUGMENU.ItemList and WORSTDEBUGMENU.ItemList.ModsPath then
 		ibackthis.ModsPath = WORSTDEBUGMENU.ItemList.ModsPath
 		ibackthis.CardIdToPath = WORSTDEBUGMENU.ItemList.CardIdToPath
 	end
@@ -227,7 +172,11 @@ Menu.strings = {
 	["playerindex"] = {en = "player", ru = "игрок"},
 
 	["debug_cmd_hint"] = {en = "",
-		ru = "Открывает окно быстрого доступа \n к консольной команде \"debug\" "}
+		ru = "Открывает окно быстрого доступа \n к консольной команде \"debug\" "},
+
+	["Stages_Selector_hint"] = {en = "",
+	ru = "Открывает окно с выбором этажей. \n поддерживаются этажи StageAPI"},
+
 }
 
 local function GetStr(str)
@@ -293,35 +242,47 @@ local function blockPlayerShot()
 end
 
 
-WORSTDEBUGMENU.MainOffset = 10
+WORSTDEBUGMENU.MainOffset = Vector(0, 10)
 function Menu.DebugMenuRender(off, mousepos)
-	WORSTDEBUGMENU.MainOffset = off
+	Menu.MainOffset = Vector(Menu.MainOffset.X, off)
 	local MenuUpPos = Vector(Isaac.GetScreenWidth()/2, -50 + off)
 	UIs.MenuUp.Color = Color(1,1,1,0.5)
 	UIs.MenuUp:Render(MenuUpPos)
 	UIs.MenuUp.Color = Color(1,1,1,1)
 
 	if not WORSTDEBUGMENU.showMainMenu then
-		WORSTDEBUGMENU.wma.DetectMenuButtons("__debug_menu_grab")
-		WORSTDEBUGMENU.wma.RenderMenuButtons("__debug_menu_grab")
+		Menu.wma.DetectMenuButtons("__debug_menu_grab")
+		Menu.wma.RenderMenuButtons("__debug_menu_grab")
 	else
-		WORSTDEBUGMENU.wma.DetectMenuButtons("__debug_menu")
-		WORSTDEBUGMENU.wma.RenderMenuButtons("__debug_menu")
+		Menu.wma.DetectMenuButtons("__debug_menu")
+		Menu.wma.RenderMenuButtons("__debug_menu")
 	end
 	
 end
 
 do
-	local PosForBtn = Vector(222,5)
+	Menu.PosForBtn = Vector(52,5) --Vector(222,5)
 
+	local nilspr = Sprite()
 	function WORSTDEBUGMENU.AddButtonOnDebugBar(buttonName, size, sprite, pressFunc, renderFunc)
-		local curPos = PosForBtn/1
+		local curPos = Menu.PosForBtn/1
 		local self
-		self = WORSTDEBUGMENU.wma.AddButton("__debug_menu", buttonName, curPos, size.X, size.Y, sprite, pressFunc, pressFunc)
+		self = WORSTDEBUGMENU.wma.AddButton("__debug_menu", buttonName, curPos, size.X, size.Y, nilspr, pressFunc, renderFunc)
 		self.posfunc = function()
-			self.pos = Vector(curPos.X, curPos.Y+WORSTDEBUGMENU.MainOffset)
+			self.pos = Vector(curPos.X+Menu.MainOffset.X, curPos.Y+Menu.MainOffset.Y)
 		end
-		PosForBtn.X = PosForBtn.X + size.X + 2
+		self.render = function(pos)
+			--local ScrX = Isaac.GetScreenWidth()
+			if sprite then
+				print(sprite,buttonName)
+				sprite:SetFrame(self.IsSelected and 1 or 0)
+				sprite:Render(pos,Vector(math.max(0, 52 - pos.X),0))
+			end
+			if renderFunc then
+				renderFunc(pos, Vector(math.max(0, 52 - pos.X),0))
+			end
+		end
+		Menu.PosForBtn.X = Menu.PosForBtn.X + size.X + 2
 		return self
 	end
 end
@@ -337,12 +298,31 @@ grab2 = WORSTDEBUGMENU.wma.AddButton("__debug_menu", "grab", Vector(12,-25), 64,
 	WORSTDEBUGMENU.showMainMenu = false
 end)
 grab1.posfunc = function()
-	grab1.pos = Vector(Isaac.GetScreenWidth() - 66, 50+WORSTDEBUGMENU.MainOffset)
+	grab1.pos = Vector(Isaac.GetScreenWidth() - 66, 50+Menu.MainOffset.Y)
 end
 grab2.posfunc = function()
-	grab2.pos = Vector(Isaac.GetScreenWidth() - 66, 50+WORSTDEBUGMENU.MainOffset)
+	grab2.pos = Vector(Isaac.GetScreenWidth() - 66, 50+Menu.MainOffset.Y)
 end
 --WORSTDEBUGMENU.wma.ButtonSetHintText("__debug_menu", "open_editor", "test text")
+
+local grab3
+grab3 = Menu.wma.AddScrollBar("__debug_menu","moverX",Vector(52,-30),Vector(Isaac.GetScreenWidth()-120,10),nil,nil,
+function(button, value)
+	if button ~= 0 then return end
+	Menu.MainOffset.X = -value -- (value-1) * grab3.x -- (value-.5) * 100
+end,
+function(pos, visible)
+	if visible then
+		Menu.wma.RenderCustomTextBox(pos+Vector(0,2),Vector(grab3.x,grab3.y-4),false)
+	end
+end,0.5,0,160)
+grab3.posfunc = function()
+	grab3.x = Isaac.GetScreenWidth()-120
+	grab3.pos = Vector(52, 45+Menu.MainOffset.Y)
+	grab3.endValue = Menu.PosForBtn.X-52
+	grab3.visible = grab3.endValue > grab3.x
+	grab3.canPressed = grab3.visible
+end
 
 
 
@@ -357,20 +337,26 @@ function(pos)
 	UIs.MouseIsLocked:Render(pos)
 end)
 self.posfunc = function()
-	self.pos = Vector(1,5+WORSTDEBUGMENU.MainOffset)
+	self.pos = Vector(1,5+Menu.MainOffset.Y)
 end
 
-local self
+--[[local self
 self = WORSTDEBUGMENU.wma.AddButton("__debug_menu", "luamod", Vector(86,-25), 32, 32, UIs.luamod_debug, function(button) 
 	if button ~= 0 then return end
 	--blockPlayerShot()
 	Isaac.ExecuteCommand("luamod mouse debug menu")
 end, function(pos)
-	--self.pos = Vector(86,5+WORSTDEBUGMENU.MainOffset)
+	--self.pos = Vector(86,5+WORSTDEBUGMENU.MainOffset.Y)
 end, nil, 100)
 self.posfunc = function()
-	self.pos = Vector(86,5+WORSTDEBUGMENU.MainOffset)
-end
+	self.pos = Vector(86,5+WORSTDEBUGMENU.MainOffset.Y)
+end]]
+WORSTDEBUGMENU.AddButtonOnDebugBar( "luamod", Vector(32,32), UIs.luamod_debug, 
+function(button) 
+	if button ~= 0 then return end
+	--blockPlayerShot()
+	Isaac.ExecuteCommand("luamod mouse debug menu")
+end)
 
 
 
@@ -381,7 +367,7 @@ local debugcmd = WORSTDEBUGMENU.debugcmd_Menu
 do
 	local sizev =  Vector(14*19,40)
 
-	local self
+	--[[local self
 	self = WORSTDEBUGMENU.wma.AddButton("__debug_menu", "debugcmd_Menu", Vector(52,5), 32, 32, UIs.DebugCMD, function(button) 
 		if button ~= 0 then return end
 		blockPlayerShot()
@@ -389,20 +375,23 @@ do
 		debugcmd.pos = self.pos + Vector(0, 30)
 		WORSTDEBUGMENU.wma.ShowWindow(debugcmd.name, debugcmd.pos, sizev)
 	end, function(pos)
-		--self.pos = Vector(52, 5+WORSTDEBUGMENU.MainOffset)
+		--self.pos = Vector(52, 5+WORSTDEBUGMENU.MainOffset.Y)
 		--font:DrawStringScaledUTF8("aaaaaa",pos.X+1,pos.Y-1,0.5,0.5,KColor(0.2,0.2,0.2,0.8),0,false) 
 	end)
 	self.posfunc = function()
-		self.pos = Vector(52, 5+WORSTDEBUGMENU.MainOffset)
-	end
+		self.pos = Vector(52, 5+WORSTDEBUGMENU.MainOffset.Y)
+	end]]
+	WORSTDEBUGMENU.AddButtonOnDebugBar("debugcmd_Menu", Vector(32,32), UIs.DebugCMD, 
+	function(button) 
+		if button ~= 0 then return end
+		blockPlayerShot()
+		debugcmd.active = not debugcmd.active
+		debugcmd.pos = self.pos + Vector(0, 30)
+		WORSTDEBUGMENU.wma.ShowWindow(debugcmd.name, debugcmd.pos, sizev)
+	end)
+
 	Menu.wma.ButtonSetHintText("__debug_menu", "debugcmd_Menu", GetStr("debug_cmd_hint"))
 
-	--[[local self
-	self = WORSTDEBUGMENU.wma.AddButton("_debugcmd", "plashka", Vector(0,0), sizev.X, sizev.Y, Sprite() , function(button) 
-		if button ~= 0 then return end
-		--debugcmd.CanMove = true
-	end, nil, nil, 10)
-	self.BlockPress = true]]
 	---------
 	for i=1,14 do
 		local self
@@ -412,14 +401,10 @@ do
 			blockPlayerShot()
 			self.IsActived = not self.IsActived
 		end, function(pos)
-			--self.pos = Vector((i-1)*18+6,13) + debugcmd.pos
 			if self.IsActived then
 				UIs.Var_Sel:Render(self.pos + Vector(2,12))
 			end
 		end)
-		--self.posfunc = function()
-		--	self.pos = Vector((i-1)*18+6,13) + debugcmd.pos 
-		--end
 	end
 
 
@@ -440,6 +425,12 @@ do
 		--WORSTDEBUGMENU.wma.DetectSelectedButton(WORSTDEBUGMENU.debugcmd_Menu.name)
 		--WORSTDEBUGMENU.wma.RenderMenuButtons(WORSTDEBUGMENU.debugcmd_Menu.name)
 	end
+
+	Menu:AddCallback(ModCallbacks.MC_PRE_GAME_EXIT, function()
+		for i=1,14 do
+			Menu.wma.GetButton("_debugcmd", "debug"..i).IsActived = false
+		end
+	end)
 end
 
 
@@ -523,7 +514,7 @@ do
 	local StageSel = WORSTDEBUGMENU.StageSel
 	local sizev = StageSel.size
 
-	local self
+	--[[local self
 	self = WORSTDEBUGMENU.wma.AddButton("__debug_menu", "Stages_Selector_Menu", Vector(120,5), 32, 32, UIs.StageChanger, function(button) 
 		if button ~= 0 then return end
 		blockPlayerShot()
@@ -532,8 +523,18 @@ do
 		Menu.StageSel.DefaultSpawnButton()
 	end)
 	self.posfunc = function()
-		self.pos = Vector(120, 5+WORSTDEBUGMENU.MainOffset)
-	end
+		self.pos = Vector(120, 5+Menu.MainOffset.Y)
+	end]]
+
+	local self
+	self = Menu.AddButtonOnDebugBar("Stages_Selector_Menu", Vector(32, 32), UIs.StageChanger, function(button) 
+		if button ~= 0 then return end
+		blockPlayerShot()
+		---@type Window
+		StageSel.wind = WORSTDEBUGMENU.wma.ShowWindow(StageSel.name, StageSel.pos, sizev)
+		Menu.StageSel.DefaultSpawnButton()
+	end)
+	Menu.wma.ButtonSetHintText("__debug_menu","Stages_Selector_Menu",GetStr("Stages_Selector_hint"))
 
 	local function GenSprite2(anm2, anim, frame0, frame2)
 		local spr = GenSprite(anm2, anim)
@@ -764,7 +765,7 @@ do
 	local EntSpawner = Menu.EntSpawner
 	local sizev = EntSpawner.size
 
-	local self
+	--[[local self
 	self = Menu.wma.AddButton("__debug_menu", "Ent_Spawner_Menu", Vector(154,5), 32, 32, UIs.EntSpawner, function(button) 
 		if button ~= 0 then return end
 		blockPlayerShot()
@@ -772,8 +773,16 @@ do
 		EntSpawner.wind = Menu.wma.ShowWindow(EntSpawner.name, EntSpawner.pos, sizev)
 	end)
 	self.posfunc = function()
-		self.pos = Vector(154, 5+Menu.MainOffset)
-	end
+		self.pos = Vector(154, 5+Menu.MainOffset.Y)
+	end]]
+
+	local self
+	self = Menu.AddButtonOnDebugBar("Ent_Spawner_Menu", Vector(32, 32), UIs.EntSpawner, function(button) 
+		if button ~= 0 then return end
+		blockPlayerShot()
+		---@type Window
+		EntSpawner.wind = Menu.wma.ShowWindow(EntSpawner.name, EntSpawner.pos, sizev)
+	end)
 	
 	local self
 	self = Menu.wma.AddTextBox(EntSpawner.name, "type", Vector(5,24), Vector(32,16), nil, 
@@ -980,7 +989,7 @@ do --UIs.GridSpawner
 	local GridSpawner = Menu.GridSpawner
 	local sizev = GridSpawner.size
 
-	local self
+	--[[local self
 	self = Menu.wma.AddButton("__debug_menu", "Grid_Spawner_Menu", Vector(188,5), 32, 32, UIs.GridSpawner, function(button) 
 		if button ~= 0 then return end
 		blockPlayerShot()
@@ -988,8 +997,16 @@ do --UIs.GridSpawner
 		GridSpawner.wind = Menu.wma.ShowWindow(GridSpawner.name, GridSpawner.pos, sizev)
 	end)
 	self.posfunc = function()
-		self.pos = Vector(188, 5+Menu.MainOffset)
-	end
+		self.pos = Vector(188, 5+Menu.MainOffset.Y)
+	end]]
+
+	local self
+	self = Menu.AddButtonOnDebugBar("Grid_Spawner_Menu", Vector(32, 32), UIs.GridSpawner, function(button) 
+		if button ~= 0 then return end
+		blockPlayerShot()
+		---@type Window
+		GridSpawner.wind = Menu.wma.ShowWindow(GridSpawner.name, GridSpawner.pos, sizev)
+	end)
 	
 	local GridList = {
 		{0, "decoration",},

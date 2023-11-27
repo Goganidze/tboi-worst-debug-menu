@@ -25,9 +25,116 @@
 ---@field ScrollOffset Vector
 ---@field LastOrderRender function
 ---@field DetectSelectedButtonActuale function
+
+--@class EditorButton 
+---@field name any
+---@field pos Vector
+---@field posref Vector
+---@field x number
+---@field y number
+---@field spr Sprite
+---@field func function
+---@field render function
+---@field canPressed boolean
+---@field hintText table
+---@field IsSelected integer?
+---@field posfunc function
+---@field IsTextBox boolean
+---@field text string|number
+---@field visible boolean
+---@field isDragZone boolean?
+---@field dragPrePos Vector?
+---@field dragCurPos Vector?
+---@field isDrager boolean?
+---@field dragtype integer?
+---@field dragspr Sprite?
+
+--@class EditorMenu
+---@field sortList table<integer, {["btn"]:any, ["Priority"]:integer, }>
+---@field somethingPressed boolean
+---@field Buttons table<string, EditorButton>
+---@field CalledByWindow Window?
+
+--@class Window
+---@field pos Vector
+---@field size Vector
+---@field refsize Vector
+---@field color Color
+---@field InFocus integer
+---@field MovingByMouse boolean
+---@field MouseOldPos Vector
+---@field OldPos Vector
+---@field Removed boolean
+---@field plashka EditorButton
+---@field close EditorButton
+---@field SubMenus table?
+---@field somethingPressed boolean
+---@field IsHided boolean
+---@field hide EditorButton
+---@field unhide EditorButton
+
+code example
+
+local self
+self = wma.AddButton(MenuName, "button1", Vector(20,30), 32, 32, BtnSprite, function(button) 
+	--button: left click = 0, right click = 1
+	if button ~= 0 then return end
+	--pressed left click
+end,
+function(pos)
+	-- pos = Render pos of the button
+	someSprite:Render(pos+Vector(3,3)
+end)
+
+wma.ButtonSetHintText(MenuName, "button1", "is a button!")
+
+local Newtext
+local self
+self = wma.AddTextBox(MenuName, "Searth", Vector(46,12), Vector(128, 16), nil, 
+function(result) 
+	--result is a text
+	if not result then
+		return true
+	else
+		if #result < 1 or not string.find(result,"%S") then
+			return GetStr("emptyField") --returning a string causes an error message and discards the new string
+		end
+		Newtext = result
+		return true -- sets self.text to new string, false does not
+	end
+end, false,
+function(pos)
+	wma.RenderCustomTextBox(pos, Vector(self.x, self.y), self.IsSelected) -- render the button sprite
+	font:DrawStringScaledUTF8(self.text,pos.X-13,pos.Y-2,1,1,KColor(0.1,0.1,0.2,1),0,false)
+end)
+self.text = "" --start text
+
+local self
+self = wma.AddGragFloat(MenuName, "red color", Vector(20,60), Vector(136/2,10), nilspr, nil, 
+function(button, value, oldvalue)
+	-- value can be from 0 to 1
+	if button ~= 0 then return end
+	AnimTest.col.R = value
+end, function(pos)
+	font:DrawStringScaledUTF8("color: " .. AnimTest.col.R,pos.X+3,pos.Y-9,0.5,0.5,KColor(0.1,0.1,0.2,1),0,false)
+end)
+
+local list = {
+	{1, "somethink"},
+	{2, "shit"},
+	{"piss", "shit"},
+	{"пися", "попа"}
+}
+
+local Xsize = 60
+Menu.wma.FastCreatelist(MenuName, Vector(0,0), Xsize, list, 
+	function(_,arg1,arg2)
+		Arg1 = arg1
+		Arg2 = arg2
+	end, false)
+
 ]]
 
---return function(mod)
 ---@class wga_menu
 ---@field AddCallback function
 ---@field RemoveCallback function
@@ -352,8 +459,8 @@ end)
 ---@field x number
 ---@field y number
 ---@field spr Sprite
----@field func function
----@field render function
+---@field func fun(button)|fun(button,currentValue,PreValue)
+---@field render fun(pos)
 ---@field canPressed boolean
 ---@field hintText table
 ---@field IsSelected integer?
@@ -367,6 +474,11 @@ end)
 ---@field isDrager boolean?
 ---@field dragtype integer?
 ---@field dragspr Sprite?
+---@field dragsprRenderFunc fun(self,pos,value,barSize)
+---@field startValue number
+---@field endValue number
+---@field ValueSize any
+---@field DragerSize number
 
 ---@class EditorMenu
 ---@field sortList table<integer, {["btn"]:any, ["Priority"]:integer, }>
@@ -484,6 +596,16 @@ function menuTab.ButtonSetHintText(menuName, buttonName, text, NoError)
 	end
 end
 
+---@param menuName any
+---@param buttonName any
+---@param pos Vector
+---@param sizeX number
+---@param sizeY number
+---@param sprite Sprite?
+---@param pressFunc fun(button:integer)?
+---@param renderFunc fun(pos:Vector, visible:boolean)?
+---@param notpressed boolean?
+---@param priority number?
 ---@return EditorButton
 function menuTab.AddButton(menuName, buttonName, pos, sizeX, sizeY, sprite, pressFunc, renderFunc, notpressed, priority)
     if menuName and buttonName then
@@ -770,7 +892,7 @@ function menuTab.AddGragFloat(menuName, buttonName, pos, size, sprite, dragSpr, 
 		menu.sortList = menu.sortList or {}
 		menu.Buttons = menu.Buttons or {}
 		menu.Buttons[buttonName] = {name = buttonName, pos = pos, posref = Vector(pos.X,pos.Y), x = size.X, y = size.Y, spr = sprite, 
-			func = DragFunc, render = renderFunc, canPressed = true, visible = true, isDrager = true, dragtype = 1, dragspr = UIs.DefDragDrager(),
+			func = DragFunc, render = renderFunc, canPressed = true, visible = true, isDrager = true, dragtype = 1, dragspr = dragSpr or UIs.DefDragDrager(),
 			dragPrePos = Vector(startValue*size.X,0), dragCurPos = Vector(startValue*size.X,0)
 		}
 		
@@ -788,6 +910,71 @@ function menuTab.AddGragFloat(menuName, buttonName, pos, size, sprite, dragSpr, 
     end
 end
 
+---@param self EditorButton
+menuTab.DefaultScrollBarRender = function(self,pos,value,barSize)
+	local size = self.ishori and Vector(barSize*2, self.y) or Vector(self.x, barSize*2)
+	local offset = self.ishori and Vector(-size.X/2, 0) or Vector(0, -size.Y/2)
+	--print(self.IsSelected)
+	menuTab.RenderCustomButton(pos+offset, size, self.dragspr:GetFrame()==1)
+end
+
+---@param menuName any
+---@param buttonName any
+---@param pos Vector
+---@param size Vector
+---@param sprite Sprite?
+---@param dragSpr Sprite?
+---@param DragFunc fun(button:integer,value:number)
+---@param renderFunc fun(pos:Vector, visible:boolean)
+---@param startProcent number -- 0 - 1 
+---@param startValue number 
+---@param endValue number
+---@param priority number?
+---@return EditorButton
+function menuTab.AddScrollBar(menuName, buttonName, pos, size, sprite, dragSpr, DragFunc, renderFunc, startProcent, startValue, endValue, priority)
+	if menuName and buttonName then
+		startValue = startValue or 1
+		menuTab.MenuData[menuName] = menuTab.MenuData[menuName] or {sortList = {}, Buttons = {}}
+		local menu = menuTab.MenuData[menuName]
+		if menu.Buttons[buttonName] then
+			menuTab.RemoveButton(menuName, buttonName)
+		end
+		menu.sortList = menu.sortList or {}
+		menu.Buttons = menu.Buttons or {}
+		--menu.Buttons[buttonName] = {name = buttonName, pos = pos, posref = Vector(pos.X,pos.Y), x = size.X, y = size.Y, spr = sprite, 
+		--	func = DragFunc, render = renderFunc, canPressed = true, visible = true, isDrager = true, dragtype = 1, dragspr = dragSpr or UIs.DefDragDrager(),
+		--	dragPrePos = Vector(startValue*size.X,0), dragCurPos = Vector(startValue*size.X,0)
+		--}
+
+		local self = menuTab.AddButton(menuName, buttonName,pos, size.X, size.Y, sprite, DragFunc, renderFunc, nil, priority)
+		self.isDrager = true
+		self.dragtype = 3
+		self.dragspr = dragSpr or UIs.DefDragDrager()
+		self.startValue = startValue
+		self.endValue = endValue
+		local curValue = startValue + (endValue-startValue)*startProcent
+		self.dragPrePos = Vector(curValue,0)
+		self.dragCurPos = Vector(curValue,0)
+		self.dragsprRenderFunc = menuTab.DefaultScrollBarRender
+		self.ishori = size.X>size.Y
+
+		local si = self.ishori and self.x or self.y
+		self.ValueSize = (endValue-startValue)
+		self.DragerSize = math.min(si, si / ( math.abs( self.ValueSize )) * si)
+
+		--[[priority = priority or 0
+		local Spos = #menu.sortList+1
+		for i=#menu.sortList,1,-1 do
+			if menu.sortList[i].Priority <= priority then
+				break
+			else
+				Spos = Spos-1
+			end
+		end
+		table.insert(menu.sortList, Spos, {btn = buttonName, Priority = priority})]]
+		return menu.Buttons[buttonName]
+    end
+end
 
 
 
@@ -1539,8 +1726,16 @@ function menuTab.RenderButton(menuName, btn)
 		btn.render(btn.pos, btn.visible)
 	end
 	if btn.isDrager then
-		local pos = btn.pos + btn.dragCurPos 
-		btn.dragspr:Render(pos+Vector(0,-2))
+		local pos = btn.pos + btn.dragCurPos
+		if btn.dragtype == 1 then
+			btn.dragspr:Render(pos+Vector(0,-2))
+		elseif btn.dragtype == 3 then
+			btn.ishori = btn.x > btn.y
+			local si = btn.ishori and btn.x or btn.y
+			btn.ValueSize = (btn.endValue-btn.startValue)
+			btn.DragerSize = math.min(si, si / ( math.abs( btn.ValueSize )) * si) -- / (btn.ishori and btn.x or btn.y))*btn.x
+			btn.dragsprRenderFunc(btn, pos, btn.dragCurPos, btn.DragerSize/2) --math.abs(si/(btn.startValue-btn.endValue)) )
+		end
 	end
 
 	if IstextboxMenu then
@@ -1602,9 +1797,39 @@ function menuTab.RenderMenuButtons(menuName)
 			if btn.render then
 				btn.render(btn.pos, btn.visible)
 			end
-			if btn.isDrager then
-				local pos = btn.pos + btn.dragCurPos 
-				btn.dragspr:Render(pos+Vector(0,-2))
+			if btn.isDrager and btn.visible then
+				local pos = btn.pos + btn.dragCurPos
+				if btn.dragtype == 1 then
+					btn.dragspr:Render(pos+Vector(0,-2))
+				elseif btn.dragtype == 3 then
+					btn.ishori = btn.x > btn.y
+					local si = btn.ishori and btn.x or btn.y
+					btn.ValueSize = (btn.endValue-btn.startValue)
+					btn.DragerSize = math.min(si, si / ( math.abs( btn.ValueSize )) * si) -- / (btn.ishori and btn.x or btn.y))*btn.x
+					btn.dragsprRenderFunc(btn, pos, btn.dragCurPos, btn.DragerSize/2) --math.abs(si/(btn.startValue-btn.endValue)) )
+
+					if Isaac.GetFrameCount()%30 == 0 then
+						if btn.ishori then
+							if math.abs(btn.ValueSize) <= btn.x then
+								btn.dragCurPos.X = btn.x/2
+							else
+								local vs = btn.x/math.abs(btn.ValueSize)/2*btn.x
+								local siL, siR =(btn.x-vs), vs
+								
+								btn.dragCurPos.X = math.min( siL, math.max( siR, btn.dragCurPos.X))
+							end
+						else
+							if math.abs(btn.ValueSize) <= btn.y then
+								btn.dragCurPos.Y = btn.y/2
+							else
+								local vs = btn.y/math.abs(btn.ValueSize)/2*btn.y
+								local siL, siR =(btn.y-vs), vs
+								
+								btn.dragCurPos.Y = math.min( siL, math.max( siR, btn.dragCurPos.Y))
+							end
+						end
+					end
+				end
 			end
 		end
 
@@ -1673,7 +1898,6 @@ function menuTab.DetectSelectedButtonActuale()
 				if k.canPressed then
 					if not onceTouch and mousePos.X >= k.pos.X and mousePos.Y >= k.pos.Y
 						and mousePos.X < (k.pos.X + k.x) and mousePos.Y < (k.pos.Y + k.y) then
-
 						menuTab.OnFreePos = false
 						onceTouch = true
 						if not k.IsSelected then
@@ -1684,11 +1908,28 @@ function menuTab.DetectSelectedButtonActuale()
 						else
 							k.IsSelected = k.IsSelected + 1
 							if k.isDrager then
-								local cm = mousePos.X - k.pos.X
-								if cm > k.dragCurPos.X-3 and cm < k.dragCurPos.X+3 then
-									k.dragspr:SetFrame(1)
-								else
-									k.dragspr:SetFrame(0)
+								if k.dragtype == 1 then
+									local cm = mousePos.X - k.pos.X
+									if cm > k.dragCurPos.X-3 and cm < k.dragCurPos.X+3 then
+										k.dragspr:SetFrame(1)
+									else
+										k.dragspr:SetFrame(0)
+									end
+								elseif k.dragtype == 3 then --DragerSize
+									local cm = mousePos.X - k.pos.X
+									if k.ishori then
+										if cm > (k.dragCurPos.X-k.DragerSize/2) and cm < (k.dragCurPos.X+k.DragerSize/2) then
+											k.dragspr:SetFrame(1)
+										else
+											k.dragspr:SetFrame(0)
+										end
+									else
+										if cm > (k.dragCurPos.Y-k.DragerSize/2) and cm < (k.dragCurPos.Y+k.DragerSize/2) then
+											k.dragspr:SetFrame(1)
+										else
+											k.dragspr:SetFrame(0)
+										end
+									end
 								end
 							end
 						end
@@ -1703,7 +1944,9 @@ function menuTab.DetectSelectedButtonActuale()
 									k.dragPreMousePos =  mousePos/1
 								elseif k.isDrager then
 									menuTab.SelectedDrager = k
-									k.dragPrePos = Vector(mousePos.X-k.pos.X,0)
+									if k.dragtype == 1 then
+										k.dragPrePos = Vector(mousePos.X-k.pos.X,0)
+									end
 									--k.dragCurPos = Vector(mousePos.X,0)
 									k.dragPreMousePos = mousePos/1
 								else
@@ -1763,18 +2006,68 @@ function menuTab.DetectSelectedButtonActuale()
 
 	elseif menuTab.SelectedDrager then
 		local k = menuTab.SelectedDrager
-		if Input.IsMouseBtnPressed(0) then
-			k.dragCurPos.X = k.dragPrePos.X + mousePos.X - k.dragPreMousePos.X
-			k.dragCurPos.X = math.min( k.x, math.max( 0, k.dragCurPos.X))
-			local proc = k.dragCurPos.X / k.x
-			k.func(0, proc, k.dragPrePos.X / k.x)
-		else
-			--k.dragPrePos = Vector(0,0)
-			k.dragPreMousePos = mousePos/1 -- k.dragPrePos
-			k.dragPrePos = k.dragCurPos
-			menuTab.SelectedDrager = nil
-		end
+		if k.dragtype == 1 then
+			if Input.IsMouseBtnPressed(0) then
+				k.dragCurPos.X = k.dragPrePos.X + mousePos.X - k.dragPreMousePos.X
+				k.dragCurPos.X = math.min( k.x, math.max( 0, k.dragCurPos.X))
+				local proc = k.dragCurPos.X / k.x
+				k.func(0, proc, k.dragPrePos.X / k.x)
+			else
+				--k.dragPrePos = Vector(0,0)
+				k.dragPreMousePos = mousePos/1 -- k.dragPrePos
+				k.dragPrePos = k.dragCurPos
+				menuTab.SelectedDrager = nil
+			end
+		elseif k.dragtype == 3 then
+			if Input.IsMouseBtnPressed(0) then
+				if k.ishori then
+					--[[k.IsSelected = k.IsSelected and (k.IsSelected + 1) or 1
+					local ValueSizetrue = (1- math.abs( k.ValueSize ) / (k.x))/2
+					local siL, siR = k.x*(1-ValueSizetrue), k.x*ValueSizetrue
+					
+					k.dragCurPos.X = k.dragPrePos.X + mousePos.X - k.dragPreMousePos.X
+					--k.dragCurPos.X = math.min( k.x-ValueSizetrue, math.max( ValueSizetrue, k.dragCurPos.X))
+					k.dragCurPos.X = math.min( siL, math.max( siR, k.dragCurPos.X))
+					local proc = (k.dragCurPos.X-siR) / siL * k.ValueSize
+					k.func(0, proc, k.dragPrePos.X / k.x)]]
 
+					if math.abs(k.ValueSize)<=k.x then
+						k.dragCurPos.X = k.x/2
+						k.func(0, 0, k.dragPrePos.X / k.x)
+					else
+						local vs = k.x/math.abs(k.ValueSize)/2*k.x   --math.abs(k.ValueSize)/2
+						local siL, siR =(k.x-vs), vs --, (k.y-vs) --, k.y
+						
+						k.dragCurPos.X = k.dragPrePos.X + mousePos.X - k.dragPreMousePos.X
+						k.dragCurPos.X = math.min( siL, math.max( siR, k.dragCurPos.X))
+
+						local proc = (k.dragCurPos.X-siR) / (siL-siR) * (math.abs(k.ValueSize) - k.x)
+						
+						k.func(0, proc, k.dragPrePos.X / k.x)
+					end
+				else
+					if math.abs(k.ValueSize)<=k.y then
+						k.dragCurPos.Y = k.y/2
+						k.func(0, 0, k.dragPrePos.Y / k.y)
+					else
+						local vs = k.y/math.abs(k.ValueSize)/2*k.y   --math.abs(k.ValueSize)/2
+						local siL, siR =(k.y-vs), vs --, (k.y-vs) --, k.y
+						
+						k.dragCurPos.Y = k.dragPrePos.Y + mousePos.Y - k.dragPreMousePos.Y
+						k.dragCurPos.Y = math.min( siL, math.max( siR, k.dragCurPos.Y))
+
+						local proc = (k.dragCurPos.Y-siR) / (siL-siR) * (math.abs(k.ValueSize) - k.y)
+						
+						k.func(0, proc, k.dragPrePos.Y / k.y)
+					end
+				end
+			else
+				--k.dragPrePos = Vector(0,0)
+				k.dragPreMousePos = mousePos/1 -- k.dragPrePos
+				k.dragPrePos = k.dragCurPos/1
+				menuTab.SelectedDrager = nil
+			end
+		end
 	end
 end
 
