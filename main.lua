@@ -170,13 +170,28 @@ Menu.strings = {
 	["file"] = {en = "file", ru = "файл"},
 
 	["playerindex"] = {en = "player", ru = "игрок"},
+	["useless_poisk"] = {en = "This button doesn't do anything \n It's just for clarity", ru = "Это кнопка ничего не делает, \n просто для наглядности"},
 
-	["debug_cmd_hint"] = {en = "",
+	["luamod_hintText"] = {en = "Reloads this menu",
+		ru = "Перезагружает данное меню"},
+
+	["debug_cmd_hint"] = {en = "Opens a quick access window\n to the console command \"debug\"",
 		ru = "Открывает окно быстрого доступа \n к консольной команде \"debug\" "},
 
-	["Stages_Selector_hint"] = {en = "",
-	ru = "Открывает окно с выбором этажей. \n поддерживаются этажи StageAPI"},
+	["Stages_Selector_hint"] = {en = "Opens the Stages Selector window. \n supported StageAPI floors",
+		ru = "Открывает окно с выбором этажей. \n поддерживаются этажи StageAPI"},
 
+	["Ent_Spawner_Menu_hintText"] = {en = "Opens the entity spawning window \n LMB to place",
+		ru = "Открывает окно спавна сущностей \n ЛКМ - поставить"},
+
+	["Grid_Spawner_Menu_hintText"] = {en = "Opens the window of spwning grid elements \n LMB to place, RMB to remove",
+		ru = "Открывает окно спавна элементов сетки \n ЛКМ - поставить, ПКМ - убрать"},
+
+	["Anim_Test_Menu_hintText"] = {en = "Opens a window to view \n animations, colors",
+		ru = "Открывает окно для просмотра \n анимаций, цветов"},
+
+	["Item_List_Menu_hintText"] = {en = "Opens a window for giving out items, trinkets and cards \n LMB to add, RMB to remove",
+		ru = "Открывает окно выдачи \n предметов, брелоков и карт \n ЛКМ - добавить, ПКМ - убрать"},
 }
 
 local function GetStr(str)
@@ -264,6 +279,7 @@ do
 	Menu.PosForBtn = Vector(52,5) --Vector(222,5)
 
 	local nilspr = Sprite()
+	--"__debug_menu"
 	function WORSTDEBUGMENU.AddButtonOnDebugBar(buttonName, size, sprite, pressFunc, renderFunc)
 		local curPos = Menu.PosForBtn/1
 		local self
@@ -307,6 +323,12 @@ do
 
 	function Menu.isPlaceMode(name)
 		return Menu.PlaceModeData.name and Menu.PlaceModeData.name == name
+	end
+
+	function Menu.RemoveOlaceModeByName(name)
+		if Menu.PlaceModeData and Menu.PlaceModeData.name == name then
+			Menu.PlaceModeData = {}
+		end
 	end
 
 	function Menu.PlaceRender()
@@ -400,7 +422,7 @@ function(button)
 	--blockPlayerShot()
 	Isaac.ExecuteCommand("luamod mouse debug menu")
 end)
-
+Menu.wma.ButtonSetHintText("__debug_menu", "luamod", GetStr("luamod_hintText"))
 
 
 
@@ -798,9 +820,10 @@ do
 	end
 	Menu:AddCallback(Menu.wma.Callbacks.WINDOW_PRE_RENDER, Menu.StageSelectorPreRender, StageSel.name)
 
-
-
 end
+
+
+
 
 do
 	Menu.EntSpawner = {name = "Ent_Spawner", size = Vector(126,86), pos = Vector(87,35), btn = {}, TVS = {10,0,0},
@@ -826,6 +849,7 @@ do
 		---@type Window
 		EntSpawner.wind = Menu.wma.ShowWindow(EntSpawner.name, EntSpawner.pos, sizev)
 	end)
+	Menu.wma.ButtonSetHintText("__debug_menu", "Ent_Spawner_Menu", GetStr("Ent_Spawner_Menu_hintText"))
 	
 	local self
 	self = Menu.wma.AddTextBox(EntSpawner.name, "type", Vector(5,24), Vector(32,16), nil, 
@@ -1082,6 +1106,7 @@ do --UIs.GridSpawner
 		---@type Window
 		GridSpawner.wind = Menu.wma.ShowWindow(GridSpawner.name, GridSpawner.pos, sizev)
 	end)
+	Menu.wma.ButtonSetHintText("__debug_menu", "Grid_Spawner_Menu", GetStr("Grid_Spawner_Menu_hintText"))
 	
 	local GridList = {
 		{0, "decoration",},
@@ -1418,6 +1443,7 @@ do
 		AnimTest.wind:SetSubMenuVisible(AnimTest.subnames.file, true)
 		AnimTest.wind:SetSize(AnimTest.size+Vector(0,16))
 	end, nil)
+	Menu.wma.ButtonSetHintText("__debug_menu", "Anim_Test_Menu", GetStr("Anim_Test_Menu_hintText"))
 	
 	local function UpdateLstFrame()
 		AnimTest.anim.lastFrame = 0
@@ -2389,12 +2415,22 @@ do
 					local pos = gridposZero + Vector((x-1)*33, j*33) * .5
 					local self
 					self = Menu.wma.AddButton(ItemList.name, btnstr , pos, 16, 16, UIs.EmptyBtn(), function(button)
-						if button == 0 then
-							--Isaac.GetPlayer():AddCollectible(id, 20)
-							ItemList.item = {type = typ, index = ItemList.playerindex, add = true, id = id}
-						elseif button == 1 then
-							--Isaac.GetPlayer():RemoveCollectible(id)
-							ItemList.item = {type = typ, index = ItemList.playerindex, remove = true, id = id}
+						if ItemList.predestal then
+							if button == 0 then
+								--Isaac.GetPlayer():AddCollectible(id, 20)
+								ItemList.itemToSpawn = {spr = spr, type = typ, index = ItemList.playerindex, add = true, id = id}
+							elseif button == 1 then
+								--Isaac.GetPlayer():RemoveCollectible(id)
+								ItemList.itemToSpawn = nil --{spr = spr, type = typ, index = ItemList.playerindex, remove = true, id = id}
+							end
+						else
+							if button == 0 then
+								--Isaac.GetPlayer():AddCollectible(id, 20)
+								ItemList.item = {type = typ, index = ItemList.playerindex, add = true, id = id}
+							elseif button == 1 then
+								--Isaac.GetPlayer():RemoveCollectible(id)
+								ItemList.item = {type = typ, index = ItemList.playerindex, remove = true, id = id}
+							end
 						end
 					end,
 					function(pos)
@@ -2499,6 +2535,7 @@ do
 			end)
 		end
 	end, nil)
+	Menu.wma.ButtonSetHintText("__debug_menu", "Item_List_Menu", GetStr("Item_List_Menu_hintText"))
 
 	local self
 	self = Menu.wma.AddButton(ItemList.name, "поиск", Vector(10,12), 16, 16, UIs.poisk(), function(button) 
@@ -2507,6 +2544,7 @@ do
 		ItemList.PreGenList()
 		ItemList.GetCollectibleList(ItemList.page)
 	end)
+	Menu.wma.ButtonSetHintText(ItemList.name, "поиск", GetStr("useless_poisk"))
 
 	UIs.ItemList_col = GenSprite("gfx/editor/ui copy2.anm2","itemlist_collectible")
 	local self
@@ -2551,12 +2589,70 @@ do
 	local self
 	self = Menu.wma.AddButton(ItemList.name, "activeslot", Vector(116,130), 16, 16, UIs.ActiveSlot, function(button) 
 		if button ~= 0 then return end
-		ItemList.activeslot = (ItemList.activeslot + 1) % 4
+		if ItemList.predestal then
+			ItemList.predestal = not ItemList.predestal
+			UIs.ActiveSlot.Color = Color(1,1,1,1)
+			Menu.RemoveOlaceModeByName("ItemList_OnRock")
+		else
+			ItemList.activeslot = (ItemList.activeslot + 1) % 4
+		end
 	end,
 	function(pos)
-		UIs.ActiveSlotOverlay:SetFrame(ItemList.activeslot)
-		UIs.ActiveSlotOverlay:Render(pos)
+		if ItemList.predestal or IsType() ~= "col" then
+			UIs.ActiveSlot.Color = Color(1,1,1,.4)
+		else
+			UIs.ActiveSlot.Color = Color(1,1,1,1)
+			UIs.ActiveSlotOverlay:SetFrame(ItemList.activeslot)
+			UIs.ActiveSlotOverlay:Render(pos)
+		end
 	end)
+
+	UIs.ItemRock = GenSprite("gfx/editor/ui copy2.anm2","пьедистал")
+	local self
+	self = Menu.wma.AddButton(ItemList.name, "onrock", Vector(134,130), 16, 16, UIs.ItemRock, function(button) 
+		if button ~= 0 then return end
+		ItemList.predestal = not ItemList.predestal
+		UIs.ActiveSlot.Color = Color(1,1,1,1)
+
+		Menu.PlaceMode("ItemList_OnRock", ItemList.PlacePress, ItemList.PlaceLogic, 
+		function()
+			ItemList.predestal = nil
+			UIs.ActiveSlot.Color = Color(1,1,1,1)
+		end)
+	end,
+	function(pos)
+		if ItemList.predestal then
+			UIs.Var_Sel:Render(pos+Vector(2,8))
+		end
+	end)
+
+	function ItemList.PlacePress(btn, pos)
+		if not ItemList.itemToSpawn or btn ~= 0 or ItemList.wind.IsHided or not Menu.wma.OnFreePos then return end
+
+		local tt = IsType()
+		if tt == "col" then
+			Isaac.Spawn(5,100, ItemList.itemToSpawn.id, pos, Vector(0,0), Isaac.GetPlayer(ItemList.playerindex))
+		elseif tt == "trin" then
+			Isaac.Spawn(5,350, ItemList.itemToSpawn.id, pos, Vector(0,0), Isaac.GetPlayer(ItemList.playerindex))
+		elseif tt == "card" then
+			Isaac.Spawn(5,300, ItemList.itemToSpawn.id, pos, Vector(0,0), Isaac.GetPlayer(ItemList.playerindex))
+		end
+	end
+
+	function ItemList.PlaceLogic(pos)
+		if ItemList.wind and ItemList.wind.Removed then
+			ItemList.wind = nil
+		end
+		if ItemList.predestal and not ItemList.wind.IsHided
+		and ItemList.itemToSpawn and ItemList.itemToSpawn.spr then
+			
+			UIs.entspawnerpoint:Render(pos)
+			local prescale = ItemList.itemToSpawn.spr.Scale/1
+			ItemList.itemToSpawn.spr.Scale = Vector(1,1)
+			ItemList.itemToSpawn.spr:Render(pos+Vector(-8,-16))
+			ItemList.itemToSpawn.spr.Scale = prescale
+		end
+	end
 
 	local self
 	self = Menu.wma.AddTextBox(ItemList.name, "poisktext", Vector(28,12), Vector(128, 16), nil, 
@@ -2634,9 +2730,12 @@ do
 		ItemList.CardIdToPath = ibackthis.CardIdToPath
 	end
 
+	UIs.ThisGuy = GenSprite("gfx/editor/ui copy2.anm2","этого")
 	function Menu.ItemListRender()
-		local player = Isaac.GetPlayer(ItemList.item.index)
+		if not ItemList.wind or ItemList.wind.Removed or ItemList.wind.IsHided or not ItemList.playerindex then return end
+		local player = Isaac.GetPlayer(ItemList.playerindex)
 		local renderpos = Isaac.WorldToScreen(player.Position)
+		UIs.ThisGuy:Render(renderpos+Vector(0.5,-40))
 	end
 
 end
