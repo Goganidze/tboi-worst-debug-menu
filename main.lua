@@ -274,7 +274,6 @@ do
 		self.render = function(pos)
 			--local ScrX = Isaac.GetScreenWidth()
 			if sprite then
-				print(sprite,buttonName)
 				sprite:SetFrame(self.IsSelected and 1 or 0)
 				sprite:Render(pos,Vector(math.max(0, 52 - pos.X),0))
 			end
@@ -285,6 +284,50 @@ do
 		Menu.PosForBtn.X = Menu.PosForBtn.X + size.X + 2
 		return self
 	end
+
+	Menu.PlaceModeData = {}
+
+	---@param name any
+	---@param press fun(MouseBtn:integer, Mousepos:Vector)
+	---@param logic fun(pos:Vector)
+	---@param loss function
+	function WORSTDEBUGMENU.PlaceMode(name, press, logic, loss)
+		if name and logic then
+			local prename = Menu.PlaceModeData.name
+			if Menu.PlaceModeData.loss then
+				Menu.PlaceModeData.loss()
+			end
+			if prename ~= name then
+				Menu.PlaceModeData = {name = name, press = press, logic = logic, loss = loss}
+			else
+				Menu.PlaceModeData = {}
+			end
+		end
+	end
+
+	function Menu.isPlaceMode(name)
+		return Menu.PlaceModeData.name and Menu.PlaceModeData.name == name
+	end
+
+	function Menu.PlaceRender()
+		if game:IsPaused() then return end
+		local place = Menu.PlaceModeData
+		if place then
+			if place.logic then
+				place.logic(Menu.wma.MousePos)
+			end
+			if place.press then
+				if Menu.wma.IsMouseBtnTriggered(0) then
+					place.press(0, Input.GetMousePosition(true))
+				elseif Menu.wma.IsMouseBtnTriggered(1) then
+					place.press(1, Input.GetMousePosition(true))
+				end
+			end
+		end
+	end
+
+	Menu:AddCallback(ModCallbacks.MC_POST_RENDER, Menu.PlaceRender)
+
 end
 
 local grab1
@@ -842,7 +885,13 @@ do
 	self = Menu.wma.AddButton(EntSpawner.name, "odin_chel", Vector(73,48), 16, 16, UIs.Chlen_1(), function(button) 
 		if button ~= 0 then return end
 		blockPlayerShot()
-		EntSpawner.SpawnMode = EntSpawner.SpawnMode == 1 and 0 or 1
+		Menu.PlaceMode("EntSpawner_odin", nil, Menu.EntSpawnerLogic, 
+		function()
+			EntSpawner.SpawnMode = 0
+		end)
+		if Menu.isPlaceMode("EntSpawner_odin") then
+			EntSpawner.SpawnMode = EntSpawner.SpawnMode == 1 and 0 or 1
+		end
 	end,
 	function(pos)
 		if EntSpawner.SpawnMode == 1 then
@@ -853,7 +902,14 @@ do
 	self = Menu.wma.AddButton(EntSpawner.name, "mnogo_chel", Vector(91,48), 16, 16, UIs.Chlen_multi, function(button) 
 		if button ~= 0 then return end
 		blockPlayerShot()
-		EntSpawner.SpawnMode = EntSpawner.SpawnMode == 2 and 0 or 2
+
+		Menu.PlaceMode("EntSpawner_mnogo", nil, Menu.EntSpawnerLogic, 
+		function()
+			EntSpawner.SpawnMode = 0
+		end)
+		if Menu.isPlaceMode("EntSpawner_mnogo") then
+			EntSpawner.SpawnMode = EntSpawner.SpawnMode == 2 and 0 or 2
+		end
 	end,
 	function(pos)
 		if EntSpawner.SpawnMode == 2 then
@@ -903,12 +959,29 @@ do
 		EntSpawner.LastSpawns = TabDeepCopy(tab)
 	end
 
+	function Menu.EntSpawnerLogic()
+		if EntSpawner.SpawnMode > 0 and EntSpawner.wind then
+			local mousePos = Menu.wma.MousePos
+			UIs.entspawnerpoint:Render(mousePos)
+			if Menu.wma.OnFreePos and Menu.wma.IsMouseBtnTriggered(0) then
+				local pos = Input.GetMousePosition(true)
+				local tvs = EntSpawner.TVS
+				
+				if EntSpawner.SpawnMode == 1 then
+					EntSpawner.EntSpawner_SpawnList({{tvs[1], tvs[2], tvs[3], pos}})
+				elseif EntSpawner.SpawnMode == 2 then
+					EntSpawner.SpawnList[#EntSpawner.SpawnList+1] = {tvs[1], tvs[2], tvs[3], pos}
+				end
+			end
+		end
+	end
+
 	function Menu.EntSpawnerRender()
 		if game:IsPaused() then return end
 		if EntSpawner.wind and EntSpawner.wind.Removed then
 			EntSpawner.wind = nil
 		end
-		if EntSpawner.SpawnMode > 0 and EntSpawner.wind then
+		--[[if EntSpawner.SpawnMode > 0 and EntSpawner.wind then
 			local mousePos = Menu.wma.MousePos
 			UIs.entspawnerpoint:Render(mousePos)
 			if Menu.wma.OnFreePos and Menu.wma.IsMouseBtnTriggered(0) then
@@ -923,7 +996,7 @@ do
 					--EntSpawner.LastSpawns = TabDeepCopy(EntSpawner.SpawnList)
 				end
 			end
-		end
+		end]]
 		if EntSpawner.wind then
 			if #EntSpawner.SpawnList>0 then
 				UIs.entspawnerpoint.Color = Color(1,1,1,.5)
@@ -938,7 +1011,7 @@ do
 			end
 		end
 
-		if Menu.GridSpawner.wind and Menu.GridSpawner.wind.Removed then
+		--[[if Menu.GridSpawner.wind and Menu.GridSpawner.wind.Removed then
 			Menu.GridSpawner.wind = nil
 		end
 		if Menu.GridSpawner.wind then
@@ -975,7 +1048,9 @@ do
 					Menu.GridSpawner.btn.state.text = ""
 				end
 			end
-		end
+		end]]
+
+		Menu.ItemListRender()
 	end
 
 	Menu:AddCallback(ModCallbacks.MC_POST_RENDER, Menu.EntSpawnerRender)
@@ -1146,7 +1221,12 @@ do --UIs.GridSpawner
 	self = Menu.wma.AddButton(GridSpawner.name, "odin_chel", Vector(5,32), 16, 16, UIs.Chlen_1(), function(button) 
 		if button ~= 0 then return end
 		blockPlayerShot()
-		GridSpawner.SpawnMode = GridSpawner.SpawnMode == 1 and 0 or 1
+		Menu.PlaceMode("GridSpawner_odin", Menu.GridSpawnerPlacePress, Menu.GridSpawnerPlaceLogic, function()
+			GridSpawner.SpawnMode = 0
+		end)
+		if Menu.isPlaceMode("GridSpawner_odin") then
+			GridSpawner.SpawnMode = GridSpawner.SpawnMode == 1 and 0 or 1
+		end
 	end,
 	function(pos)
 		if GridSpawner.SpawnMode == 1 then
@@ -1158,7 +1238,12 @@ do --UIs.GridSpawner
 	self = Menu.wma.AddButton(GridSpawner.name, "edit_grid", Vector(22,32), 16, 16, UIs.Editbtn, function(button) 
 		if button ~= 0 then return end
 		blockPlayerShot()
-		GridSpawner.SpawnMode = GridSpawner.SpawnMode == 2 and 0 or 2
+		Menu.PlaceMode("GridSpawner_edit", Menu.GridSpawnerPlacePress, Menu.GridSpawnerPlaceLogic, function()
+			GridSpawner.SpawnMode = 0
+		end)
+		if Menu.isPlaceMode("GridSpawner_edit") then
+			GridSpawner.SpawnMode = GridSpawner.SpawnMode == 2 and 0 or 2
+		end
 	end,
 	function(pos)
 		if GridSpawner.SpawnMode == 2 then
@@ -1248,6 +1333,59 @@ do --UIs.GridSpawner
 		end
 	end)
 	GridSpawner.btn.state.text = ""
+
+	function Menu.GridSpawnerPlacePress(btn, mousePos)
+		if Menu.GridSpawner.wind then
+			local room = game:GetRoom()
+			local pos = Input.GetMousePosition(true)
+			if Menu.GridSpawner.SpawnMode == 1 and Menu.GridSpawner.TVS ~= -1 then
+				local index = room:GetGridIndex(pos)
+
+				if Menu.wma.OnFreePos and btn == (0) then
+					--local pos = Input.GetMousePosition(true)
+					local tvs = Menu.GridSpawner.TVS
+					Isaac.ExecuteCommand("gridspawn "..Menu.GridSpawner.TVS.." "..index)
+				elseif Menu.wma.OnFreePos and btn == (1) then
+					room:RemoveGridEntity(index, 0, false)
+				end
+			elseif Menu.GridSpawner.SpawnMode == 2 then
+				local index = room:GetGridIndex(pos)
+
+				if Menu.wma.OnFreePos and btn == (0) then
+					local grid = room:GetGridEntity(index)
+					--if grid then
+						Menu.GridSpawner.SelGridIndex = grid
+						Menu.GridSpawner.btn.vardata.text = grid and grid.VarData or ""
+						Menu.GridSpawner.btn.state.text = grid and grid.State or ""
+					--end
+				elseif btn == (1) then
+					Menu.GridSpawner.SelGridIndex = nil
+					Menu.GridSpawner.btn.vardata.text = ""
+					Menu.GridSpawner.btn.state.text = ""
+				end
+			end
+		end
+	end
+	function Menu.GridSpawnerPlaceLogic(mousePos)
+		if Menu.GridSpawner.wind and Menu.GridSpawner.wind.Removed then
+			Menu.GridSpawner.wind = nil
+		end
+		if Menu.GridSpawner.wind then
+			local room = game:GetRoom()
+			local pos = Input.GetMousePosition(true)
+			if Menu.GridSpawner.SpawnMode == 1 and Menu.GridSpawner.TVS ~= -1 then
+				local index = room:GetGridIndex(pos)
+				local RenderPos = Isaac.WorldToScreen(room:GetGridPosition(room:GetGridIndex(pos)))
+
+				UIs.entspawnerpoint:Render(RenderPos)
+			elseif Menu.GridSpawner.SpawnMode == 2 then
+				local index = room:GetGridIndex(pos)
+				local RenderPos = Isaac.WorldToScreen(room:GetGridPosition(room:GetGridIndex(pos)))
+
+				UIs.entspawnerpoint:Render(RenderPos)
+			end
+		end
+	end
 
 
 end
@@ -1562,118 +1700,373 @@ do
 	vG.Y = vG.Y+18 + self.y
 	local leftv = 24
 	
+	local selfR
+	selfR = Menu.wma.AddTextBox(AnimTest.subnames.color, "Tred", Vector(leftv-22,vG.Y-1), Vector(21,10), nil, 
+	function(result)
+		if not result then
+			return true
+		else
+			if not tonumber(result) then
+				return GetStr("incorrectNumber")
+			end
+			AnimTest.anim.col.R = result / 256
+			return true
+		end
+	end, true, nil, 1)
+	selfR.text = math.ceil(AnimTest.anim.col.R * 255)
+	selfR.textoffset = Vector(-1,-2)
 	local self
 	self = Menu.wma.AddGragFloat(AnimTest.subnames.color, "red", Vector(leftv,vG.Y), Vector(136/2,10), nilspr, nil, 
 	function(button, value, oldvalue)
 		if button ~= 0 then return end
 		AnimTest.anim.col.R = value
+		selfR.text = math.ceil(value * 255)
 	end, function(pos)
 		font:DrawStringScaledUTF8("color",pos.X+3,pos.Y-9,0.5,0.5,KColor(0.1,0.1,0.2,1),0,false)
-		font:DrawStringScaledUTF8(math.ceil(AnimTest.anim.col.R * 255), pos.X-10,pos.Y-1,0.5,0.5,KColor(0.1,0.1,0.2,1),1,true)
+		--font:DrawStringScaledUTF8(math.ceil(AnimTest.anim.col.R * 255), pos.X-10,pos.Y-1,0.5,0.5,KColor(0.1,0.1,0.2,1),1,true)
 		UIs.ColorDrager:RenderLayer(0, pos)
+		self.dragCurPos.X = math.min(self.x, math.max(0, AnimTest.anim.col.R * self.x))
 	end)
+
+	local selfR
+	selfR = Menu.wma.AddTextBox(AnimTest.subnames.color, "TredO", Vector(leftv+69+2,vG.Y-1), Vector(21,10), nil, 
+	function(result)
+		if not result then
+			return true
+		else
+			if not tonumber(result) then
+				return GetStr("incorrectNumber")
+			end
+			AnimTest.anim.col.RO = result / 256
+			return true
+		end
+	end, true, nil, 1)
+	selfR.text = math.ceil(AnimTest.anim.col.RO * 255)
+	selfR.textoffset = Vector(-1,-2)
 	local self
-	self = Menu.wma.AddGragFloat(AnimTest.subnames.color, "redO", Vector(leftv+69+20,vG.Y), Vector(136/2,10), nilspr, nil, 
+	self = Menu.wma.AddGragFloat(AnimTest.subnames.color, "redO", Vector(leftv+69+26,vG.Y), Vector(136/2,10), nilspr, nil, 
 	function(button, value, oldvalue)
 		if button ~= 0 then return end
 		AnimTest.anim.col.RO = value
+		selfR.text = math.ceil(value * 255)
 	end, function(pos)
 		font:DrawStringScaledUTF8(GetStr("offset"),pos.X+3,pos.Y-9,0.5,0.5,KColor(0.1,0.1,0.2,1),0,false)
-		font:DrawStringScaledUTF8(math.ceil(AnimTest.anim.col.RO * 255), pos.X-10,pos.Y-1,0.5,0.5,KColor(0.1,0.1,0.2,1),1,true)
+		--font:DrawStringScaledUTF8(math.ceil(AnimTest.anim.col.RO * 255), pos.X-10,pos.Y-1,0.5,0.5,KColor(0.1,0.1,0.2,1),1,true)
 		UIs.ColorDrager:RenderLayer(0, pos)
+		self.dragCurPos.X = math.min(self.x, math.max(0, AnimTest.anim.col.RO * self.x))
 	end, 0)
 	vG.Y = vG.Y+2 + self.y
+
+	local selfR
+	selfR = Menu.wma.AddTextBox(AnimTest.subnames.color, "Tgreen", Vector(leftv-22,vG.Y-1), Vector(21,10), nil, 
+	function(result)
+		if not result then
+			return true
+		else
+			if not tonumber(result) then
+				return GetStr("incorrectNumber")
+			end
+			AnimTest.anim.col.G = result / 256
+			return true
+		end
+	end, true, nil, 1)
+	selfR.text = math.ceil(AnimTest.anim.col.G * 255)
+	selfR.textoffset = Vector(-1,-2)
 	local self
 	self = Menu.wma.AddGragFloat(AnimTest.subnames.color, "green", Vector(leftv,vG.Y), Vector(136/2,10), nilspr, nil, 
 	function(button, value, oldvalue)
 		if button ~= 0 then return end
 		AnimTest.anim.col.G = value
+		selfR.text = math.ceil(value * 255)
 	end, function(pos)
-		font:DrawStringScaledUTF8(math.ceil(AnimTest.anim.col.G * 255), pos.X-10,pos.Y-1,0.5,0.5,KColor(0.1,0.1,0.2,1),1,true)
+		--font:DrawStringScaledUTF8(math.ceil(AnimTest.anim.col.G * 255), pos.X-10,pos.Y-1,0.5,0.5,KColor(0.1,0.1,0.2,1),1,true)
 		UIs.ColorDrager:RenderLayer(1, pos)
+		self.dragCurPos.X = math.min(self.x, math.max(0, AnimTest.anim.col.G * self.x))
 	end)
+
+	local selfR
+	selfR = Menu.wma.AddTextBox(AnimTest.subnames.color, "TgreenO", Vector(leftv+69+2,vG.Y-1), Vector(21,10), nil, 
+	function(result)
+		if not result then
+			return true
+		else
+			if not tonumber(result) then
+				return GetStr("incorrectNumber")
+			end
+			AnimTest.anim.col.GO = result / 256
+			return true
+		end
+	end, true, nil, 1)
+	selfR.text = math.ceil(AnimTest.anim.col.GO * 255)
+	selfR.textoffset = Vector(-1,-2)
 	local self
-	self = Menu.wma.AddGragFloat(AnimTest.subnames.color, "greenO", Vector(leftv+69+20,vG.Y), Vector(136/2,10), nilspr, nil, 
+	self = Menu.wma.AddGragFloat(AnimTest.subnames.color, "greenO", Vector(leftv+69+26,vG.Y), Vector(136/2,10), nilspr, nil, 
 	function(button, value, oldvalue)
 		if button ~= 0 then return end
 		AnimTest.anim.col.GO = value
+		selfR.text = math.ceil(value * 255)
 	end, function(pos)
-		font:DrawStringScaledUTF8(math.ceil(AnimTest.anim.col.GO * 255), pos.X-10,pos.Y-1,0.5,0.5,KColor(0.1,0.1,0.2,1),1,true)
+		--font:DrawStringScaledUTF8(math.ceil(AnimTest.anim.col.GO * 255), pos.X-10,pos.Y-1,0.5,0.5,KColor(0.1,0.1,0.2,1),1,true)
 		UIs.ColorDrager:RenderLayer(1, pos)
+		self.dragCurPos.X = math.min(self.x, math.max(0, AnimTest.anim.col.GO * self.x))
 	end, 0)
 	vG.Y = vG.Y+2 + self.y
+
+	local selfR
+	selfR = Menu.wma.AddTextBox(AnimTest.subnames.color, "Tblue", Vector(leftv-22,vG.Y-1), Vector(21,10), nil, 
+	function(result)
+		if not result then
+			return true
+		else
+			if not tonumber(result) then
+				return GetStr("incorrectNumber")
+			end
+			AnimTest.anim.col.B = result / 256
+			return true
+		end
+	end, true, nil, 1)
+	selfR.text = math.ceil(AnimTest.anim.col.B * 255)
+	selfR.textoffset = Vector(-1,-2)
 	local self
 	self = Menu.wma.AddGragFloat(AnimTest.subnames.color, "blue", Vector(leftv,vG.Y), Vector(136/2,10), nilspr, nil, 
 	function(button, value, oldvalue)
 		if button ~= 0 then return end
 		AnimTest.anim.col.B = value
+		selfR.text = math.ceil(value * 255)
 	end, function(pos)
-		font:DrawStringScaledUTF8(math.ceil(AnimTest.anim.col.B * 255), pos.X-10,pos.Y-1,0.5,0.5,KColor(0.1,0.1,0.2,1),1,true)
+		--font:DrawStringScaledUTF8(math.ceil(AnimTest.anim.col.B * 255), pos.X-10,pos.Y-1,0.5,0.5,KColor(0.1,0.1,0.2,1),1,true)
 		UIs.ColorDrager:RenderLayer(2, pos)
+		self.dragCurPos.X = math.min(self.x, math.max(0, AnimTest.anim.col.B * self.x))
 	end)
+
+	local selfR
+	selfR = Menu.wma.AddTextBox(AnimTest.subnames.color, "TblueO", Vector(leftv+69+2,vG.Y-1), Vector(21,10), nil, 
+	function(result)
+		if not result then
+			return true
+		else
+			if not tonumber(result) then
+				return GetStr("incorrectNumber")
+			end
+			AnimTest.anim.col.BO = result / 256
+			return true
+		end
+	end, true, nil, 1)
+	selfR.text = math.ceil(AnimTest.anim.col.BO * 255)
+	selfR.textoffset = Vector(-1,-2)
 	local self
-	self = Menu.wma.AddGragFloat(AnimTest.subnames.color, "blueO", Vector(leftv+69+20,vG.Y), Vector(136/2,10), nilspr, nil, 
+	self = Menu.wma.AddGragFloat(AnimTest.subnames.color, "blueO", Vector(leftv+69+26,vG.Y), Vector(136/2,10), nilspr, nil, 
 	function(button, value, oldvalue)
 		if button ~= 0 then return end
 		AnimTest.anim.col.BO = value
+		selfR.text = math.ceil(value * 255)
 	end, function(pos)
-		font:DrawStringScaledUTF8(math.ceil(AnimTest.anim.col.BO * 255), pos.X-10,pos.Y-1,0.5,0.5,KColor(0.1,0.1,0.2,1),1,true)
+		--font:DrawStringScaledUTF8(math.ceil(AnimTest.anim.col.BO * 255), pos.X-10,pos.Y-1,0.5,0.5,KColor(0.1,0.1,0.2,1),1,true)
 		UIs.ColorDrager:RenderLayer(2, pos)
+		self.dragCurPos.X = math.min(self.x, math.max(0, AnimTest.anim.col.BO * self.x))
 	end, 0)
 	vG.Y = vG.Y+2 + self.y
+
+	local selfR
+	selfR = Menu.wma.AddTextBox(AnimTest.subnames.color, "Talpha", Vector(leftv-22,vG.Y-1), Vector(21,10), nil, 
+	function(result)
+		if not result then
+			return true
+		else
+			if not tonumber(result) then
+				return GetStr("incorrectNumber")
+			end
+			AnimTest.anim.col.A = result / 256
+			return true
+		end
+	end, true, nil, 1)
+	selfR.text = math.ceil(AnimTest.anim.col.A * 255)
+	selfR.textoffset = Vector(-1,-2)
 	local self
 	self = Menu.wma.AddGragFloat(AnimTest.subnames.color, "alpha", Vector(leftv,vG.Y), Vector(136/2,10), nilspr, nil, 
 	function(button, value, oldvalue)
 		if button ~= 0 then return end
 		AnimTest.anim.col.A = value
+		selfR.text = math.ceil(value * 255)
 	end, function(pos)
-		font:DrawStringScaledUTF8(math.ceil(AnimTest.anim.col.A * 255), pos.X-10,pos.Y-1,0.5,0.5,KColor(0.1,0.1,0.2,1),1,true)
+		--font:DrawStringScaledUTF8(math.ceil(AnimTest.anim.col.A * 255), pos.X-10,pos.Y-1,0.5,0.5,KColor(0.1,0.1,0.2,1),1,true)
 		UIs.ColorDrager:RenderLayer(3, pos)
+		self.dragCurPos.X = math.min(self.x, math.max(0, AnimTest.anim.col.A* self.x))
 	end)
 
 
 	vG.Y = vG.Y+18 + self.y  --colorize
 	
+	local selfR
+	selfR = Menu.wma.AddTextBox(AnimTest.subnames.color, "TredOf", Vector(leftv-22,vG.Y-1), Vector(21,10), nil, 
+	function(result)
+		if not result then
+			return true
+		else
+			if not tonumber(result) then
+				return GetStr("incorrectNumber")
+			end
+			AnimTest.anim.colorize.R = result / 256
+			return true
+		end
+	end, true, nil, 1)
+	selfR.text = math.ceil(AnimTest.anim.colorize.R * 255)
+	selfR.textoffset = Vector(-1,-2)
 	local self
 	self = Menu.wma.AddGragFloat(AnimTest.subnames.color, "redOf", Vector(leftv,vG.Y), Vector(136/2,10), nilspr, nil, 
 	function(button, value, oldvalue)
 		if button ~= 0 then return end
 		AnimTest.anim.colorize.R = value
+		selfR.text = math.ceil(value * 255)
 	end, function(pos)
 		font:DrawStringScaledUTF8(GetStr("colorize"),pos.X+3,pos.Y-9,0.5,0.5,KColor(0.1,0.1,0.2,1),0,false)
-		font:DrawStringScaledUTF8(math.ceil(AnimTest.anim.colorize.R * 255), pos.X-10,pos.Y-1,0.5,0.5,KColor(0.1,0.1,0.2,1),1,true)
+		--font:DrawStringScaledUTF8(math.ceil(AnimTest.anim.colorize.R * 255), pos.X-10,pos.Y-1,0.5,0.5,KColor(0.1,0.1,0.2,1),1,true)
 		UIs.ColorDrager:RenderLayer(0, pos)
+		self.dragCurPos.X = math.min(self.x, math.max(0, AnimTest.anim.colorize.R * self.x))
 	end)
 	vG.Y = vG.Y+2 + self.y
+
+	local selfR
+	selfR = Menu.wma.AddTextBox(AnimTest.subnames.color, "TgreenOf", Vector(leftv-22,vG.Y-1), Vector(21,10), nil, 
+	function(result)
+		if not result then
+			return true
+		else
+			if not tonumber(result) then
+				return GetStr("incorrectNumber")
+			end
+			AnimTest.anim.colorize.G = result / 256
+			return true
+		end
+	end, true, nil, 1)
+	selfR.text = math.ceil(AnimTest.anim.colorize.G * 255)
+	selfR.textoffset = Vector(-1,-2)
 	local self
 	self = Menu.wma.AddGragFloat(AnimTest.subnames.color, "greenOf", Vector(leftv,vG.Y), Vector(136/2,10), nilspr, nil, 
 	function(button, value, oldvalue)
 		if button ~= 0 then return end
 		AnimTest.anim.colorize.G = value
+		selfR.text = math.ceil(value * 255)
 	end, function(pos)
-		font:DrawStringScaledUTF8(math.ceil(AnimTest.anim.colorize.G * 255), pos.X-10,pos.Y-1,0.5,0.5,KColor(0.1,0.1,0.2,1),1,true)
+		--font:DrawStringScaledUTF8(math.ceil(AnimTest.anim.colorize.G * 255), pos.X-10,pos.Y-1,0.5,0.5,KColor(0.1,0.1,0.2,1),1,true)
 		UIs.ColorDrager:RenderLayer(1, pos)
+		self.dragCurPos.X = math.min(self.x, math.max(0, AnimTest.anim.colorize.G * self.x))
 	end)
 	vG.Y = vG.Y+2 + self.y
+
+	local selfR
+	selfR = Menu.wma.AddTextBox(AnimTest.subnames.color, "TblueOf", Vector(leftv-22,vG.Y-1), Vector(21,10), nil, 
+	function(result)
+		if not result then
+			return true
+		else
+			if not tonumber(result) then
+				return GetStr("incorrectNumber")
+			end
+			AnimTest.anim.colorize.B = result / 256
+			return true
+		end
+	end, true, nil, 1)
+	selfR.text = math.ceil(AnimTest.anim.colorize.B * 255)
+	selfR.textoffset = Vector(-1,-2)
 	local self
 	self = Menu.wma.AddGragFloat(AnimTest.subnames.color, "blueOf", Vector(leftv,vG.Y), Vector(136/2,10), nilspr, nil, 
 	function(button, value, oldvalue)
 		if button ~= 0 then return end
 		AnimTest.anim.colorize.B = value
+		selfR.text = math.ceil(value * 255)
 	end, function(pos)
-		font:DrawStringScaledUTF8(math.ceil(AnimTest.anim.colorize.B * 255), pos.X-10,pos.Y-1,0.5,0.5,KColor(0.1,0.1,0.2,1),1,true)
+		--font:DrawStringScaledUTF8(math.ceil(AnimTest.anim.colorize.B * 255), pos.X-10,pos.Y-1,0.5,0.5,KColor(0.1,0.1,0.2,1),1,true)
 		UIs.ColorDrager:RenderLayer(2, pos)
+		self.dragCurPos.X = math.min(self.x, math.max(0, AnimTest.anim.colorize.B * self.x))
 	end)
 	vG.Y = vG.Y+2 + self.y
+
+	local selfR
+	selfR = Menu.wma.AddTextBox(AnimTest.subnames.color, "TalphaOf", Vector(leftv-22,vG.Y-1), Vector(21,10), nil, 
+	function(result)
+		if not result then
+			return true
+		else
+			if not tonumber(result) then
+				return GetStr("incorrectNumber")
+			end
+			AnimTest.anim.colorize.A = result / 256
+			return true
+		end
+	end, true, nil, 1)
+	selfR.text = math.ceil(AnimTest.anim.colorize.A * 255)
+	selfR.textoffset = Vector(-1,-2)
 	local self
 	self = Menu.wma.AddGragFloat(AnimTest.subnames.color, "alphaOf", Vector(leftv,vG.Y), Vector(136/2,10), nilspr, nil, 
 	function(button, value, oldvalue)
 		if button ~= 0 then return end
 		AnimTest.anim.colorize.A = value
+		selfR.text = math.ceil(value * 255)
 	end, function(pos)
-		font:DrawStringScaledUTF8(math.ceil(AnimTest.anim.colorize.A * 255), pos.X-10,pos.Y-1,0.5,0.5,KColor(0.1,0.1,0.2,1),1,true)
+		--font:DrawStringScaledUTF8(math.ceil(AnimTest.anim.colorize.A * 255), pos.X-10,pos.Y-1,0.5,0.5,KColor(0.1,0.1,0.2,1),1,true)
 		UIs.ColorDrager:RenderLayer(3, pos)
+		self.dragCurPos.X = math.min(self.x, math.max(0, AnimTest.anim.colorize.A * self.x))
 	end, 0)
+
+	local raindow = function(x)
+		local c
+		local w = x * 245 + 380
+		if (w >= 380 and w < 440) then
+			c = Color
+				(-(w - 440.) / (440. - 380.), 0.0, 1.0);
+		elseif (w >= 440 and w < 490) then
+			c = Color
+				(0.0, (w - 440.) / (490. - 440.), 1.0 );
+		elseif (w >= 490 and w < 510) then
+			c = Color
+				(0.0, 1.0, -(w - 510.) / (510. - 490.) );
+		elseif (w >= 510 and w < 580) then
+			c = Color
+				( (w - 510.) / (580. - 510.), 1.0, 0.0 );
+		elseif (w >= 580 and w < 645) then
+			c = Color
+				( 1.0, -(w - 645.) / (645. - 580.), 0.0 );
+		elseif (w >= 645 and w <= 780) then
+			c = Color
+				(1.0, 0.0, 0.0 );
+		else
+			c = Color
+				(0.0, 0.0, 0.0 );
+		end
+		return c
+	end
+
+	local fumo
+	fumo = Menu.wma.AddButton(AnimTest.subnames.color, "fumo", Vector(100,150), 64, 16, nil, function(button) 
+		if button ~= 0 then return end
+		blockPlayerShot()
+		if fumo.IsSelected and fumo.IsSelected > 20 then
+			fumo.IsActived = not fumo.IsActived
+			if fumo.IsActived then
+				fumo.fumo = GenSprite("gfx/editor/fumo.anm2","fumo")
+				fumo.fumo.PlaybackSpeed = .5
+			else
+				fumo.fumo = nil
+			end
+		end
+	end,
+	function(pos)
+		if fumo.IsSelected and fumo.IsSelected > 20 then
+			local frame = Isaac.GetFrameCount()
+			fumo.fumoColor = raindow( (frame % 120 + 1) / 120) --Color((frame % 60 )/ 60, ((frame-20) % 60 )/ 60, ((frame-40) % 60) / 60, 1)
+	
+			Menu.wma.RenderCustomButton(pos, Vector(fumo.x, fumo.y), fumo.IsSelected, raindow( ((frame) % 120 + 1) / 120))
+			Menu.wma.RenderCustomButton(pos+Vector(1,1), Vector(fumo.x-2, fumo.y-2), fumo.IsSelected)
+			font:DrawStringScaledUTF8("fumo", pos.X+self.x/2-2, pos.Y+3, 0.5,0.5,KColor(fumo.fumoColor.R, fumo.fumoColor.G, fumo.fumoColor.B,1),1,true)
+		end
+		if fumo.fumo then fumo.fumo:Render(pos+Vector(fumo.x/1.5, fumo.y/1.5)) fumo.fumo:Update() 
+			if fumo.fumo:IsFinished() then
+				fumo.fumo:Play(fumo.fumo:GetAnimation(), true)
+			end
+		end
+	end, false, -1)
+	fumo.fumoColor = Color(1,1,1,1)
 
 
 	local vG = GetPlace(AnimTest.name)/1
@@ -2241,12 +2634,12 @@ do
 		ItemList.CardIdToPath = ibackthis.CardIdToPath
 	end
 
-
+	function Menu.ItemListRender()
+		local player = Isaac.GetPlayer(ItemList.item.index)
+		local renderpos = Isaac.WorldToScreen(player.Position)
+	end
 
 end
-
-
-
 
 
 

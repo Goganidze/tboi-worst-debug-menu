@@ -467,6 +467,7 @@ end)
 ---@field posfunc function
 ---@field IsTextBox boolean
 ---@field text string|number
+---@field textoffset Vector
 ---@field visible boolean
 ---@field isDragZone boolean?
 ---@field dragPrePos Vector?
@@ -1284,10 +1285,11 @@ function menuTab.OpenTextbox(menu, button, onlyNumber, resultCheckFunc, startTex
 	menuTab.TextboxPopup.ResultCheck = resultCheckFunc
 	menuTab.TextboxPopup.Text = startText and tostring(startText) or ""
 	menuTab.TextboxPopup.TextPos = startText and utf8.len(menuTab.TextboxPopup.Text) or 0
+	menuTab.TextboxPopup.textoffset = menuTab.GetButton(menu, button).textoffset
 	--menuTab.TextboxPopup.TabKey = {tab, key}
 
 	local ctrlVPressed = false
-
+	local TextboxPopup = menuTab.TextboxPopup
 	menuTab.TextboxPopup.KeyLogic = function(MousePos)
 		mousePosi = MousePos
 
@@ -1295,36 +1297,36 @@ function menuTab.OpenTextbox(menu, button, onlyNumber, resultCheckFunc, startTex
 		--and menuTab.MenuButtons[Menuname].TextBox.spr:GetFrame() == 0 then
 		and not menuTab.GetButton(menu, button).IsSelected
 		then
-			menuTab.TextboxPopup.InFocus = false
+			TextboxPopup.InFocus = false
 
-			local result = menuTab.TextboxPopup.ResultCheck(menuTab.TextboxPopup.Text)
+			local result = TextboxPopup.ResultCheck(TextboxPopup.Text)
 			if result == true then
 				menuTab.CloseTextbox()
 			elseif type(result) == "string" then
-				menuTab.TextboxPopup.errorMes = result
+				TextboxPopup.errorMes = result
 				menuTab.GetButton(menu, button).errorMes = result
 				menuTab.GetButton(menu, button).showError = 60
 				menuTab.CloseTextbox()
 			end
 		end
 		if Input.IsButtonPressed(Keyboard.KEY_ENTER, 0)  then
-			local result = menuTab.TextboxPopup.ResultCheck(menuTab.TextboxPopup.Text)
+			local result = TextboxPopup.ResultCheck(TextboxPopup.Text)
 			if result == true then
 				menuTab.CloseTextbox()
 			elseif type(result) == "string" then
-				menuTab.TextboxPopup.errorMes = result
+				TextboxPopup.errorMes = result
 				menuTab.GetButton(menu, button).errorMes = result
 				menuTab.GetButton(menu, button).showError = 60
 			end
 		end
-		if menuTab.TextboxPopup.InFocus then
+		if TextboxPopup.InFocus then
 			for index = 0, game:GetNumPlayers()-1 do
 				Isaac.GetPlayer(index).ControlsCooldown = math.max(Isaac.GetPlayer(index).ControlsCooldown, 3)
 			end
 
 
 			local mouseClickPos = mousePosi-buttonPos
-			local textlong = math.max(font:GetStringWidthUTF8(menuTab.TextboxPopup.Text)/2, 160)
+			local textlong = math.max(font:GetStringWidthUTF8(TextboxPopup.Text)/2, 160)
 			
 			--[[if mouseClickPos.X > 1 and mouseClickPos.X < textlong+1 and mouseClickPos.Y>4 and mouseClickPos.Y<27 then
 				if not menuTab.MouseSprite or menuTab.MouseSprite:GetAnimation() ~= "mouse_textEd" then
@@ -1339,21 +1341,21 @@ function menuTab.OpenTextbox(menu, button, onlyNumber, resultCheckFunc, startTex
 			end]]
 
 
-			local maxN = utf8.len(menuTab.TextboxPopup.Text)
-			if menuTab.TextboxPopup.TextPosMoveDelay <= 0 
-			or menuTab.TextboxPopup.TextPosMoveDelay > 15 and menuTab.TextboxPopup.TextPosMoveDelay%2==0 then
+			local maxN = utf8.len(TextboxPopup.Text)
+			if TextboxPopup.TextPosMoveDelay <= 0 
+			or TextboxPopup.TextPosMoveDelay > 15 and TextboxPopup.TextPosMoveDelay%2==0 then
 				if Input.IsButtonPressed(Keyboard.KEY_RIGHT,0) then
-					menuTab.TextboxPopup.TextPos = math.min(menuTab.TextboxPopup.TextPos + 1,maxN)
+					TextboxPopup.TextPos = math.min(TextboxPopup.TextPos + 1,maxN)
 					--menuTab.TextboxPopup.TextPosMoveDelay = 5
 				elseif Input.IsButtonPressed(Keyboard.KEY_LEFT,0) then
-					menuTab.TextboxPopup.TextPos = math.max(menuTab.TextboxPopup.TextPos - 1, 0)
+					TextboxPopup.TextPos = math.max(TextboxPopup.TextPos - 1, 0)
 					--menuTab.TextboxPopup.TextPosMoveDelay = 5
 				end
 			end
 			if Input.IsButtonPressed(Keyboard.KEY_RIGHT,0) or Input.IsButtonPressed(Keyboard.KEY_LEFT,0) then
-				menuTab.TextboxPopup.TextPosMoveDelay = menuTab.TextboxPopup.TextPosMoveDelay + 1
+				TextboxPopup.TextPosMoveDelay = TextboxPopup.TextPosMoveDelay + 1
 			else
-				menuTab.TextboxPopup.TextPosMoveDelay = 0
+				TextboxPopup.TextPosMoveDelay = 0
 			end
 			local shift = Input.IsButtonPressed(Keyboard.KEY_LEFT_SHIFT,0) or Input.IsButtonPressed(Keyboard.KEY_RIGHT_SHIFT,0)
 
@@ -1384,7 +1386,7 @@ function menuTab.OpenTextbox(menu, button, onlyNumber, resultCheckFunc, startTex
 			local charTable
 			local ignoreKeybord = false
 
-			if menuTab.TextboxPopup.OnlyNumber then
+			if TextboxPopup.OnlyNumber then
 				if shift then
 					charTable = menuTab.Keyboard.Chars.ShiftOnlyNumberBtnList
 				else
@@ -1421,10 +1423,10 @@ function menuTab.OpenTextbox(menu, button, onlyNumber, resultCheckFunc, startTex
 				ignoreKeybord = true
 			end
 			--LongDelay = 30, shortDelay = 10, Delay = 0,
-			if menuTab.TextboxPopup.Delay > 0 then
-				menuTab.TextboxPopup.Delay = menuTab.TextboxPopup.Delay - 1
-				if menuTab.TextboxPopup.Delay == 0 then
-					menuTab.TextboxPopup.DelayOn = true
+			if TextboxPopup.Delay > 0 then
+				TextboxPopup.Delay = TextboxPopup.Delay - 1
+				if TextboxPopup.Delay == 0 then
+					TextboxPopup.DelayOn = true
 				end
 			end
 
@@ -1453,38 +1455,38 @@ function menuTab.OpenTextbox(menu, button, onlyNumber, resultCheckFunc, startTex
 				end
 
 				if lastkeyPressed then
-					if menuTab.TextboxPopup.lastChar ~= lastkeyPressed then
+					if TextboxPopup.lastChar ~= lastkeyPressed then
 						newChar = charTable[lastkeyPressed]
-						menuTab.TextboxPopup.lastChar = lastkeyPressed
-						menuTab.TextboxPopup.DelayOn = false
-						menuTab.TextboxPopup.Delay = menuTab.TextboxPopup.LongDelay
+						TextboxPopup.lastChar = lastkeyPressed
+						TextboxPopup.DelayOn = false
+						TextboxPopup.Delay = TextboxPopup.LongDelay
 					end
-					if menuTab.TextboxPopup.DelayOn and menuTab.TextboxPopup.Delay <= 0 then
-						menuTab.TextboxPopup.Delay = menuTab.TextboxPopup.shortDelay
+					if TextboxPopup.DelayOn and TextboxPopup.Delay <= 0 then
+						TextboxPopup.Delay = TextboxPopup.shortDelay
 						newChar = charTable[lastkeyPressed]
-						menuTab.TextboxPopup.lastChar = lastkeyPressed
+						TextboxPopup.lastChar = lastkeyPressed
 					end
 				else --if menuTab.TextboxPopup.lastChar == lastkeyPressed then
 					
-					menuTab.TextboxPopup.lastChar = nil
+					TextboxPopup.lastChar = nil
 				end
 
 			end
 			if newChar then
 				--local minusPos = utf8.offset(menuTab.TextboxPopup.Text, menuTab.TextboxPopup.TextPos-1)
-				local curjspos = menuTab.TextboxPopup.TextPos --utf8.offset(menuTab.TextboxPopup.Text, menuTab.TextboxPopup.TextPos)
-				local secoPos = menuTab.TextboxPopup.TextPos+1 -- utf8.offset(menuTab.TextboxPopup.Text, menuTab.TextboxPopup.TextPos+1)
+				local curjspos = TextboxPopup.TextPos --utf8.offset(menuTab.TextboxPopup.Text, menuTab.TextboxPopup.TextPos)
+				local secoPos = TextboxPopup.TextPos+1 -- utf8.offset(menuTab.TextboxPopup.Text, menuTab.TextboxPopup.TextPos+1)
 				
-				local firstPart = utf8_Sub(menuTab.TextboxPopup.Text, 0, curjspos)
-				local secondPart = utf8_Sub(menuTab.TextboxPopup.Text, secoPos)
+				local firstPart = utf8_Sub(TextboxPopup.Text, 0, curjspos)
+				local secondPart = utf8_Sub(TextboxPopup.Text, secoPos)
 				if newChar == -1 then
-					if menuTab.TextboxPopup.TextPos>0 then
-						menuTab.TextboxPopup.Text = utf8_Sub(firstPart, 0, utf8.len(firstPart)-1) .. secondPart
-						menuTab.TextboxPopup.TextPos = menuTab.TextboxPopup.TextPos - 1
+					if TextboxPopup.TextPos>0 then
+						TextboxPopup.Text = utf8_Sub(firstPart, 0, utf8.len(firstPart)-1) .. secondPart
+						TextboxPopup.TextPos = TextboxPopup.TextPos - 1
 					end
 				else
-					menuTab.TextboxPopup.Text = firstPart .. newChar .. secondPart
-					menuTab.TextboxPopup.TextPos = menuTab.TextboxPopup.TextPos + utf8.len(newChar)
+					TextboxPopup.Text = firstPart .. newChar .. secondPart
+					TextboxPopup.TextPos = TextboxPopup.TextPos + utf8.len(newChar)
 				end
 			end
 		end
@@ -1542,10 +1544,11 @@ end
 
 function menuTab.RenderTextBoxButton(button, pos)
 	local text = menuTab.TextboxPopup.Text -- string.format("%.4f", menuTab.TextboxPopup.Text)
-	TextBoxFont:DrawStringScaledUTF8(text ,pos.X+3,pos.Y,1,1,KColor(0.1,0.1,0.2,1),0,false)
+	local textoffset = menuTab.TextboxPopup.textoffset or Vector.Zero
+	TextBoxFont:DrawStringScaledUTF8(text, pos.X + 3 + textoffset.X, pos.Y + textoffset.Y, 1,1,KColor(0.1,0.1,0.2,1),0,false)
 	if menuTab.TextboxPopup.InFocus then
 		local poloskaPos = TextBoxFont:GetStringWidthUTF8(utf8_Sub(menuTab.TextboxPopup.Text, 0, menuTab.TextboxPopup.TextPos))
-		UIs.TextEdPos:Render(pos+Vector(3+poloskaPos,1))
+		UIs.TextEdPos:Render(pos+Vector(3+poloskaPos+textoffset.X, 1+textoffset.Y))
 		UIs.TextEdPos:Update()
 	end
 	
@@ -1637,8 +1640,13 @@ end
 
 UIs.ButtonBG2v = GenSprite("gfx/editor/ui copy.anm2", "custom button_bg")
 
-function menuTab.RenderCustomButton(pos, size, isSel)
+function menuTab.RenderCustomButton(pos, size, isSel, color)
 	if pos and size then
+		if color then
+			UIs.ButtonBG2v.Color = color
+		else
+			UIs.ButtonBG2v.Color = Color.Default
+		end
 		if isSel then
 			UIs.ButtonBG2v:SetFrame(1)
 		else
@@ -1768,7 +1776,8 @@ function menuTab.RenderMenuButtons(menuName)
 					if IstextboxMenu and menuTab.TextboxPopup.TargetBtn[2] == btn.name then
 						menuTab.RenderTextBoxButton(btn, btn.pos)
 					elseif btn.text then
-						TextBoxFont:DrawStringScaledUTF8(btn.text, btn.pos.X+3, btn.pos.Y, 1,1,KColor(0.1,0.1,0.2,1),0,false)
+						local textoffset = btn.textoffset or Vector.Zero
+						TextBoxFont:DrawStringScaledUTF8(btn.text, btn.pos.X+3+textoffset.X, btn.pos.Y+textoffset.Y, 1,1,KColor(0.1,0.1,0.2,1),0,false)
 					end
 					--menuTab.GetButton(menu, button).errorMes = result
 					--menuTab.GetButton(menu, button).showError = 60
