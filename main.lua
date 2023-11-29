@@ -1,7 +1,8 @@
 local TryGetPathForCard = true  --set false to disable unpredictable code
 
 
-
+--todo luamod - брать настоящий путь
+--подсказки для всяких кнопок
 
 
 
@@ -2643,7 +2644,7 @@ do
 		if ItemList.wind and ItemList.wind.Removed then
 			ItemList.wind = nil
 		end
-		if ItemList.predestal and not ItemList.wind.IsHided
+		if ItemList.predestal and ItemList.wind and not ItemList.wind.IsHided
 		and ItemList.itemToSpawn and ItemList.itemToSpawn.spr then
 			
 			UIs.entspawnerpoint:Render(pos)
