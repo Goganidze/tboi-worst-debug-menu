@@ -2628,7 +2628,7 @@ do
 	end)
 
 	function ItemList.PlacePress(btn, pos)
-		if not ItemList.itemToSpawn or btn ~= 0 or ItemList.wind.IsHided or not Menu.wma.OnFreePos then return end
+		if not ItemList.itemToSpawn or btn ~= 0 or not ItemList.wind or ItemList.wind.IsHided or not Menu.wma.OnFreePos then return end
 
 		local tt = IsType()
 		if tt == "col" then
