@@ -1898,7 +1898,7 @@ function menuTab.DetectSelectedButtonActuale()
 			--for i, dt in pairs(menuTab.MenuData[menu].sortList) do
 			---@param k EditorButton
 			for i, k in pairs(button) do
-
+				print(menu, k.name)
 				---@type EditorButton
 				--local k = menuTab.MenuData[menu].Buttons[dt.btn]
 				--if not k then

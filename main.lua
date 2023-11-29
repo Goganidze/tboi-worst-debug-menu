@@ -171,7 +171,10 @@ Menu.strings = {
 	["file"] = {en = "file", ru = "файл"},
 
 	["playerindex"] = {en = "player", ru = "игрок"},
+	["activeslot"] = {en = "slot for active item \n 1-main \n 2-schoolbag \n 3-pocket \n 4-dice bag", 
+	ru = "слот для активки \n 1-основной \n 2-рюкзак \n 3-карманный \n 4-одноразовый карманный"},
 	["useless_poisk"] = {en = "This button doesn't do anything \n It's just for clarity", ru = "Это кнопка ничего не делает, \n просто для наглядности"},
+	["SpawnOnpedestal"] = {en = "spawn an item on a pedestal", ru = "спавн предмета на пьедестале"},
 
 	["luamod_hintText"] = {en = "Reloads this menu",
 		ru = "Перезагружает данное меню"},
@@ -2607,6 +2610,8 @@ do
 			UIs.ActiveSlotOverlay:Render(pos)
 		end
 	end)
+	Menu.wma.ButtonSetHintText(ItemList.name, "activeslot", GetStr("activeslot"))
+
 
 	UIs.ItemRock = GenSprite("gfx/editor/ui copy2.anm2","пьедистал")
 	local self
@@ -2626,6 +2631,7 @@ do
 			UIs.Var_Sel:Render(pos+Vector(2,8))
 		end
 	end)
+	Menu.wma.ButtonSetHintText(ItemList.name, "onrock", GetStr("SpawnOnpedestal"))
 
 	function ItemList.PlacePress(btn, pos)
 		if not ItemList.itemToSpawn or btn ~= 0 or not ItemList.wind or ItemList.wind.IsHided or not Menu.wma.OnFreePos then return end
