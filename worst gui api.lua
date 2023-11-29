@@ -544,12 +544,12 @@ function menuTab.RemoveButton(menuName, buttonName, NoError)
 	end
 end
 
-function menuTab.ButtonSetHintText(menuName, buttonName, text, NoError)
+function menuTab.ButtonSetHintText(menuName, buttonName, text, Error)
 	if not menuTab.MenuData[menuName] then
-		if NoError then return end
+		if not Error then return end
 		error("This menu does not exist",2)
 	elseif not menuTab.MenuData[menuName].Buttons[buttonName] then
-		if NoError then return end
+		if not Error then return end
 		error("This button does not exist",2)
 	end
 	if menuTab.MenuData[menuName].Buttons[buttonName] then
@@ -595,6 +595,53 @@ function menuTab.ButtonSetHintText(menuName, buttonName, text, NoError)
 		--end
 		menuTab.MenuData[menuName].Buttons[buttonName].hintText = str
 	end
+end
+function menuTab.ButtonSetHintTextR(button, text, Error)
+	if not button then
+		if not Error then return end
+		error("This button does not exist",2)
+	end
+	local BoxWidth = 450
+	local str = {}
+	if BoxWidth ~= 0 then
+		local spaceLeft = BoxWidth
+		local words = {}
+		for word in string.gmatch(text, '([^ ]+)') do --Split string into individual words
+			words[#words+1] = word;
+		end
+		text = ""
+		for i=1, #words do
+			local wordLength = font:GetStringWidthUTF8(words[i])*0.5
+			if (words[i] == "\n") then --Word is purely breakline
+				--text = text.."\n"
+				str[#str+1] = text
+				text = ""
+			elseif (utf8_Sub(words[i], 1, 2) == "\n") then --Word starts with breakline
+				spaceLeft = BoxWidth - wordLength
+				text = text..words[i].." "
+			elseif (wordLength > spaceLeft) then --Word breaks text boundary
+				spaceLeft = BoxWidth - wordLength
+				str[#str+1] = text
+				text = ""
+				text = words[i].." " --text.."\n"..
+			else --Word is fine
+				spaceLeft = spaceLeft - wordLength
+				text = text..words[i].." "
+			end
+			--maxWidth = math.max(BoxWidth-spaceLeft, maxWidth)
+		end
+		str[#str+1] = text
+	end
+	local maxlenght = 0
+	for i=1,#str do
+		local text = str[i]
+		maxlenght = math.max(font:GetStringWidthUTF8(text)*0.5, maxlenght)
+	end
+	str.Width = maxlenght
+	--for i,k in pairs(str) do
+	--	Isaac.DebugString(i .. k)
+	--end
+	button.hintText = str
 end
 
 ---@param menuName any
@@ -2086,6 +2133,8 @@ function menuTab.HandleWindowControl()
 	local onceTouch = false
 	local orderCopy = TabDeepCopy(wind.order)
 	if not orderCopy then return end
+
+	local delayed = {}
 	for order = 1, #orderCopy do
 		local menuName = orderCopy[order]
 		---@type Window
@@ -2093,23 +2142,27 @@ function menuTab.HandleWindowControl()
 
 		--menuTab.CurrentWindowControl = window
 		if window.IsHided then
-			menuTab.DetectButtonsList(menuName, {window.close, window.unhide, window.plashka})
-
+			--menuTab.DetectButtonsList(menuName, {window.close, window.unhide, window.plashka})
+			delayed[#delayed+1] = {menuTab.DetectButtonsList, menuName, {window.close, window.unhide, window.plashka}}
 		else
 			if order == 1 then
 				--menuTab.DetectMenuButtons(window)
-				menuTab.DetectButtonsList(menuName, {window.close, window.hide, window.plashka})
+				--menuTab.DetectButtonsList(menuName, {window.close, window.hide, window.plashka})
+				delayed[#delayed+1] = {menuTab.DetectMenuButtons, menuName}
+				
 				menuTab.GetMenu(window).CalledByWindow = window
 				if window.SubMenus then
 					for name, tab in pairs(window.SubMenus) do
 						if tab.visible then
-							menuTab.DetectMenuButtons(name)
+							--menuTab.DetectMenuButtons(name)
+							delayed[#delayed+1] = {menuTab.DetectMenuButtons, name}
 							menuTab.GetMenu(name).CalledByWindow = window
 						end
 					end
 				end
 				menuTab.GetMenu(menuName).CalledByWindow = window
-				menuTab.DetectMenuButtons(menuName)
+				--menuTab.DetectMenuButtons(menuName)
+				delayed[#delayed+1] = {menuTab.DetectButtonsList, menuName, {window.close, window.hide, window.plashka}}
 			end
 			if window.plashka then
 				window.plashka.x = window.size.X
@@ -2138,17 +2191,20 @@ function menuTab.HandleWindowControl()
 			else
 				if order ~= 1 then
 					--menuTab.DetectMenuButtons(window)
-					menuTab.DetectButtonsList(menuName, {window.close, window.hide, window.plashka})
+					--menuTab.DetectButtonsList(menuName, {window.close, window.hide, window.plashka})
+					delayed[#delayed+1] = {menuTab.DetectMenuButtons, menuName}
 					menuTab.GetMenu(window).CalledByWindow = window
 					if window.SubMenus then
 						for name, tab in pairs(window.SubMenus) do
 							if tab.visible then
-								menuTab.DetectMenuButtons(name)
+								--menuTab.DetectMenuButtons(name)
+								delayed[#delayed+1] = {menuTab.DetectMenuButtons,name}
 								menuTab.GetMenu(name).CalledByWindow = window
 							end
 						end
 					end
-					menuTab.DetectMenuButtons(menuName)
+					--menuTab.DetectMenuButtons(menuName)
+					delayed[#delayed+1] = {menuTab.DetectButtonsList, menuName, {window.close, window.hide, window.plashka}}
 					menuTab.GetMenu(menuName).CalledByWindow = window
 				end
 			end
@@ -2170,6 +2226,10 @@ function menuTab.HandleWindowControl()
 		window.somethingPressed = nil
 		--menuTab.CurrentWindowControl = nil
 		::skip::
+	end
+	for i = #delayed, 1, -1 do
+		local tab = delayed[i]
+		tab[1](tab[2],tab[3])
 	end
 end
 

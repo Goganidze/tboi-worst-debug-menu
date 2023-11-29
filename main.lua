@@ -1,7 +1,6 @@
 local TryGetPathForCard = true  --set false to disable unpredictable code
 
 
---todo luamod - брать настоящий путь
 --подсказки для всяких кнопок
 
 
@@ -163,12 +162,21 @@ Menu.strings = {
 	["triggerNoTarget"] = {en = "Doesn't have a target", ru = "Отсутствует цель"},
 	["ObjBlockedbyObj"] = {en = "overlapped on object layer [3]", ru = "перекрыто на слое объектов [3]"},
 
+	--["spawn"] = {en = "spawn", ru = "спавн"},
+	["EntSpawner odin"] = {en = "spawns at the point of click", ru = "спавн в точке клика"},
+	["EntSpawner mnogo"] = {en = "creates a spawn point \n at the click point", ru = "создать точку спавна в точке клика"},
+	["removeAllSpawnpoint"] = {en = "remove all spawn points", ru = "убрать все точки спавна"},
+	["nasadSpawnpoint"] = {en = "remove the last spawn point", ru = "убрать последную точку спавна"},
+	["povtorSpawnpoint"] = {en = "repeat last spawn", ru = "повторить последний спавн"},
+
 	["scale"] = {en = "scale", ru = "размер"},
 	["frame"] = {en = "frame", ru = "кадр"},
 	['overlay frame'] = {en = "overlay frame", ru = "кадр оверлея"},
 	["animation"] = {en = "animation", ru = "анимация"},
 	["color"] = {en = "color", ru = "цвет"},
 	["file"] = {en = "file", ru = "файл"},
+	["removeoverlaylayer"] = {en = "remove overlay", ru = "убрать оверлей"},
+	["overlaylayerchange"] = {en = "swap overlay and main animation", ru = "поменять местами оверлей и основную анимацию"},
 
 	["playerindex"] = {en = "player", ru = "игрок"},
 	["activeslot"] = {en = "slot for active item \n 1-main \n 2-schoolbag \n 3-pocket \n 4-dice bag", 
@@ -249,16 +257,6 @@ function UIs.CounterDownSmol() return GenSprite("gfx/editor/ui copy.anm2","оп�
 function UIs.PrePage16() return GenSprite("gfx/editor/ui copy.anm2","лево_smol") end
 function UIs.NextPage16() return GenSprite("gfx/editor/ui copy.anm2","право_smol") end
 
-
-
-local shouldReturnMouseControl
-local function blockPlayerShot()
-	--if Options.MouseControl == true then
-	--	shouldReturnMouseControl = true
-	--	Options.MouseControl = false
-	--	Isaac.GetPlayer().ControlsCooldown = math.max(Isaac.GetPlayer().ControlsCooldown, 1)
-	--end
-end
 
 
 WORSTDEBUGMENU.MainOffset = Vector(0, 10)
@@ -398,7 +396,6 @@ end
 local self
 self = WORSTDEBUGMENU.wma.AddButton("__debug_menu", "mouseLock", Vector(4,-25), 16, 16, UIs.MouseLockBtn, function(button) 
 	if button ~= 0 then return end
-	--blockPlayerShot()
 	Options.MouseControl = not Options.MouseControl
 	UIs.MouseIsLocked:SetFrame(Options.MouseControl and 0 or 1)
 end,
@@ -409,24 +406,38 @@ self.posfunc = function()
 	self.pos = Vector(1,5+Menu.MainOffset.Y)
 end
 
---[[local self
-self = WORSTDEBUGMENU.wma.AddButton("__debug_menu", "luamod", Vector(86,-25), 32, 32, UIs.luamod_debug, function(button) 
-	if button ~= 0 then return end
-	--blockPlayerShot()
-	Isaac.ExecuteCommand("luamod mouse debug menu")
-end, function(pos)
-	--self.pos = Vector(86,5+WORSTDEBUGMENU.MainOffset.Y)
-end, nil, 100)
-self.posfunc = function()
-	self.pos = Vector(86,5+WORSTDEBUGMENU.MainOffset.Y)
-end]]
-WORSTDEBUGMENU.AddButtonOnDebugBar( "luamod", Vector(32,32), UIs.luamod_debug, 
-function(button) 
-	if button ~= 0 then return end
-	--blockPlayerShot()
-	Isaac.ExecuteCommand("luamod mouse debug menu")
-end)
-Menu.wma.ButtonSetHintText("__debug_menu", "luamod", GetStr("luamod_hintText"))
+local function GetCurrentModPath() --эпитани
+	if not debug then
+		--use some very hacky trickery to get the path to this mod
+		local _, err = pcall(require, "")
+		local _, basePathStart = string.find(err, "no file '", 1)
+		local _, modPathStart = string.find(err, "no file '", basePathStart)
+		local modPathEnd, _ = string.find(err, ".lua'", modPathStart)
+		local modPath = string.sub(err, modPathStart+1, modPathEnd-1)
+		modPath = string.gsub(modPath, "\\", "/")
+
+		return modPath
+	else
+		local _, _err = pcall(require, "")				-- require a file that doesn't exist
+		-- Mod:Log(_err)
+		for str in _err:gmatch("no file '.*/mods/.-.lua'\n") do
+			return str:sub(1, -7):sub(10)
+		end
+	end
+end
+do
+	local path = GetCurrentModPath()
+	Menu.Path = path
+	local fz,fx = string.find(path,"mods/[%S%s]-/")
+	local luamodPath = string.sub(path,fz+5,fx-1)
+
+	WORSTDEBUGMENU.AddButtonOnDebugBar( "luamod", Vector(32,32), UIs.luamod_debug, 
+	function(button) 
+		if button ~= 0 then return end
+		Isaac.ExecuteCommand("luamod " .. luamodPath)
+	end)
+	Menu.wma.ButtonSetHintText("__debug_menu", "luamod", GetStr("luamod_hintText"))
+end
 
 
 
@@ -436,24 +447,9 @@ local debugcmd = WORSTDEBUGMENU.debugcmd_Menu
 do
 	local sizev =  Vector(14*19,40)
 
-	--[[local self
-	self = WORSTDEBUGMENU.wma.AddButton("__debug_menu", "debugcmd_Menu", Vector(52,5), 32, 32, UIs.DebugCMD, function(button) 
-		if button ~= 0 then return end
-		blockPlayerShot()
-		debugcmd.active = not debugcmd.active
-		debugcmd.pos = self.pos + Vector(0, 30)
-		WORSTDEBUGMENU.wma.ShowWindow(debugcmd.name, debugcmd.pos, sizev)
-	end, function(pos)
-		--self.pos = Vector(52, 5+WORSTDEBUGMENU.MainOffset.Y)
-		--font:DrawStringScaledUTF8("aaaaaa",pos.X+1,pos.Y-1,0.5,0.5,KColor(0.2,0.2,0.2,0.8),0,false) 
-	end)
-	self.posfunc = function()
-		self.pos = Vector(52, 5+WORSTDEBUGMENU.MainOffset.Y)
-	end]]
 	WORSTDEBUGMENU.AddButtonOnDebugBar("debugcmd_Menu", Vector(32,32), UIs.DebugCMD, 
 	function(button) 
 		if button ~= 0 then return end
-		blockPlayerShot()
 		debugcmd.active = not debugcmd.active
 		debugcmd.pos = self.pos + Vector(0, 30)
 		WORSTDEBUGMENU.wma.ShowWindow(debugcmd.name, debugcmd.pos, sizev)
@@ -467,7 +463,6 @@ do
 		self = WORSTDEBUGMENU.wma.AddButton("_debugcmd", "debug"..i, Vector(i*18-14,13), 18, 17, UIs["debugbtn" .. i] , function(button) 
 			if button ~= 0 then return end
 			Isaac.ExecuteCommand("debug " .. i)
-			blockPlayerShot()
 			self.IsActived = not self.IsActived
 		end, function(pos)
 			if self.IsActived then
@@ -520,11 +515,6 @@ do
 				Menu.wma.SelectedMenu = "__debug_menu"
 			end
 			Menu.wma.MouseHintText = nil
-			
-			if shouldReturnMouseControl then
-				Options.MouseControl = true
-				shouldReturnMouseControl = false
-			end
 
 			local pos = Isaac.WorldToScreen(Input.GetMousePosition(true))-game.ScreenShakeOffset
 			local check = pos.X+pos.Y
@@ -586,7 +576,6 @@ do
 	--[[local self
 	self = WORSTDEBUGMENU.wma.AddButton("__debug_menu", "Stages_Selector_Menu", Vector(120,5), 32, 32, UIs.StageChanger, function(button) 
 		if button ~= 0 then return end
-		blockPlayerShot()
 		---@type Window
 		StageSel.wind = WORSTDEBUGMENU.wma.ShowWindow(StageSel.name, StageSel.pos, sizev)
 		Menu.StageSel.DefaultSpawnButton()
@@ -598,7 +587,6 @@ do
 	local self
 	self = Menu.AddButtonOnDebugBar("Stages_Selector_Menu", Vector(32, 32), UIs.StageChanger, function(button) 
 		if button ~= 0 then return end
-		blockPlayerShot()
 		---@type Window
 		StageSel.wind = WORSTDEBUGMENU.wma.ShowWindow(StageSel.name, StageSel.pos, sizev)
 		Menu.StageSel.DefaultSpawnButton()
@@ -703,7 +691,6 @@ do
 				local self
 				self = WORSTDEBUGMENU.wma.AddButton(StageSel.name, i..","..j, pos, 20, 14, nilspr, function(button) 
 					if button ~= 0 then return end
-					blockPlayerShot()
 					Isaac.ExecuteCommand("stage "..stage.GoTo)
 				end, function(pos)
 					stage.spr:Render(pos)
@@ -756,7 +743,6 @@ do
 					local self
 					self = WORSTDEBUGMENU.wma.AddButton(StageSel.name, i..","..j, pos, 20, 14, nilspr, function(button) 
 						if button ~= 0 then return end
-						blockPlayerShot()
 						Isaac.ExecuteCommand("cstage "..stage.Name)
 					end, function(pos)
 						spr:RenderLayer(2,pos)
@@ -779,7 +765,6 @@ do
 		---@type EditorButton
 		self = Menu.wma.AddButton(StageSel.name, "default", Vector(3,9), 50, 10, nilspr, function(button) 
 			if button ~= 0 then return end
-			blockPlayerShot()
 			Menu.StageSel.DefaultSpawnButton()
 			local size = (#StageSel.btn*18 -30) + math.ceil(math.min(9,#StageSel.btn)/2)*3
 			StageSel.wind:SetSize(Vector(StageSel.wind.size.X, size))
@@ -792,7 +777,6 @@ do
 		---@type EditorButton
 		self = Menu.wma.AddButton(StageSel.name, "stageAPI", Vector(3+51,9), 50, 10, nilspr, function(button) 
 			if button ~= 0 then return end
-			blockPlayerShot()
 			Menu.StageSel.StageAPISpawnButton()
 			local ypos = StageSel.StageAPI*18 + 24
 			local size = ypos + math.ceil(math.min(9,StageSel.StageAPI)/2)*3
@@ -838,7 +822,6 @@ do
 	--[[local self
 	self = Menu.wma.AddButton("__debug_menu", "Ent_Spawner_Menu", Vector(154,5), 32, 32, UIs.EntSpawner, function(button) 
 		if button ~= 0 then return end
-		blockPlayerShot()
 		---@type Window
 		EntSpawner.wind = Menu.wma.ShowWindow(EntSpawner.name, EntSpawner.pos, sizev)
 	end)
@@ -849,7 +832,6 @@ do
 	local self
 	self = Menu.AddButtonOnDebugBar("Ent_Spawner_Menu", Vector(32, 32), UIs.EntSpawner, function(button) 
 		if button ~= 0 then return end
-		blockPlayerShot()
 		---@type Window
 		EntSpawner.wind = Menu.wma.ShowWindow(EntSpawner.name, EntSpawner.pos, sizev)
 	end)
@@ -912,7 +894,6 @@ do
 	local self
 	self = Menu.wma.AddButton(EntSpawner.name, "odin_chel", Vector(73,48), 16, 16, UIs.Chlen_1(), function(button) 
 		if button ~= 0 then return end
-		blockPlayerShot()
 		Menu.PlaceMode("EntSpawner_odin", nil, Menu.EntSpawnerLogic, 
 		function()
 			EntSpawner.SpawnMode = 0
@@ -926,10 +907,11 @@ do
 			UIs.Var_Sel:Render(self.pos+Vector(1.5,13))
 		end
 	end)
+	Menu.wma.ButtonSetHintTextR(self, GetStr("EntSpawner odin"))
+
 	local self
 	self = Menu.wma.AddButton(EntSpawner.name, "mnogo_chel", Vector(91,48), 16, 16, UIs.Chlen_multi, function(button) 
 		if button ~= 0 then return end
-		blockPlayerShot()
 
 		Menu.PlaceMode("EntSpawner_mnogo", nil, Menu.EntSpawnerLogic, 
 		function()
@@ -944,39 +926,43 @@ do
 			UIs.Var_Sel:Render(self.pos+Vector(1.5,13))
 		end
 	end)
+	Menu.wma.ButtonSetHintTextR(self, GetStr("EntSpawner mnogo"))
+
 	local self
 	self = Menu.wma.AddButton(EntSpawner.name, "стереть", Vector(19,48), 16, 16, UIs.CCCCCCCC(), function(button) 
 		if button ~= 0 then return end
-		blockPlayerShot()
 		EntSpawner.SpawnList = {}
 		EntSpawner.LastSpawns = {}
 	end)
+	Menu.wma.ButtonSetHintTextR(self, GetStr("removeAllSpawnpoint"))
+
 	local self
 	self = Menu.wma.AddButton(EntSpawner.name, "nasad", Vector(37,48), 16, 16, UIs.nasad(), function(button) 
 		if button ~= 0 then return end
-		blockPlayerShot()
 		if #EntSpawner.SpawnList > 0 then
 			table.remove(EntSpawner.SpawnList, #EntSpawner.SpawnList)
 		end
 	end)
+	Menu.wma.ButtonSetHintTextR(self, GetStr("nasadSpawnpoint"))
+
 	local self
 	self = Menu.wma.AddButton(EntSpawner.name, "povtor", Vector(55,48), 16, 16, UIs.reset(), function(button) 
 		if button ~= 0 then return end
-		blockPlayerShot()
 		if EntSpawner.LastSpawns then
 			EntSpawner.EntSpawner_SpawnList(EntSpawner.LastSpawns)
 		end
 	end)
+	Menu.wma.ButtonSetHintTextR(self, GetStr("povtorSpawnpoint"))
+
 	local self
-	self = Menu.wma.AddButton(EntSpawner.name, "multispawn", Vector(73,66), 32, 16, nil, function(button) 
+	self = Menu.wma.AddButton(EntSpawner.name, "multispawn", Vector(73,66), 34, 16, nil, function(button) 
 		if button ~= 0 then return end
-		blockPlayerShot()
 		if EntSpawner.SpawnList then
 			EntSpawner.EntSpawner_SpawnList(EntSpawner.SpawnList)
 		end
 	end, function(pos)
-		Menu.wma.RenderCustomButton(pos, Vector(32,14), self.IsSelected)
-		font:DrawStringScaledUTF8("spawn",pos.X+1,pos.Y-1,0.5,0.5,KColor(0.1,0.1,0.2,1),0,false)
+		Menu.wma.RenderCustomButton(pos, Vector(self.x,self.y), self.IsSelected)
+		font:DrawStringScaledUTF8(GetStr("spawn"),pos.X-.5+self.x/2,pos.Y+1,0.5,0.5,KColor(0.1,0.1,0.2,1),1,true)
 	end)
 
 	function EntSpawner.EntSpawner_SpawnList(tab)
@@ -1095,7 +1081,6 @@ do --UIs.GridSpawner
 	--[[local self
 	self = Menu.wma.AddButton("__debug_menu", "Grid_Spawner_Menu", Vector(188,5), 32, 32, UIs.GridSpawner, function(button) 
 		if button ~= 0 then return end
-		blockPlayerShot()
 		---@type Window
 		GridSpawner.wind = Menu.wma.ShowWindow(GridSpawner.name, GridSpawner.pos, sizev)
 	end)
@@ -1106,7 +1091,6 @@ do --UIs.GridSpawner
 	local self
 	self = Menu.AddButtonOnDebugBar("Grid_Spawner_Menu", Vector(32, 32), UIs.GridSpawner, function(button) 
 		if button ~= 0 then return end
-		blockPlayerShot()
 		---@type Window
 		GridSpawner.wind = Menu.wma.ShowWindow(GridSpawner.name, GridSpawner.pos, sizev)
 	end)
@@ -1222,7 +1206,6 @@ do --UIs.GridSpawner
 	self = Menu.wma.AddButton(GridSpawner.name, "type", Vector(5,16), 152,16, nil, 
 	function(button)
 		if button ~= 0 then return end
-		blockPlayerShot()
 		
 		Menu.wma.FastCreatelist(GridSpawner.name, self.pos - GridSpawner.wind.pos, self.x, GridList, 
 		function(_,arg1,arg2)
@@ -1249,7 +1232,6 @@ do --UIs.GridSpawner
 	local self
 	self = Menu.wma.AddButton(GridSpawner.name, "odin_chel", Vector(5,32), 16, 16, UIs.Chlen_1(), function(button) 
 		if button ~= 0 then return end
-		blockPlayerShot()
 		Menu.PlaceMode("GridSpawner_odin", Menu.GridSpawnerPlacePress, Menu.GridSpawnerPlaceLogic, function()
 			GridSpawner.SpawnMode = 0
 		end)
@@ -1266,7 +1248,6 @@ do --UIs.GridSpawner
 	local self
 	self = Menu.wma.AddButton(GridSpawner.name, "edit_grid", Vector(22,32), 16, 16, UIs.Editbtn, function(button) 
 		if button ~= 0 then return end
-		blockPlayerShot()
 		Menu.PlaceMode("GridSpawner_edit", Menu.GridSpawnerPlacePress, Menu.GridSpawnerPlaceLogic, function()
 			GridSpawner.SpawnMode = 0
 		end)
@@ -1284,7 +1265,6 @@ do --UIs.GridSpawner
 	self = Menu.wma.AddButton(GridSpawner.name, "gridData", Vector(5,60), 32,16, nil, 
 	function(button)
 		if button ~= 0 then return end
-		blockPlayerShot()
 		
 	end, function(pos)
 		if GridSpawner.SelGridIndex then
@@ -1438,7 +1418,6 @@ do
 	local self
 	self = WORSTDEBUGMENU.AddButtonOnDebugBar("Anim_Test_Menu", Vector(32,32), UIs.AnimTaste, function(button) 
 		if button ~= 0 then return end
-		blockPlayerShot()
 		---@type Window
 		AnimTest.wind = Menu.wma.ShowWindow(AnimTest.name, self.pos+Vector(0,15), sizev)
 		for i,k in pairs(AnimTest.subnames) do
@@ -1512,13 +1491,11 @@ do
 	local self
 	self = Menu.wma.AddButton(AnimTest.name, "play", Vector(12,v.Y), 16, 16, UIs.play(), function(button) 
 		if button ~= 0 then return end
-		blockPlayerShot()
 		AnimTest.anim.spr:Play(AnimTest.anim.spr:GetAnimation(), true)
 	end)
 	local self
 	self = Menu.wma.AddButton(AnimTest.name, "pause", Vector(30,v.Y), 16, 16, UIs.pause(), function(button) 
 		if button ~= 0 then return end
-		blockPlayerShot()
 		
 		if not AnimTest.anim.spr:IsPlaying() then
 			AnimTest.anim.OnPause = false
@@ -1533,7 +1510,6 @@ do
 	local self
 	self = Menu.wma.AddButton(AnimTest.name, "autoplay", Vector(48,v.Y), 16, 16, UIs.reset(), function(button) 
 		if button ~= 0 then return end
-		blockPlayerShot()
 		AnimTest.anim.AutoPlay = not AnimTest.anim.AutoPlay
 	end, function(pos)
 		if AnimTest.anim.AutoPlay then
@@ -1547,7 +1523,6 @@ do
 	local self ----------------------------------------
 	self = Menu.wma.AddButton(AnimTest.name, "Oplay", Vector(70,v.Y), 16, 16, UIs.play(), function(button) 
 		if button ~= 0 then return end
-		blockPlayerShot()
 		AnimTest.anim.spr:PlayOverlay(AnimTest.anim.spr:GetOverlayAnimation(), true)
 	end, function(pos)
 		TextBoxFont:DrawStringScaledUTF8("o",pos.X+1,pos.Y+6,1,1,KColor(0.19,0.2,0.21,1),1,true)
@@ -1555,7 +1530,6 @@ do
 	local self
 	self = Menu.wma.AddButton(AnimTest.name, "Opause", Vector(88,v.Y), 16, 16, UIs.pause(), function(button) 
 		if button ~= 0 then return end
-		blockPlayerShot()
 		
 		if not AnimTest.anim.spr:IsOverlayPlaying() then
 			AnimTest.anim.OnOverlayPause = false
@@ -1572,7 +1546,6 @@ do
 	local self
 	self = Menu.wma.AddButton(AnimTest.name, "Oautoplay", Vector(106,v.Y), 16, 16, UIs.reset(), function(button) 
 		if button ~= 0 then return end
-		blockPlayerShot()
 		AnimTest.anim.AutoOverlayPlay = not AnimTest.anim.AutoOverlayPlay
 	end, function(pos)
 		if AnimTest.anim.AutoOverlayPlay then
@@ -1593,7 +1566,6 @@ do
 	local self
 	self = Menu.wma.AddButton(AnimTest.name, "fileset", Vector(12,vG.Y+5), 32, 12, nil, function(button) 
 		if button ~= 0 then return end
-		blockPlayerShot()
 		for i,k in pairs(AnimTest.subnames) do
 			AnimTest.wind:SetSubMenuVisible(k, false)
 		end
@@ -1689,17 +1661,17 @@ do
 	local self
 	self = Menu.wma.AddButton(AnimTest.subnames.file, "overlayclear", Vector(12,vG.Y+5), 16, 16, UIs.ubratOverlay, function(button) 
 		if button ~= 0 then return end
-		blockPlayerShot()
 		AnimTest.anim.spr:RemoveOverlay()
 		AnimTest.btn.overlay.text = ""
 	end)
+	Menu.wma.ButtonSetHintTextR(self, GetStr("removeoverlaylayer"))
 	local self
 	self = Menu.wma.AddButton(AnimTest.subnames.file, "overlaylayer", Vector(30,vG.Y+5), 16, 16, UIs.pomenyatOverlay, function(button) 
 		if button ~= 0 then return end
-		blockPlayerShot()
 		AnimTest.anim.spr:SetOverlayRenderPriority(not AnimTest.anim.overlayPriority)
 		AnimTest.anim.overlayPriority = not AnimTest.anim.overlayPriority
 	end)
+	Menu.wma.ButtonSetHintTextR(self, GetStr("overlaylayerchange"))
 	vG.Y = vG.Y+18 + self.y
 	--UIs.ubratOverlay = GenSprite("gfx/editor/ui copy.anm2","erazer")
 	--UIs.pomenyatOverlay
@@ -1716,7 +1688,6 @@ do
 	local self
 	self = Menu.wma.AddButton(AnimTest.name, "colorset", Vector(46,vG.Y+5), 32, 12, nil, function(button) 
 		if button ~= 0 then return end
-		blockPlayerShot()
 		for i,k in pairs(AnimTest.subnames) do
 			AnimTest.wind:SetSubMenuVisible(k, false)
 		end
@@ -2067,30 +2038,86 @@ do
 		return c
 	end
 
+	---@type table
 	local fumo
 	fumo = Menu.wma.AddButton(AnimTest.subnames.color, "fumo", Vector(100,150), 64, 16, nil, function(button) 
 		if button ~= 0 then return end
-		blockPlayerShot()
 		if fumo.IsSelected and fumo.IsSelected > 20 then
-			fumo.IsActived = not fumo.IsActived
-			if fumo.IsActived then
+			--fumo.IsActived = not fumo.IsActived
+			if not fumo.IsActived then
+				fumo.IsActived = true
 				fumo.fumo = GenSprite("gfx/editor/fumo.anm2","fumo")
 				fumo.fumo.PlaybackSpeed = .5
+			elseif not fumo.mode then
+				fumo.mode = 1
+			elseif fumo.mode == 1 then
+				fumo.mode = 2
 			else
 				fumo.fumo = nil
+				fumo.IsActived = false
+				fumo.mode = nil
+				fumo.fakefumo.trail:Remove()
+				fumo.fakefumo = nil
 			end
 		end
 	end,
 	function(pos)
+		local frame = Isaac.GetFrameCount()
 		if fumo.IsSelected and fumo.IsSelected > 20 then
-			local frame = Isaac.GetFrameCount()
 			fumo.fumoColor = raindow( (frame % 120 + 1) / 120) --Color((frame % 60 )/ 60, ((frame-20) % 60 )/ 60, ((frame-40) % 60) / 60, 1)
 	
 			Menu.wma.RenderCustomButton(pos, Vector(fumo.x, fumo.y), fumo.IsSelected, raindow( ((frame) % 120 + 1) / 120))
 			Menu.wma.RenderCustomButton(pos+Vector(1,1), Vector(fumo.x-2, fumo.y-2), fumo.IsSelected)
 			font:DrawStringScaledUTF8("fumo", pos.X+self.x/2-2, pos.Y+3, 0.5,0.5,KColor(fumo.fumoColor.R, fumo.fumoColor.G, fumo.fumoColor.B,1),1,true)
 		end
-		if fumo.fumo then fumo.fumo:Render(pos+Vector(fumo.x/1.5, fumo.y/1.5)) fumo.fumo:Update() 
+		if fumo.fumo then 
+			if fumo.mode then
+				local c = Color(1,1,1,1)
+				local rn = raindow( ((frame+40) % 60 + 1) / 60)
+				c:SetColorize(rn.R+.3, rn.G+.3, rn.B+.3, 1)
+				fumo.fumo.Color = c
+
+				if fumo.mode == 2 then
+				
+					if not fumo.fakefumo then
+						local rng = RNG()
+						rng:SetSeed(game:GetSeeds():GetStartSeed(), 35)
+						fumo.fakefumo = {Pos = pos/1, Vel = Vector(0, 0), VelRot = Vector.FromAngle(rng:RandomInt(360)), rng = rng}
+						local tpos = Isaac.ScreenToWorld(fumo.fakefumo.Pos) - Vector(Isaac.GetScreenWidth()*Wtr,0)
+						fumo.fakefumo.trail = Isaac.Spawn(EntityType.ENTITY_EFFECT, EffectVariant.SPRITE_TRAIL, 0, 
+							tpos, Vector(0,0), nil):ToEffect()
+						fumo.fakefumo.trail.MinRadius = .02
+						fumo.fakefumo.trail.Scale = 20
+						fumo.fakefumo.trail:GetSprite().Scale = Vector(15,1)
+					else
+						local screenX, screenY = Isaac.GetScreenWidth(), Isaac.GetScreenHeight()
+						local fumms = fumo.fakefumo
+						fumms.Vel = fumms.Vel * 0.9 + fumms.VelRot * 0.3
+						fumms.Pos = fumms.Pos + fumms.Vel
+						fumms.VelRot = fumms.VelRot:Rotated((fumms.rng:RandomInt(20)-10)/1)
+						local nextpos = fumms.Pos + fumms.Vel*2
+						if nextpos.X < 0 then
+							fumms.VelRot = fumms.VelRot * 0.9 + Vector(.4,fumms.VelRot.Y)
+						elseif nextpos.X > screenX-62 then
+							fumms.VelRot = fumms.VelRot * 0.9 + Vector(-.4,fumms.VelRot.Y)
+						elseif nextpos.Y < 44 then
+							fumms.VelRot = fumms.VelRot * 0.9 + Vector(fumms.VelRot.X,.4)
+						elseif nextpos.Y > screenY-62 then
+							fumms.VelRot = fumms.VelRot * 0.9 + Vector(fumms.VelRot.X,-.4)
+						end
+						fumms.VelRot:Resize(1)
+						local worpos = (fumms.Pos+fumms.Vel-Vector(screenX*1.5,0))*Wtr - Isaac.WorldToRenderPosition(Vector(0,0))   --Isaac.ScreenToWorld(fumms.Pos)
+						fumms.trail.Color = c
+						--fumms.trail.Velocity = (worpos+Vector(117/2-20,128/2-10)-fumms.trail.Position)
+						fumms.trail.Position = (worpos+Vector(117/2-20,128/2-10))
+						fumms.trail:Render(Vector(screenX*1.5,0))
+
+						pos = fumms.Pos
+					end
+				end
+			end
+			fumo.fumo:Render(pos+Vector(fumo.x/1.5, fumo.y/1.5)) 
+			fumo.fumo:Update() 
 			if fumo.fumo:IsFinished() then
 				fumo.fumo:Play(fumo.fumo:GetAnimation(), true)
 			end
@@ -2106,7 +2133,6 @@ do
 	local self
 	self = Menu.wma.AddButton(AnimTest.name, "animset", Vector(80,vG.Y+5), 56, 12, nil, function(button) 
 		if button ~= 0 then return end
-		blockPlayerShot()
 		for i,k in pairs(AnimTest.subnames) do
 			AnimTest.wind:SetSubMenuVisible(k, false)
 		end
@@ -2510,7 +2536,6 @@ do
 	local self
 	self = WORSTDEBUGMENU.AddButtonOnDebugBar("Item_List_Menu", Vector(32,32), UIs.itemlist, function(button) 
 		if button ~= 0 then return end
-		blockPlayerShot()
 		---@type Window
 		ItemList.wind = Menu.wma.ShowWindow(ItemList.name, self.pos+Vector(0,15), sizev)
 		for i,k in pairs(ItemList.subnames) do
@@ -2698,7 +2723,7 @@ do
 			if mods[cal.Mod].path == -1 then
 				local ok, gg = pcall(cal.Function)
 				if gg then
-					local fz,fx = string.find(gg,"mods/%S-/")
+					local fz,fx = string.find(gg,"mods/[%S%s]-/")
 					if fz and fx then
 						local path = string.sub(gg,fz+5,fx-1)
 						print("found path: ", path)
