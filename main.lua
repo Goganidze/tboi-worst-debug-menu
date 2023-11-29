@@ -1,7 +1,6 @@
 local TryGetPathForCard = true  --set false to disable unpredictable code
 
 
---подсказки для всяких кнопок
 
 
 
