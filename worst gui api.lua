@@ -402,12 +402,6 @@ UIs.luamod_debug = GenSprite("gfx/editor/ui copy.anm2","luamod_debug")
 
 
 function UIs.Box48() return GenSprite("gfx/editor/ui copy.anm2","контейнер") end
-function UIs.Counter() return GenSprite("gfx/editor/ui copy.anm2","счётчик") end
-function UIs.CounterSmol() return GenSprite("gfx/editor/ui copy.anm2","счётчик_smol") end
-function UIs.CounterUp() return GenSprite("gfx/editor/ui copy.anm2","поднять") end
-function UIs.CounterDown() return GenSprite("gfx/editor/ui copy.anm2","опустить") end
-function UIs.CounterUpSmol() return GenSprite("gfx/editor/ui copy.anm2","поднять_smol") end
-function UIs.CounterDownSmol() return GenSprite("gfx/editor/ui copy.anm2","опустить_smol") end
 function UIs.PrePage() return GenSprite("gfx/editor/ui copy.anm2","лево") end
 function UIs.NextPage() return GenSprite("gfx/editor/ui copy.anm2","право") end
 function UIs.OverlayTab1() return GenSprite("gfx/editor/ui copy.anm2","оверлей_вкладка1") end
@@ -429,9 +423,15 @@ function UIs.PositionSbros() return GenSprite("gfx/editor/ui copy.anm2","сбр�
 function UIs.GridOverlayTab1() return GenSprite("gfx/editor/ui copy.anm2","вкладка1") end
 function UIs.GridOverlayTab2() return GenSprite("gfx/editor/ui copy.anm2","вкладка2") end
 ]]
+function UIs.Counter() return GenSprite("gfx/editor/ui copy.anm2","счётчик") end
+function UIs.CounterSmol() return GenSprite("gfx/editor/ui copy.anm2","счётчик_smol") end
+function UIs.CounterUp() return GenSprite("gfx/editor/ui copy.anm2","поднять") end
+function UIs.CounterDown() return GenSprite("gfx/editor/ui copy.anm2","опустить") end
+function UIs.CounterUpSmol() return GenSprite("gfx/editor/ui copy.anm2","поднять_smol") end
 function UIs.CloseBtn() return GenSprite("gfx/editor/ui copy.anm2","закрыть") end
 function UIs.HideWindowBtn() return GenSprite("gfx/editor/ui copy.anm2","свернуть") end
 function UIs.UnHideWindowBtn() return GenSprite("gfx/editor/ui copy.anm2","развернуть") end
+function UIs.CounterDownSmol() return GenSprite("gfx/editor/ui copy.anm2","опустить_smol") end
 
 local MouseBtnIsPressed = {[0] = 0,0,0}
 function menuTab.IsMouseBtnTriggered(button)
@@ -729,6 +729,10 @@ function menuTab.ShowWindow(menuName, pos, size, color )
 				if button ~= 0 then return end
 				menuTab.CloseWindow(menuName)
 			end)
+			local wind = menuTab.Windows.menus[menuName]
+			self.posfunc = function()
+				self.posref = Vector(wind.size.X-16,0)
+			end
 			menuTab.Windows.menus[menuName].close = self
 		end
 		if not menuTab.GetButton(menuTab.Windows.menus[menuName], "__blockplashka") then
@@ -775,6 +779,8 @@ function menuTab.WindowMeta.SetSize(wind, size)
 		wind.size = size
 		wind.plashka.x = size.X
 		wind.plashka.y = size.Y
+
+		wind.close.posref = Vector(wind.size.X-16,0)
 	end
 end
 
@@ -828,7 +834,15 @@ function menuTab.WindowMeta.UnHide(wind)
 	end
 end
 
-
+---@param menuName any
+---@param buttonName any
+---@param pos Vector
+---@param size Vector
+---@param sprite Sprite?
+---@param resultCheckFunc fun(newText):(boolean|string)
+---@param onlyNumber boolean?
+---@param renderFunc fun(pos:Vector, Visible:boolean)?
+---@param priority number?
 ---@return EditorButton|nil
 function menuTab.AddTextBox(menuName, buttonName, pos, size, sprite, resultCheckFunc, onlyNumber, renderFunc, priority)
     if menuName and buttonName then
@@ -1020,6 +1034,77 @@ function menuTab.AddScrollBar(menuName, buttonName, pos, size, sprite, dragSpr, 
 			end
 		end
 		table.insert(menu.sortList, Spos, {btn = buttonName, Priority = priority})]]
+		return menu.Buttons[buttonName]
+    end
+end
+
+function menuTab.DefCounterUp(ya, btn)
+	if btn ~= 0 then return end
+	ya.text = math.min(ya.max, tonumber(ya.text) + 1)
+end
+function menuTab.DefCounterDown(ya, btn)
+	if btn ~= 0 then return end
+	ya.text = math.max(ya.min, tonumber(ya.text) - 1)
+end
+
+---@param menuName any
+---@param buttonName any
+---@param pos Vector
+---@param size Vector
+---@param sprite Sprite?
+---@param resultCheck fun(newText: any):(boolean|string)
+---@param renderFunc fun(pos:Vector, visible:boolean)?
+---@param onlyNumber boolean?
+---@param startValue any?
+---@param funcUp fun(btn:integer)|number?
+---@param funcDown fun(btn:integer)|number?
+---@param priority number?
+---@return EditorButton
+function menuTab.AddCounter(menuName, buttonName, pos, sizeX, sprite, resultCheck, renderFunc, onlyNumber, startValue, funcDown, funcUp, notPressed, priority)
+    if menuName and buttonName then
+		menuTab.MenuData[menuName] = menuTab.MenuData[menuName] or {sortList = {}, Buttons = {}}
+		local menu = menuTab.MenuData[menuName]
+		if menu.Buttons[buttonName] then
+			menuTab.RemoveButton(menuName, buttonName)
+		end
+		menu.sortList = menu.sortList or {}
+		menu.Buttons = menu.Buttons or {}
+
+		local self
+		if not notPressed then
+			self = menuTab.AddTextBox(menuName, buttonName, pos, Vector(sizeX-16, 16), sprite, resultCheck, true, renderFunc, priority)
+		else
+			local function renderwrap(pos, arg1)
+				local textoffset = self.textoffset or Vector(0,0)
+				if not sprite then
+					menuTab.RenderCustomTextBox(pos,Vector(sizeX-16,16), self.IsSelected)
+				end
+				TextBoxFont:DrawStringScaledUTF8(self.text or "", self.pos.X+3+textoffset.X, self.pos.Y+textoffset.Y, 1,1,KColor(0.1,0.1,0.2,1),0,false)
+				if renderFunc then
+					renderFunc(pos, arg1)
+				end
+			end
+			self = menuTab.AddButton(menuName, buttonName, pos, sizeX-16, 16, sprite, nil, renderwrap, true, priority)
+			self.text = startValue
+		end
+		
+		self.text = startValue or 0
+		if type(funcUp) == "number" then
+			self.max = funcUp
+		end
+		if type(funcDown) == "number" then
+			self.min = funcDown
+		end
+		local funu = type(funcUp) == "function" and funcUp or function(b) menuTab.DefCounterUp(self, b) resultCheck(self.text) end
+		local fund = type(funcDown) == "function" and funcDown or function(b) menuTab.DefCounterDown(self, b) resultCheck(self.text) end
+
+		local ppos = pos+Vector(16,0)
+		local self
+		self = menuTab.AddButton(menuName, buttonName.."up", ppos, 16, 8, UIs.CounterUpSmol(), funu)
+		local self
+		self = menuTab.AddButton(menuName, buttonName.."do", ppos+Vector(0,8), 16, 8, UIs.CounterDownSmol(), fund)
+
+
 		return menu.Buttons[buttonName]
     end
 end
@@ -1847,6 +1932,9 @@ function menuTab.RenderMenuButtons(menuName)
 							btn.showError = btn.showError - 1
 						end
 					end, menuTab.Callbacks.WINDOW_POST_RENDER)
+				elseif btn.text then
+					local textoffset = btn.textoffset or Vector.Zero
+					TextBoxFont:DrawStringScaledUTF8(btn.text, btn.pos.X+3+textoffset.X, btn.pos.Y+textoffset.Y, 1,1,KColor(0.1,0.1,0.2,1),0,false)
 				end
 			end
 
@@ -2155,8 +2243,11 @@ function menuTab.HandleWindowControl()
 					for name, tab in pairs(window.SubMenus) do
 						if tab.visible then
 							--menuTab.DetectMenuButtons(name)
-							delayed[#delayed+1] = {menuTab.DetectMenuButtons, name}
-							menuTab.GetMenu(name).CalledByWindow = window
+							local subm = menuTab.GetMenu(name)
+							if subm then
+								delayed[#delayed+1] = {menuTab.DetectMenuButtons, name}
+								subm.CalledByWindow = window
+							end
 						end
 					end
 				end
@@ -2198,8 +2289,11 @@ function menuTab.HandleWindowControl()
 						for name, tab in pairs(window.SubMenus) do
 							if tab.visible then
 								--menuTab.DetectMenuButtons(name)
-								delayed[#delayed+1] = {menuTab.DetectMenuButtons,name}
-								menuTab.GetMenu(name).CalledByWindow = window
+								local subm = menuTab.GetMenu(name)
+								if subm then
+									delayed[#delayed+1] = {menuTab.DetectMenuButtons, name}
+									subm.CalledByWindow = window
+								end
 							end
 						end
 					end
@@ -2483,6 +2577,45 @@ function menuTab.LastOrderRender()
 	end
 	if menuTab.MouseSprite then
 		menuTab.MouseSprite:Render(menuTab.MousePos)
+	end
+end
+
+---@param func fun(newResult:number):(boolean|string?)
+---@return fun(result:(string|number)):(boolean|string)
+function menuTab.DefNumberResultCheck(func)
+	return function(result)
+		if not result then
+			return true
+		else
+			if not tonumber(result) then
+				return GetStr("incorrectNumber")
+			end
+			local res = func(tonumber(result))
+			if res ~= nil then
+				return res
+			end
+			return  true
+		end
+	end
+end
+
+
+---@param func fun(newResult:string):(boolean|string?)
+---@return fun(result:(string)):(boolean|string)
+function menuTab.DefStringResultCheck(func)
+	return function(result)
+		if not result then
+			return true
+		else
+			if #result < 1 or not string.find(result,"%S") then
+				return GetStr("emptyField")
+			end
+			local res = func(result)
+			if res ~= nil then
+				return res
+			end
+			return true
+		end
 	end
 end
 

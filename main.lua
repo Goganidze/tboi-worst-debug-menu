@@ -203,6 +203,12 @@ Menu.strings = {
 
 	["Item_List_Menu_hintText"] = {en = "Opens a window for giving out items, trinkets and cards \n LMB to add, RMB to remove",
 		ru = "Открывает окно выдачи \n предметов, брелоков и карт \n ЛКМ - добавить, ПКМ - убрать"},
+
+	["ByType"] = {en = "by type", ru = "по типу"},
+	["itemlist_gulp"] = {en = "add as gulped", ru = "добавить как проглоченный"},
+	["itemlist_gold"] = {en = "create as golden", ru = "сделать золотым"},
+	["quality"] = {en = "quality", ru = "качество"}
+
 }
 
 local function GetStr(str)
@@ -246,6 +252,7 @@ UIs.GridSpawner = GenSprite("gfx/editor/ui copy.anm2","grid spawn")
 UIs.AnimTaste = GenSprite("gfx/editor/ui copy.anm2","anim test")
 UIs.Editbtn = GenSprite("gfx/editor/ui copy.anm2","editthis")
 
+function UIs.CounterSmol() return GenSprite("gfx/editor/ui copy.anm2","счётчик_smol") end
 function UIs.EmptyBtn() return GenSprite("gfx/editor/ui copy.anm2","empty btn") end
 function UIs.reset() return GenSprite("gfx/editor/ui copy.anm2","reset") end
 function UIs.nasad() return GenSprite("gfx/editor/ui copy.anm2","откат") end
@@ -255,6 +262,7 @@ function UIs.CounterUpSmol() return GenSprite("gfx/editor/ui copy.anm2","под�
 function UIs.CounterDownSmol() return GenSprite("gfx/editor/ui copy.anm2","опустить_smol") end
 function UIs.PrePage16() return GenSprite("gfx/editor/ui copy.anm2","лево_smol") end
 function UIs.NextPage16() return GenSprite("gfx/editor/ui copy.anm2","право_smol") end
+function UIs.Flag() return GenSprite("gfx/editor/ui copy.anm2","флажок") end
 
 
 
@@ -2265,8 +2273,13 @@ do
 	UIs.itemlist = GenSprite("gfx/editor/ui copy2.anm2","item list")
 	--WORSTDEBUGMENU.AddButtonOnDebugBar(buttonName, size, sprite, pressFunc, renderFunc)
 
-	Menu.ItemList = {name = "Item_List", subnames = {}, size = Vector(250,156), btn = {}, poisk = {text = ""}, curtype = "col", list = {}, page = 1,
-	MainList = {}, playerindex = 0, activeslot = 0}
+	Menu.ItemList = {name = "Item_List", size = Vector(250,156), btn = {}, poisk = {text = ""}, curtype = "col", list = {}, page = 1,
+		MainList = {}, playerindex = 0, activeslot = 0, extrafilter = {MinQual=0, MaxQual=4},
+		subnames = {
+			trink_e = "Item_List_trinkets", filter = "Item_List_filter", 
+			fil_col = "Item_List_filter_col", fil_trink = "Item_List_filter_trink", fil_card = "Item_List_filter_card"
+		},
+	}
 	local ItemList = Menu.ItemList
 	local sizev = ItemList.size
 
@@ -2291,9 +2304,22 @@ do
 
 	ItemList.IsGen = false
 	function ItemList.PreGenList()
+		if ItemList.extrafilter then
+			if ItemList.extrafilter.OnlyType then
+				local breake = true
+				for i,k in pairs(ItemList.extrafilter.OnlyType) do
+					breake = false
+				end
+				if breake then
+					ItemList.extrafilter.OnlyType = nil
+				end
+			end
+		end
+		local extrafilter = ItemList.extrafilter
 		if ItemList.MainList[IsType()] and ItemList.poisk.text == "" then
 			ItemList.list[IsType()] = ItemList.MainList[IsType()]
 		end
+		local poisktext = ItemList.poisk.text
 		
 		ItemList.list[IsType()] = {}
 		local list = ItemList.list[IsType()]
@@ -2308,12 +2334,23 @@ do
 					itemname = string.gsub(itemname, "NAME", "")
 
 					local desc = item.Description
-					if ItemList.poisk.text == "" 
-					or string.find(string.lower(itemname), string.lower(ItemList.poisk.text))
-					or string.find(string.lower(desc), string.lower(ItemList.poisk.text)) then
-						local conf = config:GetCollectible(id)
+
+					local addthit = poisktext == "" 
+					or string.find(string.lower(itemname), string.lower(poisktext))
+					or string.find(string.lower(desc), string.lower(poisktext))
+					if extrafilter.OnlyType and not extrafilter.OnlyType[item.Type] then
+						addthit = false
+					end
+					if extrafilter.UseQual then
+						local q = item.Quality or 0
+						if extrafilter.MinQual > q or extrafilter.MaxQual < q then
+							addthit = false
+						end
+					end
+					if addthit then
+						--local conf = config:GetCollectible(id)
 						local hint = "ID: " .. id .." \n " 
-						.. "TYPE: " .. (ItemTypeToStr[conf.Type][Options.Language] or ItemTypeToStr[conf.Type].en) .." \n " .." \n " 
+						.. "TYPE: " .. (ItemTypeToStr[item.Type][Options.Language] or ItemTypeToStr[item.Type].en) .." \n " .." \n " 
 						.. itemname .." \n " .. desc
 						list[#list+1] = {Name = itemname, Description = desc, id = id, hint = hint}
 					end
@@ -2330,9 +2367,9 @@ do
 					itemname = string.gsub(itemname, "NAME", "")
 
 					local desc = item.Description
-					if ItemList.poisk.text == "" 
-					or string.find(string.lower(itemname), string.lower(ItemList.poisk.text))
-					or string.find(string.lower(desc), string.lower(ItemList.poisk.text)) then
+					if poisktext == "" 
+					or string.find(string.lower(itemname), string.lower(poisktext))
+					or string.find(string.lower(desc), string.lower(poisktext)) then
 						local conf = config:GetTrinket(id)
 						local hint = "ID: " .. id .." \n " 
 						.. "TYPE: " .. (ItemTypeToStr[conf.Type][Options.Language] or ItemTypeToStr[conf.Type].en) .." \n " .." \n " 
@@ -2352,9 +2389,9 @@ do
 					itemname = string.gsub(itemname, "NAME", "")
 
 					local desc = item.Description
-					if ItemList.poisk.text == "" 
-					or string.find(string.lower(itemname), string.lower(ItemList.poisk.text))
-					or string.find(string.lower(desc), string.lower(ItemList.poisk.text)) then
+					if poisktext == "" 
+					or string.find(string.lower(itemname), string.lower(poisktext))
+					or string.find(string.lower(desc), string.lower(poisktext)) then
 						local conf = config:GetCard(id)
 						local hint = "ID: " .. id .." \n " .." \n "
 						.. itemname .." \n " .. desc
@@ -2518,7 +2555,42 @@ do
 				end
 			elseif ItemList.item.type == "trin" then
 				if ItemList.item.add then
-					Isaac.GetPlayer(ItemList.item.index):AddTrinket(ItemList.item.id)
+					local id = ItemList.item.id
+					if ItemList.goldtrink then
+						id = id + TrinketType.TRINKET_GOLDEN_FLAG
+					end
+					if ItemList.gulp then
+						if Renderer then
+							Isaac.GetPlayer(ItemList.item.index):AddSmeltedTrinket(id)
+						else
+							local player = Isaac.GetPlayer(ItemList.item.index)
+							local tr1, tr2, tr3 = player:GetTrinket(0), player:GetTrinket(1), player:GetTrinket(2)
+							if tr1 ~= 0 then
+								player:TryRemoveTrinket(tr1)
+							end
+							if tr2 ~= 0 then
+								player:TryRemoveTrinket(tr2)
+							end
+							if tr3 ~= 0 then
+								player:TryRemoveTrinket(tr3)
+							end
+							
+							player:AddTrinket(id)
+							player:UseActiveItem(CollectibleType.COLLECTIBLE_SMELTER, UseFlag.USE_NOANIM)
+
+							if tr1 ~= 0 then
+								player:AddTrinket(tr1, false)
+							end
+							if tr2 ~= 0 then
+								player:AddTrinket(tr2, false)
+							end
+							if tr3 ~= 0 then
+								player:AddTrinket(tr3, false)
+							end
+						end
+					else
+						Isaac.GetPlayer(ItemList.item.index):AddTrinket(id)
+					end
 				elseif ItemList.item.remove then
 					Isaac.GetPlayer(ItemList.item.index):TryRemoveTrinket(ItemList.item.id)
 				end
@@ -2582,6 +2654,13 @@ do
 		ItemList.curtype = "col"
 		ItemList.PreGenList()
 		ItemList.GetCollectibleList(ItemList.page)
+
+		ItemList.wind:SetSubMenuVisible(ItemList.subnames.trink_e, false)
+		if ItemList.FilterOpen then
+			ItemList.wind:SetSubMenuVisible(ItemList.subnames.fil_col, true)
+			ItemList.wind:SetSubMenuVisible(ItemList.subnames.fil_trink, false)
+			ItemList.wind:SetSubMenuVisible(ItemList.subnames.fil_card, false)
+		end
 	end)
 	UIs.ItemList_trink = GenSprite("gfx/editor/ui copy2.anm2","itemlist_trinket")
 	local self
@@ -2591,6 +2670,13 @@ do
 		ItemList.curtype = "trin"
 		ItemList.PreGenList()
 		ItemList.GetCollectibleList(ItemList.page)
+
+		ItemList.wind:SetSubMenuVisible(ItemList.subnames.trink_e, true)
+		if ItemList.FilterOpen then
+			ItemList.wind:SetSubMenuVisible(ItemList.subnames.fil_col, false)
+			ItemList.wind:SetSubMenuVisible(ItemList.subnames.fil_trink, true)
+			ItemList.wind:SetSubMenuVisible(ItemList.subnames.fil_card, false)
+		end
 	end)
 	UIs.ItemList_card = GenSprite("gfx/editor/ui copy2.anm2","itemlist_card")
 	local self
@@ -2600,6 +2686,13 @@ do
 		ItemList.curtype = "card"
 		ItemList.PreGenList()
 		ItemList.GetCollectibleList(ItemList.page)
+
+		ItemList.wind:SetSubMenuVisible(ItemList.subnames.trink_e, false)
+		if ItemList.FilterOpen then
+			ItemList.wind:SetSubMenuVisible(ItemList.subnames.fil_col, false)
+			ItemList.wind:SetSubMenuVisible(ItemList.subnames.fil_trink, false)
+			ItemList.wind:SetSubMenuVisible(ItemList.subnames.fil_card, true)
+		end
 	end)
 
 	local self
@@ -2664,7 +2757,11 @@ do
 		if tt == "col" then
 			Isaac.Spawn(5,100, ItemList.itemToSpawn.id, pos, Vector(0,0), Isaac.GetPlayer(ItemList.playerindex))
 		elseif tt == "trin" then
-			Isaac.Spawn(5,350, ItemList.itemToSpawn.id, pos, Vector(0,0), Isaac.GetPlayer(ItemList.playerindex))
+			local id = ItemList.itemToSpawn.id
+			if ItemList.goldtrink then
+				id = id + TrinketType.TRINKET_GOLDEN_FLAG
+			end
+			Isaac.Spawn(5,350, id, pos, Vector(0,0), Isaac.GetPlayer(ItemList.playerindex))
 		elseif tt == "card" then
 			Isaac.Spawn(5,300, ItemList.itemToSpawn.id, pos, Vector(0,0), Isaac.GetPlayer(ItemList.playerindex))
 		end
@@ -2707,6 +2804,221 @@ do
 		--font:DrawStringScaledUTF8("Y",pos.X-13,pos.Y-2,1,1,KColor(0.1,0.1,0.2,1),0,false)
 	end)
 	self.text = ""
+	--ItemList.subnames.trink_e
+
+	UIs.GulpedTrink = GenSprite("gfx/editor/ui copy2.anm2","gulp_trink")
+	local self
+	self = Menu.wma.AddButton(ItemList.subnames.trink_e, "gulp", Vector(152,130), 16, 16, UIs.GulpedTrink, function(button) 
+		if button ~= 0 then return end
+		ItemList.gulp = not ItemList.gulp
+	end,
+	function(pos)
+		if ItemList.gulp then
+			UIs.Var_Sel:Render(pos+Vector(2,8))
+		end
+	end)
+	Menu.wma.ButtonSetHintText(ItemList.subnames.trink_e, "gulp", GetStr("itemlist_gulp"))
+	UIs.GoldemTrink = GenSprite("gfx/editor/ui copy2.anm2","gold_trink")
+	local self
+	self = Menu.wma.AddButton(ItemList.subnames.trink_e, "gold", Vector(170,130), 16, 16, UIs.GoldemTrink, function(button) 
+		if button ~= 0 then return end
+		ItemList.goldtrink = not ItemList.goldtrink
+	end,
+	function(pos)
+		if ItemList.goldtrink then
+			UIs.Var_Sel:Render(pos+Vector(2,8))
+		end
+	end)
+	Menu.wma.ButtonSetHintText(ItemList.subnames.trink_e, "gold", GetStr("itemlist_gold"))
+
+	local line
+	UIs.ItemFilter= GenSprite("gfx/editor/ui copy2.anm2","filter")
+	local self
+	self = Menu.wma.AddButton(ItemList.name, "filter", Vector(224.5,12), 16, 16, UIs.ItemFilter, function(button) 
+		if button ~= 0 then return end
+		ItemList.FilterOpen = not ItemList.FilterOpen
+		ItemList.wind:SetSubMenuVisible(ItemList.subnames.filter, ItemList.FilterOpen)
+
+		if ItemList.FilterOpen then
+			ItemList.wind:SetSize( Vector(ItemList.size.X+70,ItemList.size.Y) )
+			local istype = IsType()
+			if istype == "col" then
+				ItemList.wind:SetSubMenuVisible(ItemList.subnames.fil_col, true)
+			elseif istype == "trin" then
+				ItemList.wind:SetSubMenuVisible(ItemList.subnames.fil_trink, true)
+			else
+				ItemList.wind:SetSubMenuVisible(ItemList.subnames.fil_card, true)
+			end
+		else
+			ItemList.wind:SetSize( ItemList.size )
+
+			ItemList.wind:SetSubMenuVisible(ItemList.subnames.fil_col, false)
+			ItemList.wind:SetSubMenuVisible(ItemList.subnames.fil_trink, false)
+			ItemList.wind:SetSubMenuVisible(ItemList.subnames.fil_card, false)
+		end
+	end,
+	function (pos)
+		if ItemList.FilterOpen then
+			UIs.HintTextBG1.Color = Color(.5,.5,.5)
+			UIs.HintTextBG1.Scale = Vector(.5, (ItemList.wind.size.Y-22)/2)
+			UIs.HintTextBG1:Render(pos +  Vector(19,0))
+		end
+	end)
+
+	---------------------------------------------------------------
+	local rlvec = Vector(248,24)
+
+	local self
+	self = Menu.wma.AddButton(ItemList.subnames.fil_col, "fil_passive", rlvec/1, 62, 10, nilspr, function(button) 
+		if button ~= 0 then return end
+		self.Show = not self.Show
+		if ItemList.extrafilter.OnlyType then
+			ItemList.extrafilter.OnlyType[ItemType.ITEM_PASSIVE] = self.Show or nil
+		else
+			ItemList.extrafilter.OnlyType = {[ItemType.ITEM_PASSIVE] = self.Show}
+		end
+		
+		ItemList.page = 1
+		ItemList.PreGenList()
+		ItemList.GetCollectibleList(ItemList.page)
+	end, function(pos)
+		Menu.wma.RenderCustomButton(pos, Vector(self.x,self.y), self.IsSelected)
+		local text = ItemTypeToStr[ItemType.ITEM_PASSIVE][Options.Language] or ItemTypeToStr[ItemType.ITEM_PASSIVE].en
+		--font:DrawStringScaledUTF8(text, pos.X +1, pos.Y, .5, .5, KColor(0.1,0.1,0.2,1),0,false)
+		if not self.Show then
+			--UIs.Var_Sel:Render(pos+Vector(-5,-2))
+			font:DrawStringScaledUTF8(text, pos.X +1, pos.Y+1, .5, .5, KColor(0.4,0.5,0.7,1),0,false)
+		else
+			font:DrawStringScaledUTF8(text, pos.X +1, pos.Y+1, .5, .5, KColor(0.1,0.1,0.2,1),0,false)
+		end
+		font:DrawStringScaledUTF8(GetStr("ByType"), pos.X, pos.Y-12, .5, .5, KColor(0.1,0.1,0.2,1),0,false)
+	end)
+	rlvec.Y = rlvec.Y + 11
+
+	local self
+	self = Menu.wma.AddButton(ItemList.subnames.fil_col, "fil_active", rlvec/1, 62, 10, nilspr, function(button) 
+		if button ~= 0 then return end
+		self.Show = not self.Show
+		if ItemList.extrafilter.OnlyType then
+			ItemList.extrafilter.OnlyType[ItemType.ITEM_ACTIVE] = self.Show or nil
+		else
+			ItemList.extrafilter.OnlyType = {[ItemType.ITEM_ACTIVE] = self.Show}
+		end
+		
+		ItemList.page = 1
+		ItemList.PreGenList()
+		ItemList.GetCollectibleList(ItemList.page)
+	end, function(pos)
+		Menu.wma.RenderCustomButton(pos, Vector(self.x,self.y), self.IsSelected)
+		local text = ItemTypeToStr[ItemType.ITEM_ACTIVE][Options.Language] or ItemTypeToStr[ItemType.ITEM_ACTIVE].en
+		--font:DrawStringScaledUTF8(text, pos.X +1, pos.Y, .5, .5, KColor(0.1,0.1,0.2,1),0,false)
+		if not self.Show then
+			--UIs.Var_Sel:Render(pos+Vector(-5,-2))
+			font:DrawStringScaledUTF8(text, pos.X +1, pos.Y+1, .5, .5, KColor(0.4,0.5,0.7,1),0,false)
+		else
+			font:DrawStringScaledUTF8(text, pos.X +1, pos.Y+1, .5, .5, KColor(0.1,0.1,0.2,1),0,false)
+		end
+	end)
+	rlvec.Y = rlvec.Y + 11
+
+	local self
+	self = Menu.wma.AddButton(ItemList.subnames.fil_col, "fil_fam", rlvec/1, 62, 10, nilspr, function(button) 
+		if button ~= 0 then return end
+		self.Show = not self.Show
+		if ItemList.extrafilter.OnlyType then
+			ItemList.extrafilter.OnlyType[ItemType.ITEM_FAMILIAR] = self.Show or nil
+		else
+			ItemList.extrafilter.OnlyType = {[ItemType.ITEM_FAMILIAR] = self.Show}
+		end
+		
+		ItemList.page = 1
+		ItemList.PreGenList()
+		ItemList.GetCollectibleList(ItemList.page)
+	end, function(pos)
+		Menu.wma.RenderCustomButton(pos, Vector(self.x,self.y), self.IsSelected)
+		local text = ItemTypeToStr[ItemType.ITEM_FAMILIAR][Options.Language] or ItemTypeToStr[ItemType.ITEM_FAMILIAR].en
+		--font:DrawStringScaledUTF8(text, pos.X +1, pos.Y, .5, .5, KColor(0.1,0.1,0.2,1),0,false)
+		if not self.Show then
+			--UIs.Var_Sel:Render(pos+Vector(-5,-2))
+			font:DrawStringScaledUTF8(text, pos.X +1, pos.Y+1, .5, .5, KColor(0.4,0.5,0.7,1),0,false)
+		else
+			font:DrawStringScaledUTF8(text, pos.X +1, pos.Y+1, .5, .5, KColor(0.1,0.1,0.2,1),0,false)
+		end
+	end)
+	rlvec.Y = rlvec.Y + 14
+
+	local self
+	self = Menu.wma.AddButton(ItemList.subnames.fil_col, "qul", rlvec/1, 12, 12, nilspr, function(button) 
+		if button ~= 0 then return end
+		self.Show = not self.Show
+		ItemList.extrafilter.UseQual = not ItemList.extrafilter.UseQual
+		
+		ItemList.page = 1
+		ItemList.PreGenList()
+		ItemList.GetCollectibleList(ItemList.page)
+	end, function(pos)
+		Menu.wma.RenderCustomButton(pos, Vector(self.x,self.y), self.IsSelected)
+		if self.Show then
+			self.flag:Render(pos)
+		end
+		font:DrawStringScaledUTF8(GetStr("quality"), pos.X+13, pos.Y+.5, .5, .5, KColor(0.1,0.1,0.2,1),0,false)
+	end)
+	self.flag = UIs.Flag() self.flag.Offset = Vector(-2,-3)
+	rlvec.Y = rlvec.Y + 20
+
+	local self
+	self = Menu.wma.AddCounter(ItemList.subnames.fil_col, "qul_counter_min", rlvec/1, 32, nil,
+	Menu.wma.DefNumberResultCheck(function(result)
+		local toret
+		if result>4 or result<0 then
+			toret = false
+			result = math.max(0, math.min(4, result))
+			self.text = result
+		end
+		ItemList.extrafilter.MinQual = result
+
+		if ItemList.extrafilter.UseQual then
+			ItemList.page = 1
+			ItemList.PreGenList()
+			ItemList.GetCollectibleList(ItemList.page)
+		end
+		return toret
+	end),
+	function(pos)
+		font:DrawStringScaledUTF8(GetStr("min"), pos.X+1, pos.Y-8, .5, .5, KColor(0.1,0.1,0.2,1),0,false)
+	end, true, 0, 0, 4, true)
+
+	local self
+	self = Menu.wma.AddCounter(ItemList.subnames.fil_col, "qul_counter_max", rlvec/1+Vector(35,0), 32, nil,
+	Menu.wma.DefNumberResultCheck(function(result)
+		local toret
+		if result>4 or result<0 then
+			toret = false
+			result = math.max(0, math.min(4, result))
+			self.text = result
+		end
+		ItemList.extrafilter.MaxQual = result
+
+		if ItemList.extrafilter.UseQual then
+			ItemList.page = 1
+			ItemList.PreGenList()
+			ItemList.GetCollectibleList(ItemList.page)
+		end
+		return toret
+	end),
+	function(pos)
+		font:DrawStringScaledUTF8(GetStr("max"), pos.X+1, pos.Y-8, .5, .5, KColor(0.1,0.1,0.2,1),0,false)
+	end, true, 4, 0, 4, true)
+
+
+	local self
+	self = Menu.wma.AddButton(ItemList.subnames.fil_trink, "nil", Vector(230,12), 16, 16, nilspr, function(button) 
+	end)
+
+	local self
+	self = Menu.wma.AddButton(ItemList.subnames.fil_card, "nil", Vector(230,12), 16, 16, nilspr, function(button) 
+	end)
+
 
 	--Это может сломать запуск?
 	function ItemList.TryGenCardpathList()
