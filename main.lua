@@ -65,9 +65,11 @@ WORSTDEBUGMENU = RegisterMod("piss shit poop and menu", 1)
 
 local game = Game()
 local font = Font()
+local sfx = SFXManager()
 font:Load("font/upheaval.fnt")
 local TextBoxFont = Font()
 TextBoxFont:Load("font/pftempestasevencondensed.fnt")
+local nilspr = Sprite()
 
 ---@type wga_menu
 WORSTDEBUGMENU.wma = include("worst gui api")
@@ -207,7 +209,9 @@ Menu.strings = {
 	["ByType"] = {en = "by type", ru = "по типу"},
 	["itemlist_gulp"] = {en = "add as gulped", ru = "добавить как проглоченный"},
 	["itemlist_gold"] = {en = "create as golden", ru = "сделать золотым"},
-	["quality"] = {en = "quality", ru = "качество"}
+	["quality"] = {en = "quality", ru = "качество"},
+	["max"] = {en = "max", ru = "макс"},
+	["min"] = {en = "min", ru = "мин"},
 
 }
 
@@ -404,13 +408,29 @@ local self
 self = WORSTDEBUGMENU.wma.AddButton("__debug_menu", "mouseLock", Vector(4,-25), 16, 16, UIs.MouseLockBtn, function(button) 
 	if button ~= 0 then return end
 	Options.MouseControl = not Options.MouseControl
-	UIs.MouseIsLocked:SetFrame(Options.MouseControl and 0 or 1)
+	--UIs.MouseIsLocked:SetFrame(Options.MouseControl and 0 or 1)
 end,
 function(pos)
+	UIs.MouseIsLocked:SetFrame(Options.MouseControl and 0 or 1)
 	UIs.MouseIsLocked:Render(pos)
 end)
 self.posfunc = function()
 	self.pos = Vector(1,5+Menu.MainOffset.Y)
+end
+
+UIs.ShowMouse = GenSprite("gfx/editor/ui copy2.anm2","mouse_visible1")
+UIs.ShowMouse1 = GenSprite("gfx/editor/ui copy2.anm2","mouse_visible")
+local self
+self = WORSTDEBUGMENU.wma.AddButton("__debug_menu", "mouseshow", Vector(4,-25), 16, 16, UIs.ShowMouse, function(button) 
+	if button ~= 0 then return end
+	Menu.wma.ShowFakeMouse = not Menu.wma.ShowFakeMouse
+end,
+function(pos)
+	UIs.ShowMouse1:SetFrame(Menu.wma.ShowFakeMouse and 0 or 1)
+	UIs.ShowMouse1:Render(pos)
+end)
+self.posfunc = function()
+	self.pos = Vector(1,22+Menu.MainOffset.Y)
 end
 
 local function GetCurrentModPath() --эпитани
@@ -3080,6 +3100,187 @@ do
 		local renderpos = Isaac.WorldToScreen(player.Position)
 		UIs.ThisGuy:Render(renderpos+Vector(0.5,-40))
 	end
+
+end
+
+do
+	UIs.SoundTest = GenSprite("gfx/editor/ui copy2.anm2","sound test")
+	UIs.blockThis = GenSprite("gfx/editor/ui copy2.anm2","blocksy")
+	UIs.blockThis.Scale = Vector(.5,.5)
+	--UIs.blockThis = function() return GenSprite("gfx/editor/ui copy2.anm2","blocksy") end
+
+	Menu.SoundTest = {name = "SoundTest", subnames = {}, size = Vector(220,210), btn = {}, 
+		list = {}, revlist = {}, block = {}, max = 60, showmax = 20, listpos = 0
+	}
+	local SoundTest = Menu.SoundTest
+	local sizev = SoundTest.size
+
+	local self
+	self = WORSTDEBUGMENU.AddButtonOnDebugBar("Sound_Test_Menu", Vector(32,32), UIs.SoundTest, function(button) 
+		if button ~= 0 then return end
+		---@type Window
+		SoundTest.wind = Menu.wma.ShowWindow(SoundTest.name, self.pos+Vector(0,15), sizev)
+		for i,k in pairs(SoundTest.subnames) do
+			SoundTest.wind:SetSubMenuVisible(k, false)
+		end
+	end, nil)
+	Menu.wma.ButtonSetHintText("__debug_menu", "Sound_Test_Menu", GetStr("Sound_Test_Menu_hintText"))
+
+	local list, revlist = SoundTest.list, SoundTest.revlist
+
+	local rebild
+	local function makelistbtn(i)
+		local offst = font:GetStringWidthUTF8("222 ")/2
+
+		local posX =  12 + i*9
+		local ar = list[i]
+		local self
+		local block
+		self = Menu.wma.AddButton(SoundTest.name, "list"..i, Vector(32, posX), 176, 9, nilspr, function(button)
+			if button ~= 0 then return end
+			sfx:Play(list[i][1])
+		end, function(pos, visible)
+			if list[i] and visible then
+				if not self.IsSelected then
+					if i%2 == 0 then
+						--Menu.wma.RenderCustomButton(pos, Vector(self.x,self.y), self.IsSelected)
+						UIs.HintTextBG1.Color = Color(.8,.8,.8, .5)
+					else
+						--Menu.wma.RenderCustomTextBox(pos, Vector(self.x,self.y), self.IsSelected)
+						UIs.HintTextBG1.Color = Color(1.2, 1.2, 1.2, .5)
+					end
+				else
+					UIs.HintTextBG1.Color = Color(0.7, 1.0, 1.3, .5, .2,.2,.4)
+				end
+				UIs.HintTextBG1.Scale = Vector(self.x/2, self.y/2)
+				UIs.HintTextBG1:Render(pos)
+
+				local kc = KColor(0.1,0.1,0.2,1)
+				if list[i][3] then
+					font:DrawStringScaledUTF8(list[i][1], pos.X+1, pos.Y-1, .5, .5, KColor(0.1,0.1,0.2,1),0,false)
+					font:DrawStringScaledUTF8(list[i][2], pos.X+1+offst, pos.Y-1, .5, .5, KColor(0.1,0.1,0.2,1),0,false)
+				else
+					font:DrawStringScaledUTF8(list[i][2], pos.X+1, pos.Y-1, .5, .5, KColor(0.1,0.1,0.2,1),0,false)
+				end
+			elseif not list[i] then
+				print("whe",i, #list)
+				Menu.wma.RemoveButton(SoundTest.name, "list"..i)
+			end
+		end)
+		self.posfunc = function()
+			self.posref.Y = SoundTest.listpos + posX
+			block.posref.Y = SoundTest.listpos + posX
+			if self.posref.Y-12 > SoundTest.showmax*9 or self.posref.Y < 12 then
+				self.visible = false
+				self.canPressed = false
+				block.visible = false
+				block.canPressed = false
+			else
+				self.visible = true
+				self.canPressed = true
+				block.visible = true
+				block.canPressed = true
+			end
+		end
+
+		SoundTest.btn[i] = self
+
+		local sp = UIs.EmptyBtn()
+		sp.Scale = Vector(.5,.5)
+		block = Menu.wma.AddButton(SoundTest.name, "block"..i, Vector(12, 12 + i*9), 9, 9, sp, function(button)
+			if button ~= 0 then return end
+			print("dell", list[i][1], i)
+			revlist[list[i][1]] = nil
+			local pre = #list
+			table.remove(list, i)
+			SoundTest.btn[pre] = nil
+			Menu.wma.RemoveButton(SoundTest.name, "list"..i)
+			Menu.wma.RemoveButton(SoundTest.name, "block"..i)
+			rebild()
+		end, function(pos, visible)
+			if list[i] and visible then
+				UIs.blockThis:RenderLayer(1, pos)
+			elseif not list[i] then
+				print("whe",i, #list)
+				Menu.wma.RemoveButton(SoundTest.name, "block"..i)
+			end
+		end)
+		print(i, list[i][1])
+	end
+
+	rebild = function(add)
+		for i=1, #list do
+			makelistbtn(i)
+		end
+	end
+
+	local self
+	self = Menu.wma.AddButton(SoundTest.name, "sound_record", Vector(0,0), 1, 1, nilspr, function(button) 
+	end, function(pos)
+		UIs.HintTextBG1.Color = Color(1.2,1.2,1.2)
+		UIs.HintTextBG1.Scale = Vector(101, 5)
+		UIs.HintTextBG1:Render(pos + Vector(6,9+1))
+		UIs.HintTextBG1:Render(pos + Vector(6,15+SoundTest.showmax*9))
+
+		for name, id in pairs(SoundEffect) do
+			if sfx:IsPlaying(id) and not revlist[id] then
+				local tid = tostring(id)
+				local del = false
+				local message
+				if font:GetStringWidthUTF8(tid .. " ")/2 < 18 then
+					del = true
+					message = "- " .. tostring(name)
+				else
+					message = tid .. " - " .. tostring(name)
+				end
+
+				revlist[id] = true
+				list[#list+1] = {id, message, del}
+				if #list > SoundTest.max then
+					revlist[list[1][1]] = nil
+					table.remove(list, 1)
+				end
+			end
+		end
+		for i=1, SoundTest.max do
+			if list[i] and not SoundTest.btn[i] then
+				makelistbtn(i)
+			end
+		end
+	end, true)
+
+	--[[for i=1, SoundTest.max do
+		local self
+		self = Menu.wma.AddButton(SoundTest.name, "list"..i, Vector(24, 12 + i*9), 180, 9, nilspr, function(button) 
+		end, function(pos)
+			if list[i] then
+				Menu.wma.RenderCustomButton(pos, Vector(self.x,self.y), self.IsSelected)
+				font:DrawStringScaledUTF8(list[i][2], pos.X+1, pos.Y-1, .5, .5, KColor(0.1,0.1,0.2,1),0,false)
+			end
+		end)
+		SoundTest.btn[i] = self
+	end]]
+
+	local self
+	self = Menu.wma.AddScrollBar(SoundTest.name, "list_bar",Vector(210,20),Vector(7,SoundTest.showmax*9-6),nil,nil,
+	function(button, value)
+		if button ~= 0 then return end
+		--print(value, self.dragCurPos)
+		SoundTest.listpos = -value
+	end,
+	function(pos, visible)
+		if visible then
+
+			Menu.wma.RenderCustomTextBox(pos+Vector(1,0),Vector(self.x-2,self.y),false)
+		end
+	end,0,0,SoundTest.max*9-6, 1)
+	self.posfunc = function()
+		self.endValue = #list*9
+		self.visible = self.endValue > self.x
+		self.canPressed = self.visible
+	end
+	self.visible = false
+	self.canPressed = false
 
 end
 

@@ -143,6 +143,8 @@ Menu.wma.FastCreatelist(MenuName, Vector(0,0), Xsize, list,
 ---@field IsStickyMenu boolean
 ---@field MouseHintText string
 ---@field MousePos Vector
+---@field ShowFakeMouse boolean
+---@field MouseSprite Sprite
 ---@field HandleWindowControl function
 ---@field RenderWindows function
 ---@field Callbacks table
@@ -396,6 +398,9 @@ for i=0,6 do
 	UIs["MenuActulae" .. i] = GenSprite("gfx/editor/ui copy.anm2","меню наконец то", i)
 	UIs["MenuActulae" .. i].Color = Color(1,1,1,.25)
 end
+UIs.FakeDefMouse = GenSprite("gfx/editor/ui copy2.anm2","fakemouse")
+UIs.FakeTextMouse = GenSprite("gfx/editor/ui copy2.anm2","textedit_mouse")
+
 --[[
 UIs.RoomEditor_debug = GenSprite("gfx/editor/ui copy.anm2","room_editor_debug")
 UIs.luamod_debug = GenSprite("gfx/editor/ui copy.anm2","luamod_debug")
@@ -1015,10 +1020,10 @@ function menuTab.AddScrollBar(menuName, buttonName, pos, size, sprite, dragSpr, 
 		self.startValue = startValue
 		self.endValue = endValue
 		local curValue = startValue + (endValue-startValue)*startProcent
-		self.dragPrePos = Vector(curValue,0)
-		self.dragCurPos = Vector(curValue,0)
-		self.dragsprRenderFunc = menuTab.DefaultScrollBarRender
 		self.ishori = size.X>size.Y
+		self.dragPrePos = self.ishori and Vector(curValue,0) or Vector(0, curValue)
+		self.dragCurPos = self.ishori and Vector(curValue,0) or Vector(0, curValue)
+		self.dragsprRenderFunc = menuTab.DefaultScrollBarRender
 
 		local si = self.ishori and self.x or self.y
 		self.ValueSize = (endValue-startValue)
@@ -1471,6 +1476,9 @@ function menuTab.OpenTextbox(menu, button, onlyNumber, resultCheckFunc, startTex
 			elseif menuTab.MouseSprite and menuTab.MouseSprite:GetAnimation() == "mouse_textEd" then
 				menuTab.MouseSprite = nil
 			end]]
+			if menuTab.GetButton(menu, button).IsSelected then
+				menuTab.MouseSprite = UIs.FakeTextMouse
+			end
 
 
 			local maxN = utf8.len(TextboxPopup.Text)
@@ -2017,6 +2025,8 @@ end
 if Isaac.GetCursorSprite and Isaac.GetCursorSprite():GetFilename() == "" then
 	Isaac.GetCursorSprite():Load("gfx/ui/cursor.anm2", true)
 	Isaac.GetCursorSprite():Play("Idle")
+elseif not Isaac.GetPlayer() and Options.MouseControl == false then
+	menuTab.AutoFakeMouseSprite = true
 end
 function menuTab.DetectSelectedButtonActuale()
 	local mousePos = menuTab.MousePos
@@ -2059,14 +2069,16 @@ function menuTab.DetectSelectedButtonActuale()
 										k.dragspr:SetFrame(0)
 									end
 								elseif k.dragtype == 3 then --DragerSize
-									local cm = mousePos.X - k.pos.X
+									--local cm = mousePos.X - k.pos.X
 									if k.ishori then
+										local cm = mousePos.X - k.pos.X
 										if cm > (k.dragCurPos.X-k.DragerSize/2) and cm < (k.dragCurPos.X+k.DragerSize/2) then
 											k.dragspr:SetFrame(1)
 										else
 											k.dragspr:SetFrame(0)
 										end
 									else
+										local cm = mousePos.Y - k.pos.Y
 										if cm > (k.dragCurPos.Y-k.DragerSize/2) and cm < (k.dragCurPos.Y+k.DragerSize/2) then
 											k.dragspr:SetFrame(1)
 										else
@@ -2575,8 +2587,12 @@ function menuTab.LastOrderRender()
 		UIs.Hint_MouseMoving_Vert_white:Render(pos+Vector(1,0))
 		UIs.Hint_MouseMoving_Vert:Render(pos)
 	end
-	if menuTab.MouseSprite then
-		menuTab.MouseSprite:Render(menuTab.MousePos)
+	if menuTab.ShowFakeMouse then
+		if menuTab.MouseSprite then
+			menuTab.MouseSprite:SetFrame(Input.IsMouseBtnPressed(0) and 1 or 0)
+			menuTab.MouseSprite:Render(menuTab.MousePos)
+		end
+		menuTab.MouseSprite = UIs.FakeDefMouse
 	end
 end
 
