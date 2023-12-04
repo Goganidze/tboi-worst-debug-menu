@@ -203,7 +203,7 @@ Menu.strings = {
 	["Anim_Test_Menu_hintText"] = {en = "Opens a window to view \n animations, colors",
 		ru = "Открывает окно для просмотра \n анимаций, цветов"},
 
-	["Item_List_Menu_hintText"] = {en = "Opens a window for giving out items, trinkets and cards \n LMB to add, RMB to remove",
+	["Item_List_Menu_hintText"] = {en = "Opens a window for giving out \n items, trinkets and cards \n LMB to add, RMB to remove",
 		ru = "Открывает окно выдачи \n предметов, брелоков и карт \n ЛКМ - добавить, ПКМ - убрать"},
 
 	["ByType"] = {en = "by type", ru = "по типу"},
@@ -213,11 +213,14 @@ Menu.strings = {
 	["max"] = {en = "max", ru = "макс"},
 	["min"] = {en = "min", ru = "мин"},
 
+	["volume"] = {en = "volume", ru = "громк."},
+	["pitch"] = {en = "pitch", ru = "питч"},
+	["manual_sound"] = {en = "manually:", ru = "ручной id:"},
 }
 
 local function GetStr(str)
 	if Menu.strings[str] then
-		return Menu.strings[str][Options.Language] or Menu.strings[str].en or str
+		return Menu.strings[str].en or str-- Menu.strings[str][Options.Language] or Menu.strings[str].en or str
 	else
 		return str
 	end
@@ -3106,11 +3109,13 @@ end
 do
 	UIs.SoundTest = GenSprite("gfx/editor/ui copy2.anm2","sound test")
 	UIs.blockThis = GenSprite("gfx/editor/ui copy2.anm2","blocksy")
+	UIs.playsoundsmol = GenSprite("gfx/editor/ui copy2.anm2","sound play")
 	UIs.blockThis.Scale = Vector(.5,.5)
 	--UIs.blockThis = function() return GenSprite("gfx/editor/ui copy2.anm2","blocksy") end
 
-	Menu.SoundTest = {name = "SoundTest", subnames = {}, size = Vector(220,210), btn = {}, 
-		list = {}, revlist = {}, block = {}, max = 60, showmax = 20, listpos = 0
+	Menu.SoundTest = {name = "SoundTest", subnames = {}, size = Vector(220,190), btn = {}, 
+		list = {}, revlist = {}, block = {}, max = 60, showmax = 15, listpos = 0,
+		volume = 1, pitch = 1, pan = 0
 	}
 	local SoundTest = Menu.SoundTest
 	local sizev = SoundTest.size
@@ -3138,7 +3143,7 @@ do
 		local block
 		self = Menu.wma.AddButton(SoundTest.name, "list"..i, Vector(32, posX), 176, 9, nilspr, function(button)
 			if button ~= 0 then return end
-			sfx:Play(list[i][1])
+			sfx:Play(list[i][1], SoundTest.volume, 5, false, SoundTest.pitch, SoundTest.pan)
 		end, function(pos, visible)
 			if list[i] and visible then
 				if not self.IsSelected then
@@ -3156,21 +3161,56 @@ do
 				UIs.HintTextBG1:Render(pos)
 
 				local kc = KColor(0.1,0.1,0.2,1)
-				if list[i][3] then
+				--[[if list[i][3] then
 					font:DrawStringScaledUTF8(list[i][1], pos.X+1, pos.Y-1, .5, .5, KColor(0.1,0.1,0.2,1),0,false)
 					font:DrawStringScaledUTF8(list[i][2], pos.X+1+offst, pos.Y-1, .5, .5, KColor(0.1,0.1,0.2,1),0,false)
 				else
 					font:DrawStringScaledUTF8(list[i][2], pos.X+1, pos.Y-1, .5, .5, KColor(0.1,0.1,0.2,1),0,false)
+				end]]
+				if self.IsSelected then
+					if list[i][3] then
+						---@type string
+						local text = list[i][2]
+						if font:GetStringWidth(text)/2 + offst > 160 then
+							if utf8.len(text) > 23 then
+								text = Menu.wma.utf8_Sub(text, 0, 23) .. "..."
+							else
+								text = Menu.wma.utf8_Sub(text, 0, utf8.len(text)-2) .. "..."
+							end
+						end
+						font:DrawStringScaledUTF8(list[i][1], pos.X+1, pos.Y-1, .5, .5, KColor(0.1,0.1,0.2,1),0,false)
+						font:DrawStringScaledUTF8(text, pos.X+1+offst, pos.Y-1, .5, .5, KColor(0.1,0.1,0.2,1),0,false)
+					else
+						local text = list[i][2]
+						if font:GetStringWidth(text)/2 > 160 then
+							if utf8.len(text) > 27 then
+								text = Menu.wma.utf8_Sub(text, 0, 23+4) .. "..."
+							else
+								text = Menu.wma.utf8_Sub(text, 0, utf8.len(text)-2) .. "..."
+							end
+						end
+						font:DrawStringScaledUTF8(text, pos.X+1, pos.Y-1, .5, .5, KColor(0.1,0.1,0.2,1),0,false)
+					end
+
+					UIs.playsoundsmol:Render(pos + Vector(self.x-11,1))
+				else
+					if list[i][3] then
+						font:DrawStringScaledUTF8(list[i][1], pos.X+1, pos.Y-1, .5, .5, KColor(0.1,0.1,0.2,1),0,false)
+						font:DrawStringScaledUTF8(list[i][2], pos.X+1+offst, pos.Y-1, .5, .5, KColor(0.1,0.1,0.2,1),0,false)
+					else
+						font:DrawStringScaledUTF8(list[i][2], pos.X+1, pos.Y-1, .5, .5, KColor(0.1,0.1,0.2,1),0,false)
+					end
 				end
 			elseif not list[i] then
-				print("whe",i, #list)
 				Menu.wma.RemoveButton(SoundTest.name, "list"..i)
 			end
-		end)
+		end, nil, 1)
 		self.posfunc = function()
 			self.posref.Y = SoundTest.listpos + posX
 			block.posref.Y = SoundTest.listpos + posX
-			if self.posref.Y-12 > SoundTest.showmax*9 or self.posref.Y < 12 then
+			local pos = self.pos.Y - SoundTest.wind.pos.Y
+			--if self.posref.Y-12 > SoundTest.showmax*9 or self.posref.Y < 12 then
+			if pos-12 > SoundTest.showmax*9 or pos < 12 then
 				self.visible = false
 				self.canPressed = false
 				block.visible = false
@@ -3189,7 +3229,6 @@ do
 		sp.Scale = Vector(.5,.5)
 		block = Menu.wma.AddButton(SoundTest.name, "block"..i, Vector(12, 12 + i*9), 9, 9, sp, function(button)
 			if button ~= 0 then return end
-			print("dell", list[i][1], i)
 			revlist[list[i][1]] = nil
 			local pre = #list
 			table.remove(list, i)
@@ -3201,11 +3240,9 @@ do
 			if list[i] and visible then
 				UIs.blockThis:RenderLayer(1, pos)
 			elseif not list[i] then
-				print("whe",i, #list)
 				Menu.wma.RemoveButton(SoundTest.name, "block"..i)
 			end
-		end)
-		print(i, list[i][1])
+		end, nil, 0)
 	end
 
 	rebild = function(add)
@@ -3220,6 +3257,7 @@ do
 		UIs.HintTextBG1.Color = Color(1.2,1.2,1.2)
 		UIs.HintTextBG1.Scale = Vector(101, 5)
 		UIs.HintTextBG1:Render(pos + Vector(6,9+1))
+		UIs.HintTextBG1.Scale = Vector(101, 8)
 		UIs.HintTextBG1:Render(pos + Vector(6,15+SoundTest.showmax*9))
 
 		for name, id in pairs(SoundEffect) do
@@ -3273,7 +3311,7 @@ do
 
 			Menu.wma.RenderCustomTextBox(pos+Vector(1,0),Vector(self.x-2,self.y),false)
 		end
-	end,0,0,SoundTest.max*9-6, 1)
+	end,0,0,SoundTest.max*9-6, 2)
 	self.posfunc = function()
 		self.endValue = #list*9
 		self.visible = self.endValue > self.x
@@ -3281,6 +3319,114 @@ do
 	end
 	self.visible = false
 	self.canPressed = false
+
+	local self
+	self = Menu.wma.AddCounter(SoundTest.name, "volume", Vector(6,SoundTest.showmax*9+15), 76, nil, 
+	Menu.wma.DefNumberResultCheck(
+	function (newText)
+		SoundTest.volume = tonumber(newText)
+		self.text = SoundTest.volume
+		return false
+	end)
+	, function (pos, visible)
+		--Menu.wma.RenderCustomTextBox(pos,Vector(self.x,self.y),false)
+		font:DrawStringScaledUTF8(GetStr("volume"), pos.X+1, pos.Y+3, .5, .5, KColor(0.1,0.1,0.2,1),0,false)
+		--font:DrawStringScaledUTF8(string.format("%.2f", tostring(self.text)), pos.X+42, pos.Y+3, .5, .5, KColor(0.1,0.1,0.2,1),0,false)
+	end,
+	true, 1, function (btn)
+		self.text = self.text - .1
+		SoundTest.volume = tonumber(self.text)
+		self.text = math.abs(self.text)<0.1 and 0 or self.text
+	end, function (btn)
+		self.text = self.text + .1
+		SoundTest.volume = tonumber(self.text)
+		self.text = math.abs(self.text)<0.1 and 0 or self.text
+	end,nil,-1)
+	self.textoffset = Vector(38,0)
+
+	local self
+	self = Menu.wma.AddCounter(SoundTest.name, "pitch", Vector(6+76,SoundTest.showmax*9+15), 70, nil, 
+	Menu.wma.DefNumberResultCheck(
+	function (newText)
+		SoundTest.pitch = tonumber(newText)
+		self.text = SoundTest.pitch
+		return false
+	end)
+	, function (pos, visible)
+		--Menu.wma.RenderCustomTextBox(pos,Vector(self.x,self.y),false)
+		font:DrawStringScaledUTF8(GetStr("pitch"), pos.X+1, pos.Y+3, .5, .5, KColor(0.1,0.1,0.2,1),0,false)
+		--font:DrawStringScaledUTF8(string.format("%.2f", tostring(self.text)), pos.X+42, pos.Y+3, .5, .5, KColor(0.1,0.1,0.2,1),0,false)
+	end,
+	true, 1, function (btn)
+		self.text = self.text - .1
+		SoundTest.pitch = tonumber(self.text)
+		self.text = math.abs(self.text)<0.1 and 0 or self.text
+	end, function (btn)
+		self.text = self.text + .1
+		SoundTest.pitch = tonumber(self.text)
+		self.text = math.abs(self.text)<0.1 and 0 or self.text
+	end,nil,-1)
+	self.textoffset = Vector(38-6,0)
+
+	local self
+	self = Menu.wma.AddCounter(SoundTest.name, "pan", Vector(6+80+66,SoundTest.showmax*9+15), 62, nil, 
+	Menu.wma.DefNumberResultCheck(
+	function (newText)
+		SoundTest.pan = tonumber(newText) % 4
+		self.text = SoundTest.pan
+		return false
+	end)
+	, function (pos, visible)
+		--Menu.wma.RenderCustomTextBox(pos,Vector(self.x,self.y),false)
+		font:DrawStringScaledUTF8(GetStr("pan"), pos.X+1, pos.Y+3, .5, .5, KColor(0.1,0.1,0.2,1),0,false)
+		--font:DrawStringScaledUTF8(string.format("%.2f", tostring(self.text)), pos.X+42, pos.Y+3, .5, .5, KColor(0.1,0.1,0.2,1),0,false)
+	end,
+	true, 0, function (btn)
+		self.text = math.max(-1, self.text - .25) % 4
+		SoundTest.pan = tonumber(self.text)
+		self.text = math.abs(self.text)<0.1 and 0 or self.text
+	end, function (btn)
+		self.text = math.min(5,  self.text + .25) % 4
+		SoundTest.pan = tonumber(self.text)
+		self.text = math.abs(self.text)<0.1 and 0 or self.text
+	end, nil, -1)
+	self.textoffset = Vector(26-6,0)
+
+
+	local self
+	self = Menu.wma.AddTextBox(SoundTest.name, "manual", Vector(6+54, SoundTest.showmax*9+34), Vector(32,12), nil,
+	function(newResult)
+		if #newResult == 0 then
+			SoundTest.ManID = nil
+			return true
+		end
+		if not tonumber(newResult) then
+			return GetStr("incorrectNumber")
+		end
+		newResult = tonumber(newResult)
+		if newResult < 1 then
+			self.text = 1
+			SoundTest.ManID = 1
+		else
+			self.text = math.ceil(newResult)
+			SoundTest.ManID = self.text
+		end
+		return false
+	end, true, 
+	function(pos, Visible)
+		font:DrawStringScaledUTF8(GetStr("manual_sound"), pos.X+1-54, pos.Y+1, .5, .5, KColor(0.1,0.1,0.2,1),0,false)
+	end)
+	self.textoffset = Vector(0,-1)
+
+	UIs.playsoundbig = function() return GenSprite("gfx/editor/ui copy2.anm2","sound play b") end
+	local self
+	self = Menu.wma.AddButton(SoundTest.name, "play manll id", Vector(60 + 34, SoundTest.showmax*9+34), 16, 16, UIs.playsoundbig(), function(button)
+		if button ~= 0 then return end
+		if SoundTest.ManID then
+			sfx:Play(SoundTest.ManID, SoundTest.volume, 5, false, SoundTest.pitch, SoundTest.pan)
+		end
+	end)
+
 
 end
 

@@ -224,6 +224,7 @@ local function utf8_Sub(str, x, y)
 	if x2 == nil then error("bad argument #2 to 'sub' (position is not correct)",2) end
 	return string.sub(str, x2, y2)
 end
+menuTab.utf8_Sub = utf8_Sub
 
 local function GenSprite(gfx,anim,frame)
   if gfx and anim then
@@ -884,13 +885,19 @@ function menuTab.AddTextBox(menuName, buttonName, pos, size, sprite, resultCheck
 
 			if menuTab.TextboxPopup.TargetBtn 
 			and menuTab.TextboxPopup.TargetBtn[1] == menuName and menuTab.TextboxPopup.TargetBtn[2] == buttonName then
+				local textoff = self.textoffset and self.textoffset.X or 0
 				local mouseClickPos = menuTab.MousePos-self.pos
 				local num = 0
-				for i = utf8.len(menuTab.TextboxPopup.Text),0,-1 do
-					local CutPos = TextBoxFont:GetStringWidthUTF8(utf8_Sub(menuTab.TextboxPopup.Text, 0, i))
-					if CutPos < mouseClickPos.X then
-						menuTab.TextboxPopup.TextPos = i
-						break
+				if mouseClickPos.X-textoff < 0 then
+					menuTab.TextboxPopup.TextPos = 0
+				else
+					--menuTab.TextboxPopup.TextPos = utf8.len(menuTab.TextboxPopup.Text)
+					for i = utf8.len(menuTab.TextboxPopup.Text),0,-1 do
+						local CutPos = TextBoxFont:GetStringWidthUTF8(utf8_Sub(menuTab.TextboxPopup.Text, 0, i))
+						if CutPos < mouseClickPos.X-textoff then
+							menuTab.TextboxPopup.TextPos = i
+							break
+						end
 					end
 				end
 			else
@@ -980,9 +987,9 @@ end
 ---@param self EditorButton
 menuTab.DefaultScrollBarRender = function(self,pos,value,barSize)
 	local size = self.ishori and Vector(barSize*2, self.y) or Vector(self.x, barSize*2)
-	local offset = self.ishori and Vector(-size.X/2, 0) or Vector(0, -size.Y/2)
+	--local offset = self.ishori and Vector(-size.X/2, 0) or Vector(0, -size.Y/2)
 	--print(self.IsSelected)
-	menuTab.RenderCustomButton(pos+offset, size, self.dragspr:GetFrame()==1)
+	menuTab.RenderCustomButton(pos, size, self.dragspr:GetFrame()==1)
 end
 
 ---@param menuName any
@@ -1103,11 +1110,11 @@ function menuTab.AddCounter(menuName, buttonName, pos, sizeX, sprite, resultChec
 		local funu = type(funcUp) == "function" and funcUp or function(b) menuTab.DefCounterUp(self, b) resultCheck(self.text) end
 		local fund = type(funcDown) == "function" and funcDown or function(b) menuTab.DefCounterDown(self, b) resultCheck(self.text) end
 
-		local ppos = pos+Vector(16,0)
+		local ppos = pos+Vector(sizeX-16,0)
 		local self
-		self = menuTab.AddButton(menuName, buttonName.."up", ppos, 16, 8, UIs.CounterUpSmol(), funu)
+		self = menuTab.AddButton(menuName, buttonName.."up", ppos, 16, 8, UIs.CounterUpSmol(), funu, nil, nil, priority and (priority-1))
 		local self
-		self = menuTab.AddButton(menuName, buttonName.."do", ppos+Vector(0,8), 16, 8, UIs.CounterDownSmol(), fund)
+		self = menuTab.AddButton(menuName, buttonName.."do", ppos+Vector(0,8), 16, 8, UIs.CounterDownSmol(), fund, nil, nil, priority and (priority-1))
 
 
 		return menu.Buttons[buttonName]
@@ -1961,7 +1968,7 @@ function menuTab.RenderMenuButtons(menuName)
 					btn.dragsprRenderFunc(btn, pos, btn.dragCurPos, btn.DragerSize/2) --math.abs(si/(btn.startValue-btn.endValue)) )
 
 					if Isaac.GetFrameCount()%30 == 0 then
-						if btn.ishori then
+						--[[if btn.ishori then
 							if math.abs(btn.ValueSize) <= btn.x then
 								btn.dragCurPos.X = btn.x/2
 							else
@@ -1978,6 +1985,25 @@ function menuTab.RenderMenuButtons(menuName)
 								local siL, siR =(btn.y-vs), vs
 								
 								btn.dragCurPos.Y = math.min( siL, math.max( siR, btn.dragCurPos.Y))
+							end
+						end]]
+						if btn.ishori then
+							if math.abs(btn.ValueSize) <= btn.x then
+								btn.dragCurPos.X = 0 --btn.x/2
+							else
+								local vs = btn.x/math.abs(btn.ValueSize)*btn.x
+								local siL =(btn.x-vs) --, vs
+								
+								btn.dragCurPos.X = math.min( siL, math.max( 0, btn.dragCurPos.X))
+							end
+						else
+							if math.abs(btn.ValueSize) <= btn.y then
+								btn.dragCurPos.Y = 0 --btn.y/2
+							else
+								local vs = btn.y/math.abs(btn.ValueSize)*btn.y
+								local siL =(btn.y-vs)
+								
+								btn.dragCurPos.Y = math.min( siL, math.max( 0, btn.dragCurPos.Y))
 							end
 						end
 					end
@@ -2187,10 +2213,10 @@ function menuTab.DetectSelectedButtonActuale()
 					k.func(0, proc, k.dragPrePos.X / k.x)]]
 
 					if math.abs(k.ValueSize)<=k.x then
-						k.dragCurPos.X = k.x/2
+						k.dragCurPos.X = 0 -- k.x/2
 						k.func(0, 0, k.dragPrePos.X / k.x)
 					else
-						local vs = k.x/math.abs(k.ValueSize)/2*k.x   --math.abs(k.ValueSize)/2
+						--[[local vs = k.x/math.abs(k.ValueSize)/2*k.x   --math.abs(k.ValueSize)/2
 						local siL, siR =(k.x-vs), vs --, (k.y-vs) --, k.y
 						
 						k.dragCurPos.X = k.dragPrePos.X + mousePos.X - k.dragPreMousePos.X
@@ -2198,20 +2224,39 @@ function menuTab.DetectSelectedButtonActuale()
 
 						local proc = (k.dragCurPos.X-siR) / (siL-siR) * (math.abs(k.ValueSize) - k.x)
 						
+						k.func(0, proc, k.dragPrePos.X / k.x)]]
+						local vs = k.x/math.abs(k.ValueSize)*k.x
+						local siL =(k.x-vs)
+						
+						k.dragCurPos.X = k.dragPrePos.X + mousePos.X - k.dragPreMousePos.X
+						k.dragCurPos.X = math.min( siL, math.max( 0, k.dragCurPos.X))
+
+						local proc = (k.dragCurPos.X) / (siL) * (math.abs(k.ValueSize) - k.x)
+						
 						k.func(0, proc, k.dragPrePos.X / k.x)
 					end
 				else
 					if math.abs(k.ValueSize)<=k.y then
-						k.dragCurPos.Y = k.y/2
+						k.dragCurPos.Y = 0 --k.y/2
 						k.func(0, 0, k.dragPrePos.Y / k.y)
 					else
-						local vs = k.y/math.abs(k.ValueSize)/2*k.y   --math.abs(k.ValueSize)/2
-						local siL, siR =(k.y-vs), vs --, (k.y-vs) --, k.y
+						--[[local vs = k.y/math.abs(k.ValueSize)/2*k.y
+						local siL, siR =(k.y-vs), vs
 						
 						k.dragCurPos.Y = k.dragPrePos.Y + mousePos.Y - k.dragPreMousePos.Y
 						k.dragCurPos.Y = math.min( siL, math.max( siR, k.dragCurPos.Y))
 
 						local proc = (k.dragCurPos.Y-siR) / (siL-siR) * (math.abs(k.ValueSize) - k.y)
+						
+						k.func(0, proc, k.dragPrePos.Y / k.y)]]
+
+						local vs = k.y/math.abs(k.ValueSize)*k.y
+						local siL =(k.y-vs)
+						
+						k.dragCurPos.Y = k.dragPrePos.Y + mousePos.Y - k.dragPreMousePos.Y
+						k.dragCurPos.Y = math.min( siL, math.max( 0, k.dragCurPos.Y))
+
+						local proc = (k.dragCurPos.Y) / (siL) * (math.abs(k.ValueSize) - k.y)
 						
 						k.func(0, proc, k.dragPrePos.Y / k.y)
 					end
