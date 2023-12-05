@@ -194,17 +194,20 @@ Menu.strings = {
 	["Stages_Selector_hint"] = {en = "Opens the Stages Selector window. \n supported StageAPI floors",
 		ru = "Открывает окно с выбором этажей. \n поддерживаются этажи StageAPI"},
 
-	["Ent_Spawner_Menu_hintText"] = {en = "Opens the entity spawning window \n LMB to place",
-		ru = "Открывает окно спавна сущностей \n ЛКМ - поставить"},
+	["Ent_Spawner_Menu_hintText"] = {en = "Opens the entity spawning window. \n LMB to place",
+		ru = "Открывает окно спавна сущностей. \n ЛКМ - поставить"},
 
-	["Grid_Spawner_Menu_hintText"] = {en = "Opens the window of spwning grid elements \n LMB to place, RMB to remove",
-		ru = "Открывает окно спавна элементов сетки \n ЛКМ - поставить, ПКМ - убрать"},
+	["Grid_Spawner_Menu_hintText"] = {en = "Opens the window of spwning grid elements. \n LMB to place, RMB to remove",
+		ru = "Открывает окно спавна элементов сетки. \n ЛКМ - поставить, ПКМ - убрать"},
 
 	["Anim_Test_Menu_hintText"] = {en = "Opens a window to view \n animations, colors",
 		ru = "Открывает окно для просмотра \n анимаций, цветов"},
 
-	["Item_List_Menu_hintText"] = {en = "Opens a window for giving out \n items, trinkets and cards \n LMB to add, RMB to remove",
-		ru = "Открывает окно выдачи \n предметов, брелоков и карт \n ЛКМ - добавить, ПКМ - убрать"},
+	["Item_List_Menu_hintText"] = {en = "Opens a window for giving out \n items, trinkets and cards. \n LMB to add, RMB to remove",
+		ru = "Открывает окно выдачи \n предметов, брелоков и карт. \n ЛКМ - добавить, ПКМ - убрать"},
+
+	["Sound_Test_Menu_hintText"] = {en = "Opens a window for sound tests. \n Records used sounds",
+		ru = "Открывает окно для тестов звуков. \n Записывает используемые звуки"},
 
 	["ByType"] = {en = "by type", ru = "по типу"},
 	["itemlist_gulp"] = {en = "add as gulped", ru = "добавить как проглоченный"},
@@ -214,13 +217,19 @@ Menu.strings = {
 	["min"] = {en = "min", ru = "мин"},
 
 	["volume"] = {en = "volume", ru = "громк."},
+	["volume_rus_unshort"] = {en = "volume", ru = "громкость"},
 	["pitch"] = {en = "pitch", ru = "питч"},
+	["pan"] = {en = "pan", ru = "пан."},
+	["pan_rus_unshort"] = {en = "pan", ru = "панорамирование"},
 	["manual_sound"] = {en = "manually:", ru = "ручной id:"},
+	["sound_record"] = {en = "sounds recording", ru = "запись звуков"},
+
+	["ent_status"] = {en = "status", ru = "статусы"},
 }
 
 local function GetStr(str)
 	if Menu.strings[str] then
-		return Menu.strings[str].en or str-- Menu.strings[str][Options.Language] or Menu.strings[str].en or str
+		return Menu.strings[str][Options.Language] or Menu.strings[str].en or str
 	else
 		return str
 	end
@@ -3114,7 +3123,7 @@ do
 	--UIs.blockThis = function() return GenSprite("gfx/editor/ui copy2.anm2","blocksy") end
 
 	Menu.SoundTest = {name = "SoundTest", subnames = {}, size = Vector(220,190), btn = {}, 
-		list = {}, revlist = {}, block = {}, max = 60, showmax = 15, listpos = 0,
+		list = {}, revlist = {}, block = {}, max = 60, showmax = 15, listpos = 0, RecordEnabled = true,
 		volume = 1, pitch = 1, pan = 0
 	}
 	local SoundTest = Menu.SoundTest
@@ -3260,23 +3269,25 @@ do
 		UIs.HintTextBG1.Scale = Vector(101, 8)
 		UIs.HintTextBG1:Render(pos + Vector(6,15+SoundTest.showmax*9))
 
-		for name, id in pairs(SoundEffect) do
-			if sfx:IsPlaying(id) and not revlist[id] then
-				local tid = tostring(id)
-				local del = false
-				local message
-				if font:GetStringWidthUTF8(tid .. " ")/2 < 18 then
-					del = true
-					message = "- " .. tostring(name)
-				else
-					message = tid .. " - " .. tostring(name)
-				end
+		if SoundTest.RecordEnabled then
+			for name, id in pairs(SoundEffect) do
+				if sfx:IsPlaying(id) and not revlist[id] then
+					local tid = tostring(id)
+					local del = false
+					local message
+					if font:GetStringWidthUTF8(tid .. " ")/2 < 18 then
+						del = true
+						message = "- " .. tostring(name)
+					else
+						message = tid .. " - " .. tostring(name)
+					end
 
-				revlist[id] = true
-				list[#list+1] = {id, message, del}
-				if #list > SoundTest.max then
-					revlist[list[1][1]] = nil
-					table.remove(list, 1)
+					revlist[id] = true
+					list[#list+1] = {id, message, del}
+					if #list > SoundTest.max then
+						revlist[list[1][1]] = nil
+						table.remove(list, 1)
+					end
 				end
 			end
 		end
@@ -3320,6 +3331,20 @@ do
 	self.visible = false
 	self.canPressed = false
 
+
+	local self
+	self = Menu.wma.AddButton(SoundTest.name, "recordseter", Vector(20,10), 16, 10, nilspr, function(button) 
+		if button ~= 0 then return end
+		SoundTest.RecordEnabled = not SoundTest.RecordEnabled
+	end, function(pos, visible)
+		Menu.wma.RenderCustomButton2(pos, self)
+		if SoundTest.RecordEnabled then
+			self.flag:Render(pos + Vector(0,-5))
+		end
+		font:DrawStringScaledUTF8(GetStr("sound_record"), pos.X+2+self.x, pos.Y, .5, .5, KColor(0.1,0.1,0.2,1),0,false)
+	end, nil, -2)
+	self.flag = UIs.Flag()
+
 	local self
 	self = Menu.wma.AddCounter(SoundTest.name, "volume", Vector(6,SoundTest.showmax*9+15), 76, nil, 
 	Menu.wma.DefNumberResultCheck(
@@ -3343,6 +3368,9 @@ do
 		self.text = math.abs(self.text)<0.1 and 0 or self.text
 	end,nil,-1)
 	self.textoffset = Vector(38,0)
+	if Options.Language == "ru" then
+		Menu.wma.ButtonSetHintText(SoundTest.name, "volume", GetStr("volume_rus_unshort"))
+	end
 
 	local self
 	self = Menu.wma.AddCounter(SoundTest.name, "pitch", Vector(6+76,SoundTest.showmax*9+15), 70, nil, 
@@ -3377,9 +3405,7 @@ do
 		return false
 	end)
 	, function (pos, visible)
-		--Menu.wma.RenderCustomTextBox(pos,Vector(self.x,self.y),false)
 		font:DrawStringScaledUTF8(GetStr("pan"), pos.X+1, pos.Y+3, .5, .5, KColor(0.1,0.1,0.2,1),0,false)
-		--font:DrawStringScaledUTF8(string.format("%.2f", tostring(self.text)), pos.X+42, pos.Y+3, .5, .5, KColor(0.1,0.1,0.2,1),0,false)
 	end,
 	true, 0, function (btn)
 		self.text = math.max(-1, self.text - .25) % 4
@@ -3391,10 +3417,13 @@ do
 		self.text = math.abs(self.text)<0.1 and 0 or self.text
 	end, nil, -1)
 	self.textoffset = Vector(26-6,0)
+	if Options.Language == "ru" then
+		Menu.wma.ButtonSetHintText(SoundTest.name, "pan", GetStr("pan_rus_unshort"))
+	end
 
 
 	local self
-	self = Menu.wma.AddTextBox(SoundTest.name, "manual", Vector(6+54, SoundTest.showmax*9+34), Vector(32,12), nil,
+	self = Menu.wma.AddTextBox(SoundTest.name, "manual", Vector(6+54, SoundTest.showmax*9+36), Vector(32,12), nil,
 	function(newResult)
 		if #newResult == 0 then
 			SoundTest.ManID = nil
@@ -3424,11 +3453,231 @@ do
 		if button ~= 0 then return end
 		if SoundTest.ManID then
 			sfx:Play(SoundTest.ManID, SoundTest.volume, 5, false, SoundTest.pitch, SoundTest.pan)
+
+			if not revlist[SoundTest.ManID] then
+				local tid = tostring(SoundTest.ManID)
+				local del = false
+				local message
+				local name = "???"
+				for i,k in pairs(SoundEffect) do
+					if k == SoundTest.ManID then
+						name = i
+						break
+					end
+				end
+				if font:GetStringWidthUTF8(tid .. " ")/2 < 18 then
+					del = true
+					message = "- " .. tostring(name)
+				else
+					message = tid .. " - " .. tostring(name)
+				end
+
+				revlist[SoundTest.ManID] = true
+				list[#list+1] = {SoundTest.ManID, message, del}
+				if #list > SoundTest.max then
+					revlist[list[1][1]] = nil
+					table.remove(list, 1)
+				end
+				makelistbtn(#list)
+			end
 		end
+	end)
+end
+
+do
+	UIs.EntDebug = GenSprite("gfx/editor/ui copy2.anm2","ent test")
+	--UIs.blockThis = function() return GenSprite("gfx/editor/ui copy2.anm2","blocksy") end
+	for i=0, 7 do
+		UIs["EntDebug_debug" .. i] = GenSprite("gfx/editor/ui copy2.anm2","ent_debug", i)
+	end
+
+	Menu.EntDebug = {name = "EntDebug", subnames = {status = "Ent_Debug_Menu_status"}, size = Vector(160,80), btn = {}, 
+		mode = "all",
+	}
+	local EntDebug = Menu.EntDebug
+	local sizev = EntDebug.size
+	local btn = EntDebug.btn
+
+	local self
+	self = WORSTDEBUGMENU.AddButtonOnDebugBar("Ent_Debug_Menu", Vector(32,32), UIs.EntDebug, function(button) 
+		if button ~= 0 then return end
+		---@type Window
+		EntDebug.wind = Menu.wma.ShowWindow(EntDebug.name, self.pos+Vector(0,15), sizev)
+		for i,k in pairs(EntDebug.subnames) do
+			EntDebug.wind:SetSubMenuVisible(k, false)
+		end
+		EntDebug.wind:SetSubMenuVisible(EntDebug.subnames.status, true)
+	end, nil)
+	Menu.wma.ButtonSetHintText("__debug_menu", "Ent_Debug_Menu", GetStr("Ent_Debug_Menu_hintText"))
+
+	local vl = Vector(6, 14)
+	local self
+	self = Menu.wma.AddButton(EntDebug.name, "status", vl/1, 47, 12, nilspr, function(button)
+		if button ~= 0 then return end
+		for i,k in pairs(EntDebug.subnames) do
+			EntDebug.wind:SetSubMenuVisible(k, false)
+		end
+		EntDebug.wind:SetSubMenuVisible(EntDebug.subnames.status, true)
+	end, function(pos, visible)
+		Menu.wma.RenderCustomButton2(pos, self)
+		font:DrawStringScaledUTF8(GetStr("ent_status"), pos.X+2, pos.Y, .5, .5, KColor(0.1,0.1,0.2,1),0,false)
 	end)
 
 
+	local vg = Vector(6, 34)
+	btn.fear = Menu.wma.AddButton(EntDebug.subnames.status, "fear", vg/1, 16, 16, UIs.EmptyBtn(), function(button)
+		if button ~= 0 then return end
+		btn.fear.IsActived = not btn.fear.IsActived
+	end, function(pos, visible)
+		UIs.EntDebug_debug0:Render(pos)
+		if btn.fear.IsActived then
+			UIs.Var_Sel:Render(btn.fear.pos + Vector(2,12))
+		end
+	end)
+
+	vg.X = vg.X + 18
+
+	btn.charm = Menu.wma.AddButton(EntDebug.subnames.status, "charm", vg/1, 16, 16, UIs.EmptyBtn(), function(button)
+		if button ~= 0 then return end
+		btn.charm.IsActived = not btn.charm.IsActived
+	end, function(pos, visible)
+		UIs.EntDebug_debug1:Render(pos)
+		if btn.charm.IsActived then
+			UIs.Var_Sel:Render(btn.charm.pos + Vector(2,12))
+		end
+	end)
+
+	vg.X = vg.X + 18
+
+	btn.confus = Menu.wma.AddButton(EntDebug.subnames.status, "confus", vg/1, 16, 16, UIs.EmptyBtn(), function(button)
+		if button ~= 0 then return end
+		btn.confus.IsActived = not btn.confus.IsActived
+	end, function(pos, visible)
+		UIs.EntDebug_debug4:Render(pos)
+		if btn.confus.IsActived then
+			UIs.Var_Sel:Render(btn.confus.pos + Vector(2,12))
+		end
+	end)
+
+	vg.X = vg.X + 18
+
+	btn.friend = Menu.wma.AddButton(EntDebug.subnames.status, "friend", vg/1, 16, 16, UIs.EmptyBtn(), function(button)
+		if button ~= 0 then return end
+		btn.friend.IsActived = not btn.friend.IsActived
+	end, function(pos, visible)
+		UIs.EntDebug_debug5:Render(pos)
+		if btn.friend.IsActived then
+			UIs.Var_Sel:Render(btn.friend.pos + Vector(2,12))
+		end
+	end)
+
+	vg.X = vg.X + 18
+
+	btn.stone = Menu.wma.AddButton(EntDebug.subnames.status, "stone", vg/1, 16, 16, UIs.EmptyBtn(), function(button)
+		if button ~= 0 then return end
+		btn.stone.IsActived = not btn.stone.IsActived
+	end, function(pos, visible)
+		UIs.EntDebug_debug2:Render(pos)
+		if btn.stone.IsActived then
+			UIs.Var_Sel:Render(btn.stone.pos + Vector(2,12))
+		end
+	end)
+
+	vg.X = vg.X + 18
+
+	btn.midas = Menu.wma.AddButton(EntDebug.subnames.status, "midas", vg/1, 16, 16, UIs.EmptyBtn(), function(button)
+		if button ~= 0 then return end
+		btn.midas.IsActived = not btn.midas.IsActived
+	end, function(pos, visible)
+		UIs.EntDebug_debug6:Render(pos)
+		if btn.midas.IsActived then
+			UIs.Var_Sel:Render(btn.midas.pos + Vector(2,12))
+		end
+	end)
+
+	vg.X = vg.X + 18
+
+	btn.smol = Menu.wma.AddButton(EntDebug.subnames.status, "smol", vg/1, 16, 16, UIs.EmptyBtn(), function(button)
+		if button ~= 0 then return end
+		btn.smol.IsActived = not btn.smol.IsActived
+	end, function(pos, visible)
+		UIs.EntDebug_debug7:Render(pos)
+		if btn.smol.IsActived then
+			UIs.Var_Sel:Render(btn.smol.pos + Vector(2,12))
+		end
+	end)
+
+	vg.X = vg.X + 18
+
+
+	local fear
+	local charm
+	local confus
+	local friend
+	local stone
+	local midas
+	local smol
+	---@param ent Entity
+	local function ApplyStatusEffects(ent, ref)
+		if fear then
+			ent:AddFear(ref, 1)
+		end
+		if charm then
+			ent:AddCharmed(ref, 1)
+		end
+		if confus then
+			ent:AddConfusion(ref, 1, false)
+		end
+		if friend then
+			ent:AddCharmed(ref, -1)
+		end
+		if stone then
+			ent:AddFreeze(ref, 1)
+		end
+		if midas then
+			ent:AddMidasFreeze(ref, 1)
+		end
+		if smol then
+			ent:AddShrink(ref, 2)
+		end
+	end
+
+	Menu:AddCallback(ModCallbacks.MC_POST_UPDATE, function()
+		if EntDebug.wind and not EntDebug.wind.IsHided then
+			local playerref = EntityRef(Isaac.GetPlayer())
+			local flag = 0
+			 fear = btn.fear.IsActived
+			 charm = btn.charm.IsActived
+			 confus = btn.confus.IsActived
+			 friend = btn.friend.IsActived
+			 stone = btn.stone.IsActived
+			 midas = btn.midas.IsActived
+			 smol = btn.smol.IsActived
+
+			if btn.fear.IsActived then
+				flag = flag | EntityFlag.FLAG_FEAR
+			end
+			if EntDebug.mode == "all" then
+				local list = Isaac.FindInRadius(Vector(320,280), 600, EntityPartition.ENEMY)
+				for i=1, #list do
+					local ent = list[i]
+					--ent:AddEntityFlags()
+					--[[if fear then
+						ent:AddFear(EntityRef(ent), 1)
+					end
+					if charm then
+						ent:AddCharmed(playerref, 1)
+					end
+					if confus then
+						ent:AddConfusion(playerref, 1, false)
+					end]]
+					ApplyStatusEffects(ent, playerref)
+				end
+			end
+		end
+	end)
 end
+
 
 
 

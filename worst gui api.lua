@@ -1804,28 +1804,11 @@ function menuTab.RenderCustomButton(pos, size, isSel, color)
 
 		UIs.ButtonBG2v.Scale = Vector(size.X/2-1 ,size.Y/2-1)
 		UIs.ButtonBG2v:RenderLayer(1, pos+Vector(1,1))
-
-		--[[if isSel then
-			UIs.ButtonBG:SetFrame(1)
-		else
-			UIs.ButtonBG:SetFrame(0)
-		end
-
-		UIs.ButtonBG.Scale = Vector(size.X, size.Y/14)
-		UIs.ButtonBG:RenderLayer(1, pos+Vector(0, -size.Y/14), Vector(0,1), Vector(0,1))
-
-		UIs.ButtonBG.Scale = Vector(size.X, 1)
-		UIs.ButtonBG:RenderLayer(1, pos+Vector(1,-15), Vector(0,15))
-		UIs.ButtonBG.Scale = Vector(size.X, 1)
-		UIs.ButtonBG:RenderLayer(1, pos+Vector(1,size.Y-16), Vector(0,15))
-
-
-		UIs.ButtonBG.Scale = Vector(1,size.Y/16)
-		UIs.ButtonBG:RenderLayer(0, pos)
-
-		UIs.ButtonBG.Scale = Vector(1,size.Y/16)
-		UIs.ButtonBG:RenderLayer(0, pos+ Vector(size.X,0))]]
 	end
+end
+
+function menuTab.RenderCustomButton2(pos, btn, color)
+	menuTab.RenderCustomButton(pos, Vector(btn.x,btn.y), btn.IsSelected, color)
 end
 
 function menuTab.RenderButton(menuName, btn)
@@ -2098,14 +2081,14 @@ function menuTab.DetectSelectedButtonActuale()
 									--local cm = mousePos.X - k.pos.X
 									if k.ishori then
 										local cm = mousePos.X - k.pos.X
-										if cm > (k.dragCurPos.X-k.DragerSize/2) and cm < (k.dragCurPos.X+k.DragerSize/2) then
+										if cm > (k.dragCurPos.X) and cm < (k.dragCurPos.X+k.DragerSize) then
 											k.dragspr:SetFrame(1)
 										else
 											k.dragspr:SetFrame(0)
 										end
 									else
 										local cm = mousePos.Y - k.pos.Y
-										if cm > (k.dragCurPos.Y-k.DragerSize/2) and cm < (k.dragCurPos.Y+k.DragerSize/2) then
+										if cm > (k.dragCurPos.Y) and cm < (k.dragCurPos.Y+k.DragerSize) then
 											k.dragspr:SetFrame(1)
 										else
 											k.dragspr:SetFrame(0)
