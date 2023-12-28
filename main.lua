@@ -206,8 +206,8 @@ Menu.strings = {
 	["Item_List_Menu_hintText"] = {en = "Opens a window for giving out \n items, trinkets and cards. \n LMB to add, RMB to remove",
 		ru = "Открывает окно выдачи \n предметов, брелоков и карт. \n ЛКМ - добавить, ПКМ - убрать"},
 
-	["Sound_Test_Menu_hintText"] = {en = "Opens a window for sound tests. \n Records used sounds",
-		ru = "Открывает окно для тестов звуков. \n Записывает используемые звуки"},
+	["Sound_Test_Menu_hintText"] = {en = "Opens a window for sound test. \n Records used sounds",
+		ru = "Открывает окно для теста звуков. \n Записывает используемые звуки"},
 
 	["ByType"] = {en = "by type", ru = "по типу"},
 	["itemlist_gulp"] = {en = "add as gulped", ru = "добавить как проглоченный"},
@@ -3052,19 +3052,54 @@ do
 	end)
 
 
-	--Это может сломать запуск?
+	Menu:AddCallback("WORSTDEBUGMENU_GET_MODS_PATH", function()
+		if SamaelMod then
+			return SamaelMod, "samael_897795840"
+		end
+	end)
+	Menu:AddCallback("WORSTDEBUGMENU_GET_MODS_PATH", function()
+		if MASTEMA  then
+			return MASTEMA , "mastema_2548070298"
+		end
+	end)
+
+	function ItemList.GetModErrorConteinerFunc(func)
+		if CBEncapsulationFx.EncapsulatedFunc[func] then
+			for i,k in pairs(CBEncapsulationFx.EncapsulatedFunc) do
+				if k == func and i ~= func then
+					return i
+				end
+			end
+		end
+	end
+
+	--Это может сломать запуск? ДА!
 	function ItemList.TryGenCardpathList()
 		local calls = Isaac.GetCallbacks(ModCallbacks.MC_USE_CARD)
 		ItemList.CardIdToPath = {}
 		ItemList.ModsPath = {}
 		local mods = {}
+
+		local precalls = Isaac.GetCallbacks("WORSTDEBUGMENU_GET_MODS_PATH")
+		for i=1, #precalls do
+			local cal = precalls[i]
+			local result, result2 = cal.Function()
+			if type(result2) == "string" then
+				mods[result] = {path = result2, ids = {}}
+				ItemList.ModsPath[#ItemList.ModsPath+1] = result2
+			end
+		end
 		
 		for i=1, #calls do
 			local cal = calls[i]
 			mods[cal.Mod] = mods[cal.Mod] or {path = -1, ids = {}}
 
 			if mods[cal.Mod].path == -1 then
-				local ok, gg = pcall(cal.Function)
+				local func = cal.Function
+				if CBEncapsulationFx then
+					func = ItemList.GetModErrorConteinerFunc(func) or func
+				end
+				local ok, gg = pcall(func)
 				if gg then
 					local fz,fx = string.find(gg,"mods/[%S%s]-/")
 					if fz and fx then
