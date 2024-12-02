@@ -153,21 +153,18 @@ local ControlType = {
 ---@field MouseSprite Sprite
 ---@field HandleWindowControl function
 ---@field RenderWindows function
----@field Callbacks wga_callbacks
+---@field Callbacks table
 ---@field OnFreePos boolean
 ---@field ScrollOffset Vector
 ---@field LastOrderRender function
 ---@field DetectSelectedButtonActuale function
 ---@field ControlType ControlType
-local menuTab = RegisterMod("worst gui api: WDM", 1)
-menuTab.Ver = 0.13
-
+local menuTab = RegisterMod("worst gui api: mouse debug menu", 1)
+menuTab.Ver = 0.1
 menuTab.Callbacks = {}
----@enum wga_callbacks
 local Callbacks = {
-	WINDOW_PRE_RENDER = "",
-	WINDOW_POST_RENDER = "",
-	WINDOW_BACK_PRE_RENDER = "",
+	WINDOW_PRE_RENDER = {},
+	WINDOW_POST_RENDER = {},
 }
 local function addCallbackID(name)
 	menuTab.Callbacks[name] = setmetatable({},{__concat = function(t,b) return "[WGA] "..name..b end})
@@ -524,11 +521,6 @@ end)
 ---@field somethingPressed boolean
 ---@field Buttons table<string, EditorButton>
 ---@field CalledByWindow Window?
----@field NavigationFunc fun(tab:wga_ManualSelectedButton, vec:Vector)?
-
----@class wga_ManualSelectedButton
----@field [1] EditorButton
----@field [2] string --menuName
 
 ---@return EditorMenu?
 function menuTab.GetMenu(menuName)
@@ -586,50 +578,6 @@ function menuTab.RemoveButton(menuName, buttonName, NoError)
 		end
 	end
 end
-
-function menuTab.stringMultiline(text, Width)
-	local BoxWidth = Width or 450
-	local str = {}
-	if BoxWidth ~= 0 then
-		local spaceLeft = BoxWidth
-		local words = {}
-		for word in string.gmatch(text, '([^ ]+)') do --Split string into individual words
-			words[#words+1] = word;
-		end
-		text = ""
-		for i=1, #words do
-			local wordLength = font:GetStringWidthUTF8(words[i])*0.5
-			if (words[i] == "\n") then --Word is purely breakline
-				--text = text.."\n"
-				str[#str+1] = text
-				text = ""
-			elseif (utf8_Sub(words[i], 1, 2) == "\n") then --Word starts with breakline
-				spaceLeft = BoxWidth - wordLength
-				text = text..words[i].." "
-			elseif (wordLength > spaceLeft) then --Word breaks text boundary
-				spaceLeft = BoxWidth - wordLength
-				str[#str+1] = text
-				text = ""
-				text = words[i].." " --text.."\n"..
-			else --Word is fine
-				spaceLeft = spaceLeft - wordLength
-				text = text..words[i].." "
-			end
-			--maxWidth = math.max(BoxWidth-spaceLeft, maxWidth)
-		end
-		str[#str+1] = text
-	end
-
-	local maxlenght = 0
-	for i=1,#str do
-		local text = str[i]
-		maxlenght = math.max(font:GetStringWidthUTF8(text)*0.5, maxlenght)
-	end
-	str.Width = maxlenght
-
-	return str
-end
-
 
 function menuTab.ButtonSetHintText(menuName, buttonName, text, Error)
 	if not menuTab.MenuData[menuName] then
@@ -785,9 +733,6 @@ end
 ---@field IsHided boolean
 ---@field hide EditorButton
 ---@field unhide EditorButton
----@field unuser boolean --нельзя перемещать и без кнопок Закрыть и Свернуть
----@field backcolor Color
----@field backcolornfocus Color --цвет в не фокусе
 menuTab.WindowMeta = {}
 menuTab.WindowMetaTable = {__index = menuTab.WindowMeta}
 --TSJDNHC.FGrid.__index = TSJDNHC.Grid
@@ -809,7 +754,7 @@ function menuTab.ShowWindow(menuName, pos, size, color )
 			return menuTab.Windows.menus[menuName]
 		end
 
-		menuTab.Windows.menus[menuName] = {name = menuName, pos = pos, size = size, refsize = size/1, color = color, 
+		menuTab.Windows.menus[menuName] = {pos = pos, size = size, refsize = size/1, color = color, 
 			MouseOldPos = menuTab.MousePos, OldPos = Vector(pos.X,pos.Y)}
 		menuTab.Windows.order[#menuTab.Windows.order+1] = menuName
 
@@ -1133,30 +1078,6 @@ function menuTab.AddScrollBar(menuName, buttonName, pos, size, sprite, dragSpr, 
 		table.insert(menu.sortList, Spos, {btn = buttonName, Priority = priority})]]
 		return menu.Buttons[buttonName]
     end
-end
-
-local function MouseWheel_DefCallFunc(btn, value)
-	--print("deffff", menuTab.DraggerGetValue(btn), value, btn.ValueSize)
-	menuTab.DraggerSetValue(btn, 
-		math.max(0, math.min(1, menuTab.DraggerGetValue(btn) + value/btn.ValueSize * 20)), 
-		true)
-end
-
-function menuTab.SetMouseWheelZone(btn, vec1, vec2, callbackfunc)
-	if btn and vec1 and vec2 then
-		btn.MouseWheelZone = btn.MouseWheelZone or {}
-		local mwz = btn.MouseWheelZone
-		mwz.callfunc = type(callbackfunc) == "function" and callbackfunc
-			or MouseWheel_DefCallFunc
-		
-
-		local topleft = Vector(math.min(vec1.X, vec2.X), math.min(vec1.Y, vec2.Y))
-		local bottomright = Vector(math.max(vec1.X, vec2.X), math.max(vec1.Y, vec2.Y))
-
-		mwz.vec = topleft
-		mwz.size = bottomright-topleft
-		
-	end
 end
 
 function menuTab.DefCounterUp(ya, btn)
@@ -1821,20 +1742,12 @@ function menuTab.RenderButtonHintText(text, pos)
     local line = 0
 	if type(text) == "table" then
 		local size = Vector(text.Width/2+2.5,18*#text/4+2.5)
-		local XScreen, YScreen = Isaac.GetScreenWidth(), Isaac.GetScreenHeight()
 
-		local xshif = pos.X + size.X*2-2
-		if xshif > XScreen then
-			--pos.X = pos.X - size.X*2 - 10
-			pos.X = pos.X + (XScreen - xshif)
+		if pos.X + size.X*2-2 > Isaac.GetScreenWidth() then
+			pos.X = pos.X - size.X*2 - 10
 		end
-		local yshif = pos.Y + size.Y*2-2
-		if yshif > YScreen then
-			if yshif - 5 > YScreen then
-				pos.Y = pos.Y - size.Y*2 - 10
-			else
-				pos.Y = pos.Y + (YScreen - yshif)
-			end
+		if pos.Y + size.Y*2-2 > Isaac.GetScreenHeight() then
+			pos.Y = pos.Y - size.Y*2 - 10
 		end
 
 		UIs.HintTextBG1.Color = Color(1,1,1,0.5)
@@ -2054,9 +1967,6 @@ function menuTab.RenderMenuButtons(menuName)
 							btn.showError = btn.showError - 1
 						end
 					end, menuTab.Callbacks.WINDOW_POST_RENDER)
-
-					--Isaac.DrawQuad(btn.pos,btn.pos + Vector(btn.x,0),btn.pos + Vector(0,btn.y), btn.pos + Vector(btn.x,btn.y),
-					--	KColor(0.0,0.1,0.4,0.2),1)
 				elseif btn.text then
 					local textoffset = btn.textoffset or Vector.Zero
 					local col = btn.textcolor or menuTab.DefTextColor
@@ -2128,9 +2038,6 @@ function menuTab.RenderMenuButtons(menuName)
 					end
 				end
 			end
-
-			--Isaac.DrawQuad(btn.pos,btn.pos + Vector(btn.x,0),btn.pos + Vector(0,btn.y), btn.pos + Vector(btn.x,btn.y),
-			--			KColor(0.0,0.2,0.8,1),2)
 		end
 
 		if IstextboxMenu then
@@ -2177,14 +2084,9 @@ elseif not Isaac.GetPlayer() and Options.MouseControl == false then
 	menuTab.AutoFakeMouseSprite = true
 end
 
-local function GetPtrPlayer()
-	local p = menuTab.input.TargetPlayer
-	return p and p.Ref and p.Ref:ToPlayer()
-end
-
 menuTab.input = {}
 function menuTab.input.IsActionTriggered(action)
-	local conind = menuTab.input.TargetControllerIndex or Isaac.GetPlayer().ControllerIndex
+	local conind = Isaac.GetPlayer().ControllerIndex
 	if action == ButtonAction.ACTION_MENUCONFIRM then
 		if menuTab.ControlType == ControlType.MOUSE then
 			menuTab.IsMouseBtnTriggered(0)
@@ -2199,9 +2101,8 @@ menuTab.input.preMoveVector = Vector(0,0)
 menuTab.input.moveVector = Vector(0,0)
 function menuTab.input.GetMoveVector()
 	local ret = Vector(0,0)
-	local p = GetPtrPlayer() or Isaac.GetPlayer()
-	local controllerIndex = menuTab.input.TargetControllerIndex or p.controllerIndex
-	if controllerIndex == 0 then
+	local p = Isaac.GetPlayer()
+	if p.ControllerIndex == 0 then
 		menuTab.input.moveVector = p:GetShootingJoystick()
 	else
 		menuTab.input.moveVector = p:GetMovementJoystick()
@@ -2223,39 +2124,13 @@ function menuTab.input.GetMoveVector()
 	menuTab.input.preMoveVector = menuTab.input.moveVector
 	return ret
 end
-function menuTab.input.GetRefMoveVector()
-	local p = GetPtrPlayer() or Isaac.GetPlayer()
-	if p.ControllerIndex == 0 then
-		return p:GetShootingJoystick()
-	else
-		return p:GetMovementJoystick()
-	end
-end
 
-function menuTab.SetControlType(ttype, targetplayer)
-	menuTab.ControlType = ttype
-	if type(targetplayer) == "number" then
-		menuTab.input.TargetControllerIndex = targetplayer
-	else
-		menuTab.input.TargetPlayer = EntityPtr(targetplayer)
-		menuTab.input.TargetControllerIndex = targetplayer.ControllerIndex
-	end
-end
 
-local function PointAABB(point, vectl, xs, ys)
-	if not vectl then error("gssgs",2) end
-	local xv = vectl.X - point.X + xs
-	local yv = vectl.Y - point.Y + ys
-	return xv > 0 and xv < xs 
-		and yv > 0 and yv < ys 
-end
 
 function menuTab.MouseButtonDetect(onceTouch)
 	local mousePos = menuTab.MousePos
 	local onceTouch = onceTouch or false
 	menuTab.OnFreePos = true
-	local isMB0, isMB1 = menuTab.IsMouseBtnTriggered(0), menuTab.IsMouseBtnTriggered(1)
-
 	for ahhoh = #DetectSelectedButtonBuffer, 1,-1 do
 		local list = DetectSelectedButtonBuffer[ahhoh]
 		local menu = list[1]   --DetectSelectedButtonBuffer[ahhoh]
@@ -2264,44 +2139,14 @@ function menuTab.MouseButtonDetect(onceTouch)
 		if type(button) == "table" then
 
 			local somethingPressed = false
-			local somethingmousewheel = false
 			---@param k EditorButton
 			for i, k in pairs(button) do
 				---@type EditorButton
 				if k.canPressed then
-
-					local mwz = k.MouseWheelZone
-					if not somethingmousewheel and mwz then
-						local menupos = k.pos - k.posref
-						local st = menupos + mwz.vec
-						menuTab.DelayRender(function()
-							Isaac.DrawQuad(st, st + Vector(mwz.size.X,0),
-								st + Vector(0, mwz.size.Y), st + mwz.size, 
-								KColor(1,1,1,1), 4
-							)
-							end, menuTab.Callbacks.WINDOW_POST_RENDER
-						)
-						--Isaac.DrawLine(k.pos + mwz.vec, k.pos +mwz.vec + mwz.size, 
-						--KColor(1,1,1,1), KColor(1,1,1,1), 2)
-						--print(mousePos, k.pos + mwz.vec, k.pos +mwz.vec + mwz.size)
-						if PointAABB(mousePos, menupos + mwz.vec, mwz.size.X, mwz.size.Y) then
-							local val = Input.GetMouseWheel and -Input.GetMouseWheel().Y or 0
-							
-							if val ~= 0 then
-								mwz.callfunc(k, val)
-							end
-							somethingmousewheel = true
-						end
-					end
-
-					--if not onceTouch and mousePos.X >= k.pos.X and mousePos.Y >= k.pos.Y
-					--	and mousePos.X < (k.pos.X + k.x) and mousePos.Y < (k.pos.Y + k.y) then
-
-					if not onceTouch and PointAABB(mousePos, k.pos, k.x, k.y) then
-
+					if not onceTouch and mousePos.X >= k.pos.X and mousePos.Y >= k.pos.Y
+						and mousePos.X < (k.pos.X + k.x) and mousePos.Y < (k.pos.Y + k.y) then
 						menuTab.OnFreePos = false
 						onceTouch = true
-						menuTab.ManualSelectedButton = {k, menu}
 						if not k.IsSelected then
 							k.IsSelected = 0
 							if k.spr then
@@ -2313,10 +2158,8 @@ function menuTab.MouseButtonDetect(onceTouch)
 								if k.dragtype == 1 then
 									local cm = mousePos.X - k.pos.X
 									if cm > k.dragCurPos.X-3 and cm < k.dragCurPos.X+3 then
-										k.dragSelected = true
 										k.dragspr:SetFrame(1)
 									else
-										k.dragSelected = false
 										k.dragspr:SetFrame(0)
 									end
 								elseif k.dragtype == 3 then --DragerSize
@@ -2324,19 +2167,15 @@ function menuTab.MouseButtonDetect(onceTouch)
 									if k.ishori then
 										local cm = mousePos.X - k.pos.X
 										if cm > (k.dragCurPos.X) and cm < (k.dragCurPos.X+k.DragerSize) then
-											k.dragSelected = true
 											k.dragspr:SetFrame(1)
 										else
-											k.dragSelected = false
 											k.dragspr:SetFrame(0)
 										end
 									else
 										local cm = mousePos.Y - k.pos.Y
 										if cm > (k.dragCurPos.Y) and cm < (k.dragCurPos.Y+k.DragerSize) then
-											k.dragSelected = true
 											k.dragspr:SetFrame(1)
 										else
-											k.dragSelected = false
 											k.dragspr:SetFrame(0)
 										end
 									end
@@ -2346,7 +2185,7 @@ function menuTab.MouseButtonDetect(onceTouch)
 
 						if not k.BlockPress then
 							somethingPressed = true
-							if isMB0 and not menuTab.MouseDoNotPressOnButtons then
+							if menuTab.IsMouseBtnTriggered(0) and not menuTab.MouseDoNotPressOnButtons then
 								if k.isDragZone then
 									menuTab.SelectedDragZone = k
 									--k.dragPrePos = k.dragPrePos or mousePos/1
@@ -2363,7 +2202,7 @@ function menuTab.MouseButtonDetect(onceTouch)
 									k.func(0)
 								end
 								break
-							elseif isMB1 and not menuTab.MouseDoNotPressOnButtons then
+							elseif menuTab.IsMouseBtnTriggered(1) and not menuTab.MouseDoNotPressOnButtons then
 								k.func(1)
 								break
 							end
@@ -2377,7 +2216,6 @@ function menuTab.MouseButtonDetect(onceTouch)
 								k.spr:SetFrame(0)
 							end
 							if k.dragspr then
-								k.dragSelected = false
 								k.dragspr:SetFrame(0)
 							end
 						end
@@ -2410,21 +2248,6 @@ function menuTab.KeyboardButtonDetect()
 	local onceTouch = false
 	menuTab.OnFreePos = true
 
-	if menuTab.ManualSelectedButton and menuTab.ManualSelectedButton[2] then
-		local menunmae = menuTab.ManualSelectedButton[2]
-		local has = false
-		for ahhoh = #DetectSelectedButtonBuffer, 1,-1 do
-			local list = DetectSelectedButtonBuffer[ahhoh]
-			
-			if list and list[1] == menunmae then
-				has = true
-			end
-		end
-		if not has then
-			menuTab.ManualSelectedButton = nil
-		end
-	end
-
 	if not menuTab.ManualSelectedButton then
 		for ahhoh = #DetectSelectedButtonBuffer, 1,-1 do
 			local list = DetectSelectedButtonBuffer[ahhoh]
@@ -2443,91 +2266,66 @@ function menuTab.KeyboardButtonDetect()
 
 	--------------------------------------
 
-	if not menuTab.ManualSelectedButton then return end
+	local moveVector = menuTab.input.GetMoveVector()
 
-	local menu = menuTab.ManualSelectedButton[2]
-	local mdata = menuTab.MenuData[menu]
-	if mdata and mdata.NavigationFunc then
-		local prebtn = menuTab.ManualSelectedButton[1]
-
-		mdata.NavigationFunc(menuTab.ManualSelectedButton, menuTab.input.GetMoveVector())
-
-		if prebtn ~= menuTab.ManualSelectedButton[1] then
-			if prebtn.IsSelected then
-				prebtn.IsSelected = nil
-				if prebtn.spr then
-					prebtn.spr:SetFrame(0)
-				end
-				if prebtn.dragspr then
-					prebtn.dragspr:SetFrame(0)
-				end
-			end
-		end
-	else
-
-		local moveVector = menuTab.input.GetMoveVector()
-
-		if moveVector:Length() > 0.2 then
-			local curbtn = menuTab.ManualSelectedButton[1]
-			local nangle = moveVector:GetAngleDegrees()
-			local maxdist = 100000000
-			local minangle = 45
-			local curPos = curbtn.pos + Vector(curbtn.x/2,curbtn.y/2)
-			local curbtnname = curbtn.name
-			local targetButton, targetMenu
-			for ahhoh = #DetectSelectedButtonBuffer, 1,-1 do
-				local list = DetectSelectedButtonBuffer[ahhoh]
-				local menu = list[1]   --DetectSelectedButtonBuffer[ahhoh]
-				local button = list[2]
-				--if type(menuTab.MenuData[menu]) == "table" then
-				if type(button) == "table" then
-		
-					local somethingPressed = false
-					---@param k EditorButton
-					for i, k in pairs(button) do
-						local rvec = (k.pos + Vector(k.x/2,k.y/2) ) - curPos
-						if k.name ~= "__blockplashka" and k.name ~= curbtnname then
-							local difangle = getAngleDiv( (rvec):GetAngleDegrees(), nangle )
-							local dda = getAngleDiv(difangle, minangle)
-							if difangle <= 45 then --minangle+5 then
-								minangle = difangle
-								--print( (curPos-k.pos):GetAngleDegrees(), nangle )
-								local dist = rvec:Length()
-								if maxdist > dist then
-									targetButton, targetMenu = k, menu
-									maxdist = dist
-								end
+	if moveVector:Length() > 0.2 then
+		local curbtn = menuTab.ManualSelectedButton[1]
+		local nangle = moveVector:GetAngleDegrees()
+		local maxdist = 100000000
+		local minangle = 45
+		local curPos = curbtn.pos + Vector(curbtn.x/2,curbtn.y/2)
+		local curbtnname = curbtn.name
+		local targetButton, targetMenu
+		for ahhoh = #DetectSelectedButtonBuffer, 1,-1 do
+			local list = DetectSelectedButtonBuffer[ahhoh]
+			local menu = list[1]   --DetectSelectedButtonBuffer[ahhoh]
+			local button = list[2]
+			--if type(menuTab.MenuData[menu]) == "table" then
+			if type(button) == "table" then
+	
+				local somethingPressed = false
+				---@param k EditorButton
+				for i, k in pairs(button) do
+					local rvec = (k.pos + Vector(k.x/2,k.y/2) ) - curPos
+					if k.name ~= "__blockplashka" and k.name ~= curbtnname then
+						local difangle = getAngleDiv( (rvec):GetAngleDegrees(), nangle )
+						local dda = getAngleDiv(difangle, minangle)
+						if difangle <= 45 then --minangle+5 then
+							minangle = difangle
+							--print( (curPos-k.pos):GetAngleDegrees(), nangle )
+							local dist = rvec:Length()
+							if maxdist > dist then
+								targetButton, targetMenu = k, menu
+								maxdist = dist
 							end
 						end
 					end
 				end
 			end
-			if targetButton then
-				local k = menuTab.ManualSelectedButton[1]
-				if k.IsSelected then
-					k.IsSelected = nil
-					if k.spr then
-						k.spr:SetFrame(0)
-					end
-					if k.dragspr then
-						k.dragspr:SetFrame(0)
-					end
+		end
+		if targetButton then
+			local k = menuTab.ManualSelectedButton[1]
+			if k.IsSelected then
+				k.IsSelected = nil
+				if k.spr then
+					k.spr:SetFrame(0)
 				end
-
-				menuTab.ManualSelectedButton = {targetButton, targetMenu}
+				if k.dragspr then
+					k.dragspr:SetFrame(0)
+				end
 			end
+
+			menuTab.ManualSelectedButton = {targetButton, targetMenu}
 		end
 	end
+
 
 
 	--------------------------------------
 
 	menuTab.OnFreePos = false
-
 	local k = menuTab.ManualSelectedButton[1]
 	local menu = menuTab.ManualSelectedButton[2]
-	if not k then return end
-	
 	if not k.IsSelected then
 		k.IsSelected = 0
 		if k.spr then
@@ -2686,9 +2484,8 @@ function menuTab.DetectSelectedButtonActuale()
 
 			WORSTGUI.GlobalButtonDetect()
 		end
-			WORSTGUI.CachedDetect = WORSTGUI.CachedDetect or {}
-			WORSTGUI.CachedDetect[#WORSTGUI.CachedDetect+1] = menuTab
-		--end
+		WORSTGUI.CachedDetect = WORSTGUI.CachedDetect or {}
+		WORSTGUI.CachedDetect[#WORSTGUI.CachedDetect+1] = menuTab
 		return
 	else
 		menuTab.DetectSelectedButtonActualeActuale()
@@ -2907,13 +2704,11 @@ function menuTab.HandleWindowControl()
 		local menuName = orderCopy[order]
 		---@type Window
 		local window = wind.menus[ menuName ]
-		local unuser = window.unuser
-
+		
 		--menuTab.CurrentWindowControl = window
 		if window.IsHided then
 			--menuTab.DetectButtonsList(menuName, {window.close, window.unhide, window.plashka})
-			delayed[#delayed+1] = {menuTab.DetectButtonsList, menuName, 
-				not unuser and {window.close, window.unhide, window.plashka}}
+			delayed[#delayed+1] = {menuTab.DetectButtonsList, menuName, {window.close, window.unhide, window.plashka}}
 		else
 			if order == 1 then
 				--menuTab.DetectMenuButtons(window)
@@ -2935,8 +2730,7 @@ function menuTab.HandleWindowControl()
 				end
 				menuTab.GetMenu(menuName).CalledByWindow = window
 				--menuTab.DetectMenuButtons(menuName)
-				delayed[#delayed+1] = {menuTab.DetectButtonsList, menuName, 
-					not unuser and {window.close, window.hide, window.plashka}}
+				delayed[#delayed+1] = {menuTab.DetectButtonsList, menuName, {window.close, window.hide, window.plashka}}
 			end
 			if window.plashka then
 				window.plashka.x = window.size.X
@@ -2981,20 +2775,16 @@ function menuTab.HandleWindowControl()
 						end
 					end
 					--menuTab.DetectMenuButtons(menuName)
-					delayed[#delayed+1] = {menuTab.DetectButtonsList, menuName, 
-						not unuser and {window.close, window.hide, window.plashka}}
+					delayed[#delayed+1] = {menuTab.DetectButtonsList, menuName, {window.close, window.hide, window.plashka}}
 					menuTab.GetMenu(menuName).CalledByWindow = window
 				end
 			end
 			
-			if not unuser then
-				if menuTab.IsMouseBtnTriggered(0) and not window.somethingPressed then
-					window.MovingByMouse = true
-					window.OldPos = window.pos/1
-					--menuTab.MouseDoNotPressOnButtons = true
-				elseif not Input.IsMouseBtnPressed(0) then
-					window.MovingByMouse = false
-				end
+			if menuTab.IsMouseBtnTriggered(0) and not window.somethingPressed then
+				window.MovingByMouse = true
+				--menuTab.MouseDoNotPressOnButtons = true
+			elseif not Input.IsMouseBtnPressed(0) then
+				window.MovingByMouse = false
 			end
 		else
 			if onceTouch then
@@ -3022,9 +2812,6 @@ function menuTab.RenderWindows()
 		local menuName = wind.order[i]
 		---@type Window
 		local window = wind.menus[ menuName ]
-		local unuser = window.unuser
-		local backcolor = window.backcolor
-		local backcolorunfocus = window.backcolornfocus
 
 		if window.MovingByMouse and not Input.IsButtonPressed(Keyboard.KEY_SPACE, 0) and not menuTab.ScrollListIsOpen then
 			local offset = mousePos - window.MouseOldPos
@@ -3034,20 +2821,10 @@ function menuTab.RenderWindows()
 			window.OldPos = window.pos/1
 		end
 
-		local bgcolorfocus = backcolor or Color(1,1,1,.5)
-		local bgcolorunfocus = backcolorunfocus or Color(.6,.6,.6,.5)
-
-		menuTab.CallDelayRenders(menuTab.Callbacks.WINDOW_BACK_PRE_RENDER, menuName, window.pos, window)
-		Isaac.RunCallbackWithParam(menuTab.Callbacks.WINDOW_BACK_PRE_RENDER, menuName, window.pos, window)
-
-		if window.RenderCustomMenuBack then
-			window.RenderCustomMenuBack(window.pos,window.size, i==1 and bgcolorfocus or bgcolorunfocus)
-		else
-			menuTab.RenderCustomMenuBack(window.pos,window.size, i==1 and bgcolorfocus or bgcolorunfocus)
-		end
+		menuTab.RenderCustomMenuBack(window.pos,window.size, i==1 and Color(1,1,1,.5) or Color(.6,.6,.6,.5))
 
 		if not window.IsHided then
-			menuTab.CallDelayRenders(menuTab.Callbacks.WINDOW_PRE_RENDER, menuName, window.pos, window)
+			menuTab.CallDelayRenders(menuTab.Callbacks.WINDOW_POST_RENDER, menuName, window.pos, window)
 			Isaac.RunCallbackWithParam(menuTab.Callbacks.WINDOW_PRE_RENDER, menuName, window.pos, window)
 		end
 
@@ -3080,10 +2857,8 @@ function menuTab.RenderWindows()
 
 
 		if window.IsHided then
-			if not unuser then
-				menuTab.RenderButton(menuName, window.unhide)
-				menuTab.RenderButton(menuName, window.close)
-			end
+			menuTab.RenderButton(menuName, window.unhide)
+			menuTab.RenderButton(menuName, window.close)
 		else
 			if window.SubMenus then
 				for name, tab in pairs(window.SubMenus) do
@@ -3094,10 +2869,8 @@ function menuTab.RenderWindows()
 			end
 			--menuTab.RenderMenuButtons(menuName)
 
-			if not unuser then
-				menuTab.RenderButton(menuName, window.hide)
-				menuTab.RenderButton(menuName, window.close)
-			end
+			menuTab.RenderButton(menuName, window.hide)
+			menuTab.RenderButton(menuName, window.close)
 
 			menuTab.RenderMenuButtons(menuName)
 
@@ -3333,8 +3106,6 @@ function menuTab.DrawText(fonttype, text, posX, posY, scaleX, scaleY, rot, color
 	scaleY = scaleY or 0.5
 	if fonttype == 2 then
 		f = TextBoxFont
-	elseif type(fonttype) ~= "number" then
-		f = fonttype
 	end
 	f:DrawStringScaledUTF8(text, 
 		posX, posY, 
@@ -3344,197 +3115,6 @@ function menuTab.DrawText(fonttype, text, posX, posY, scaleX, scaleY, rot, color
 		rot == 2 and true or false
 	)
 end
-
-function menuTab.DrawMultilineText(fonttype, text, posX, posY, scaleX, scaleY, rot, color)
-	local f = font
-	scaleX = scaleX or 0.5
-	scaleY = scaleY or 0.5
-	if fonttype == 2 then
-		f = TextBoxFont
-	elseif type(fonttype) ~= "number" then
-		f = fonttype
-	end
-	local col = color or menuTab.DefTextColor
-
-	local Center = false
-	local BoxWidth = 0
-    local line = 0
-	if type(text) == "table" then
-		for li, word in ipairs(text) do
-			font:DrawStringScaledUTF8(word, posX, posY+(line*f:GetLineHeight()*0.5), 0.5, 0.5, col, 
-			rot == 1 and 0 or rot == 2 and 1, 
-			rot == 2 and true or false)
-			line = line + 1
-		end
-	elseif type(text) == "string" then
-		for word in string.gmatch(text, '([^\n]+)') do
-			font:DrawStringScaledUTF8(word, posX, posY+(line*f:GetLineHeight()*0.5), 0.5, 0.5, col, 
-			rot == 1 and 0 or rot == 2 and 1, 
-			rot == 2 and true or false)
-			line = line + 1
-		end
-	end
-end
-
----@param btn EditorButton
-function menuTab.DraggerGetValue(btn)
-	if btn then
-		if btn.dragtype == 3 then
-			local full = btn.y - btn.DragerSize
-			
-			local preval = btn.dragCurPos.Y / full
-			print(preval, btn.ValueSize)
-			return preval --* btn.ValueSize
-		end
-	end
-end
-
----@param btn EditorButton
-function menuTab.DraggerSetValue(btn, value, callpress)
-	value = value or 0
-	if btn then
-		if btn.dragtype == 3 then
-			--print(btn.DragerSize, btn.ValueSize, btn.startValue, btn.endValue, btn.ishori)
-			if btn.ishori then
-				
-			else
-				--[[
-
-						local vs = k.y/math.abs(k.ValueSize)*k.y
-						local siL =(k.y-vs)
-						
-						k.dragCurPos.Y = k.dragPrePos.Y + mousePos.Y - k.dragPreMousePos.Y
-						k.dragCurPos.Y = math.min( siL, math.max( 0, k.dragCurPos.Y))
-
-						local proc = (k.dragCurPos.Y) / (siL) * (math.abs(k.ValueSize) - k.y)
-						
-						k.func(0, proc, k.dragPrePos.Y / k.y)
-
-				]]
-
-				local full = btn.y - btn.DragerSize
-				local proc = full * value
-				
-				local preval = btn.dragCurPos.Y / full
-				btn.dragCurPos.Y = proc -- btn.y * proc
-				btn.dragPrePos = btn.dragCurPos/1
-				if callpress then
-					btn.func(0, value * (math.abs(btn.ValueSize) - btn.y ), preval * btn.ValueSize)
-				end
-			end
-		end
-	end
-end
-
-menuTab.CustomMenuBack = {}
-
----@return fun(pos:Vector, size:Vector, col:Color)?
-function menuTab.CreateCustomMenuBackRenderFunc(name, tab)
-	if not name then return end
-
-	local TsizeX, TsizeY = tab.tilesize.X or 8, tab.tilesize.Y or 8
-	local TshX, TshY = TsizeX*2, TsizeY*2
-	menuTab.CustomMenuBack[name] = {
-		tilesize = tab.tilesize,
-		tab[1].spr,
-		tab[2].spr,
-		tab[3].spr,
-		tab[4].spr,
-		tab[5].spr,
-		tab[6].spr,
-		tab[7].spr,
-		tab[8].spr,
-		tab[9].spr,
-	}
-	---@type Sprite
-	local s1,s2,s3,s4,s5,s6,s7,s8,s9 = tab[1].spr,tab[2].spr,tab[3].spr,tab[4].spr,tab[5].spr,tab[6].spr,tab[7].spr,tab[8].spr,tab[9].spr
-
-	local p2 = Vector(TsizeX,0)
-	local p4 = Vector(0,TsizeY)
-	local p5 = Vector(TsizeX, TsizeY)
-	local rgon = REPENTOGON
-	if not tab.scaling then
-		menuTab.CustomMenuBack[name].func = function(pos, size, col)
-		--function menuTab.RenderCustomMenuBack(pos, size, col)
-			if pos and size then
-				local dcol = Color(1,1,1,.25)
-				s1.Color = col or dcol   s6.Color = col or dcol
-				s2.Color = col or dcol   s7.Color = col or dcol
-				s3.Color = col or dcol   s8.Color = col or dcol
-				s4.Color = col or dcol   s9.Color = col or dcol
-				s5.Color = col or dcol
-
-				local x,y = size.X, size.Y
-				--s5.Scale = size/8 - Vector(0,2)
-				--s5:Render(pos+Vector(0,8))
-				s1:Render(pos)
-
-				for i=0, (x-TshX)/TsizeX do
-					s2:Render(pos+p2+Vector(i*TsizeX,0),nil,Vector(math.max(0,(i+1)*TsizeX-(x-TshX)),0))
-				end
-				s3:Render(pos+Vector(x-TsizeX,0))
-
-				for i=0, (y-TshY)/TsizeY do
-					s4:Render(pos+p4+Vector(0,i*TsizeY),nil,Vector(0,math.max(0,(i+1)*TsizeY-(y-TshY))))
-				end
-
-				s5.Scale = Vector((x-TshX)/TsizeX, (y-TshY)/TsizeY)
-				s5:Render(pos+p5)
-				--s6.Scale = Vector(1,(y-TshY)/TsizeY)
-				--s6:Render(pos+Vector(x-TsizeX,TsizeY))
-				for i=0, (y-TshY)/TsizeY do
-					s6:Render(pos+Vector(x-TsizeX,TsizeY)+Vector(0,i*TsizeY),nil,Vector(0,math.max(0,(i+1)*TsizeY-(y-TshY))))
-				end
-
-				s7:Render(pos+Vector(0,y-TsizeY))
-				--s8.Scale = Vector((x-TshX)/TsizeX,1)
-				--s8:Render(pos+Vector(TsizeX,y-TsizeY))
-
-				for i=0, (x-TshX)/TsizeX do
-					s8:Render(pos+Vector(TsizeX,y-TsizeY)+Vector(i*TsizeX,0),nil,Vector(math.max(0,(i+1)*TsizeX-(x-TshX)),0))
-				end
-
-				s9:Render(pos+Vector(x-TsizeX,y-TsizeY))
-			end
-		end
-	else
-		menuTab.CustomMenuBack[name].func = function(pos, size, col)
-			if pos and size then
-				local dcol = Color(1,1,1,.25)
-				s1.Color = col or dcol   s6.Color = col or dcol
-				s2.Color = col or dcol   s7.Color = col or dcol
-				s3.Color = col or dcol   s8.Color = col or dcol
-				s4.Color = col or dcol   s9.Color = col or dcol
-				s5.Color = col or dcol
-
-				local x,y = size.X, size.Y
-				--s5.Scale = size/8 - Vector(0,2)
-				--s5:Render(pos+Vector(0,8))
-				s1:Render(pos)
-				s2.Scale = Vector((x-TshX)/TsizeX,1)
-				s2:Render(pos + p2)
-				s3:Render(pos+Vector(x-TsizeX,0))
-				s4.Scale = Vector(1,(y-TshY)/TsizeY)
-				s4:Render(pos+p4)
-				s5.Scale = Vector((x-TshX)/TsizeX, (y-TshY)/TsizeY)
-				s5:Render(pos+p5)
-				s6.Scale = Vector(1,(y-TshY)/TsizeY)
-				s6:Render(pos+Vector(x-TsizeX,TsizeY))
-				s7:Render(pos+Vector(0,y-TsizeY))
-				s8.Scale = Vector((x-TshX)/TsizeX,1)
-				s8:Render(pos+Vector(TsizeX,y-TsizeY))
-				s9:Render(pos+Vector(x-TsizeX,y-TsizeY))
-			end
-		end
-	end
-	return menuTab.CustomMenuBack[name].func
-end
-
-
-
-
-
-
 
 local _, uniquepath = pcall(error,"",2)
 
@@ -3548,13 +3128,12 @@ if WORSTGUI then
 		function WORSTGUI.LastLoadCall()
 		
 			--WORSTGUI:AddCallback()
-			--print(WORSTGUI.Name)
+			print(WORSTGUI.Name)
 		end
 		function WORSTGUI.GlobalButtonDetect()
 			local mousetouch = false
-			
 			--[[for i, menus in pairs(WORSTGUI.Instances) do
-				print(i, mousetouch)
+	
 				if not mousetouch then
 					menus.DetectSelectedButtonActualeActuale()
 					mousetouch = menus.MouseSomethighTouch
@@ -3563,7 +3142,6 @@ if WORSTGUI then
 				end
 			end]]
 			if WORSTGUI.CachedDetect then
-				--print(#WORSTGUI.CachedDetect)
 				for i = #WORSTGUI.CachedDetect, 1, -1 do
 					local menus = WORSTGUI.CachedDetect[i]
 					menus.DetectSelectedButtonActualeActuale(mousetouch)
@@ -3585,7 +3163,7 @@ else
 	function WORSTGUI.LastLoadCall()
 		
 		--WORSTGUI:AddCallback()
-		--print(WORSTGUI.Name)
+		print(WORSTGUI.Name)
 
 	end
 	menuTab:AddCallback(ModCallbacks.MC_POST_MODS_LOADED, function()
@@ -3594,10 +3172,8 @@ else
 
 	function WORSTGUI.GlobalButtonDetect()
 		local mousetouch = false
-		--print(WORSTGUI.Instances)
-		
 		--[[for i, menus in pairs(WORSTGUI.Instances) do
-			print(i, mousetouch)
+
 			if not mousetouch then
 				menus.DetectSelectedButtonActualeActuale(mousetouch)
 				mousetouch = menus.MouseSomethighTouch or mousetouch
@@ -3615,6 +3191,7 @@ else
 		end
 	end
 end
+
 
 return menuTab
 --end

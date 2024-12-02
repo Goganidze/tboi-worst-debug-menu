@@ -80,6 +80,8 @@ local Menu = WORSTDEBUGMENU
 
 TextBoxFont = Menu.wma.TextBoxFont
 
+local spriteanim = {}
+setmetatable(spriteanim, {__mode = "v"})
 local function GenSprite(gfx,anim,frame)
 	if gfx and anim then
 	local spr = Sprite()
@@ -88,6 +90,7 @@ local function GenSprite(gfx,anim,frame)
 	if frame then
 		spr:SetFrame(frame)
 	end
+	spriteanim[#spriteanim+1] = spr
 	return spr
 	end
 end
@@ -103,6 +106,13 @@ local function TabDeepCopy(tbl)
     end
 
     return t
+end
+
+function Menu.ClearSprites()
+	for i,k in pairs(spriteanim) do
+		k:Reset()
+	end
+	Menu.wma.ClearSprites()
 end
 
 local cacheplaces = {}
@@ -225,6 +235,9 @@ Menu.strings = {
 	["sound_record"] = {en = "sounds recording", ru = "запись звуков"},
 
 	["ent_status"] = {en = "status", ru = "статусы"},
+
+	["FromMod"] = {en = "From mod", ru = "Из мода"},
+	["BaseGame"] = {en = "Vanilla", ru = "Ванильный"},
 }
 
 local function GetStr(str)
@@ -237,7 +250,7 @@ end
 
 
 WORSTDEBUGMENU.UIs = {}
-local UIs = {}  --WORSTDEBUGMENU.UIs
+local UIs = WORSTDEBUGMENU.UIs
 UIs.MenuUp = GenSprite("gfx/editor/ui copy.anm2","фон_вверх")
 --function UIs.RoomEditor_debug() return GenSprite("gfx/editor/ui copy.anm2","room_editor_debug") end
 --function UIs.luamod_debug() return GenSprite("gfx/editor/ui copy.anm2","luamod_debug") end
@@ -497,6 +510,7 @@ do
 	Menu.wma.ButtonSetHintText("__debug_menu", "debugcmd_Menu", GetStr("debug_cmd_hint"))
 
 	---------
+	local debugflags
 	for i=1,14 do
 		local self
 		self = WORSTDEBUGMENU.wma.AddButton("_debugcmd", "debug"..i, Vector(i*18-14,13), 18, 17, UIs["debugbtn" .. i] , function(button) 
@@ -508,6 +522,12 @@ do
 				UIs.Var_Sel:Render(self.pos + Vector(2,12))
 			end
 		end)
+		if REPENTOGON then
+			debugflags = debugflags or game:GetDebugFlags()
+			if debugflags & 1<<(i-1) ~= 0 then
+				self.IsActived = true
+			end
+		end
 	end
 
 
@@ -553,7 +573,7 @@ do
 			if not Menu.wma.IsStickyMenu then
 				Menu.wma.SelectedMenu = "__debug_menu"
 			end
-			Menu.wma.MouseHintText = nil
+			
 
 			local pos = Isaac.WorldToScreen(Input.GetMousePosition(true))-game.ScreenShakeOffset
 			local check = pos.X+pos.Y
@@ -591,7 +611,7 @@ do
 			Menu.wma.DetectSelectedButtonActuale()
 			if Menu.wma.MouseHintText then
 				local pos = Menu.wma.MousePos
-				--DrawStringScaledBreakline(font, Isaac_Tower.editor.MouseHintText, pos.X, pos.Y, 0.5, 0.5, KColor(0.1,0.1,0.2,1), 60, "Left")
+				--DrawStringScaledBreakline(font, Isaac_Tower.editor.MouseHintText, pos.X, pos.Y, 0.5, 0.5, Menu.wma.DefTextColor, 60, "Left")
 				Menu.wma.RenderButtonHintText(Menu.wma.MouseHintText, pos+Vector(8,8))
 			end
 
@@ -809,7 +829,7 @@ do
 			StageSel.wind:SetSize(Vector(StageSel.wind.size.X, size))
 		end, function(pos)
 			Menu.wma.RenderCustomTextBox(pos, Vector(self.x, self.y), self.IsSelected)
-			font:DrawStringScaledUTF8(GetStr("default"),pos.X+2,pos.Y,0.5,0.5,KColor(0.1,0.1,0.2,1),0,false)
+			font:DrawStringScaledUTF8(GetStr("default"),pos.X+2,pos.Y,0.5,0.5,Menu.wma.DefTextColor,0,false)
 		end)
 
 		local self
@@ -822,7 +842,7 @@ do
 			StageSel.wind:SetSize(Vector(StageSel.wind.size.X, size))
 		end, function(pos)
 			Menu.wma.RenderCustomTextBox(pos, Vector(self.x, self.y), self.IsSelected)
-			font:DrawStringScaledUTF8("StageAPI",pos.X+2,pos.Y,0.5,0.5,KColor(0.1,0.1,0.2,1),0,false)
+			font:DrawStringScaledUTF8("StageAPI",pos.X+2,pos.Y,0.5,0.5,Menu.wma.DefTextColor,0,false)
 		end)
 	end
 
@@ -856,7 +876,7 @@ do
 	Menu.EntSpawner = {name = "Ent_Spawner", size = Vector(126,86), pos = Vector(87,35), btn = {}, TVS = {10,0,0},
 		SpawnMode = 0, SpawnList = {}}
 	local EntSpawner = Menu.EntSpawner
-	local sizev = EntSpawner.size
+	--local sizev = EntSpawner.size
 
 	--[[local self
 	self = Menu.wma.AddButton("__debug_menu", "Ent_Spawner_Menu", Vector(154,5), 32, 32, UIs.EntSpawner, function(button) 
@@ -867,15 +887,17 @@ do
 	self.posfunc = function()
 		self.pos = Vector(154, 5+Menu.MainOffset.Y)
 	end]]
+	local warncolor = KColor(1,.2,.2,1)
 
 	local self
 	self = Menu.AddButtonOnDebugBar("Ent_Spawner_Menu", Vector(32, 32), UIs.EntSpawner, function(button) 
 		if button ~= 0 then return end
 		---@type Window
-		EntSpawner.wind = Menu.wma.ShowWindow(EntSpawner.name, EntSpawner.pos, sizev)
+		EntSpawner.wind = Menu.wma.ShowWindow(EntSpawner.name, EntSpawner.pos, EntSpawner.size)
 	end)
 	Menu.wma.ButtonSetHintText("__debug_menu", "Ent_Spawner_Menu", GetStr("Ent_Spawner_Menu_hintText"))
 	
+
 	local self
 	self = Menu.wma.AddTextBox(EntSpawner.name, "type", Vector(5,24), Vector(32,16), nil, 
 	function(result)
@@ -889,8 +911,35 @@ do
 			self.text = EntSpawner.TVS[1]
 			return false
 		end
-	end, true, function(pos)
-		font:DrawStringScaledUTF8("type",pos.X+1,pos.Y-9,0.5,0.5,KColor(0.1,0.1,0.2,1),0,false)
+	end, true, function(pos, visible)
+		if visible then
+			if REPENTOGON and Isaac.GetFrameCount()%10 == 0 then
+				local enttype = EntSpawner.TVS[1]
+				local conf = EntityConfig.GetEntity(enttype, EntSpawner.TVS[2], EntSpawner.TVS[3])
+				EntSpawner.conf = conf
+				
+				if (not conf and enttype ~= 5) then
+					EntSpawner.Warn = true
+				else
+					EntSpawner.Warn = false
+				end
+			
+				if EntSpawner.Warn then
+					self.textcolor = warncolor
+				else
+					self.textcolor = nil
+				end
+			end
+			if REPENTOGON and EntSpawner.conf then
+				local name = EntSpawner.conf:GetName()
+				if name:sub(1,1) == "#" then
+					name = Isaac.GetLocalizedString("Entities", name, Options.Language)
+				end
+				font:DrawStringScaledUTF8(name,pos.X+1,pos.Y+17,0.5,0.5,Menu.wma.DefTextColor,0,false)
+			end
+
+			font:DrawStringScaledUTF8("type",pos.X+1,pos.Y-9,0.5,0.5,Menu.wma.DefTextColor,0,false)
+		end
 	end)
 	self.text = EntSpawner.TVS[1]
 
@@ -908,7 +957,12 @@ do
 			return false
 		end
 	end, true, function(pos)
-		font:DrawStringScaledUTF8("var",pos.X+1,pos.Y-9,0.5,0.5,KColor(0.1,0.1,0.2,1),0,false)
+		if EntSpawner.Warn then
+			self.textcolor = warncolor
+		else
+			self.textcolor = nil
+		end
+		font:DrawStringScaledUTF8("var",pos.X+1,pos.Y-9,0.5,0.5,Menu.wma.DefTextColor,0,false)
 	end)
 	self.text = EntSpawner.TVS[2]
 
@@ -926,12 +980,25 @@ do
 			return false
 		end
 	end, true, function(pos)
-		font:DrawStringScaledUTF8("subtype",pos.X+1,pos.Y-9,0.5,0.5,KColor(0.1,0.1,0.2,1),0,false)
+		if EntSpawner.Warn then
+			self.textcolor = warncolor
+			font:DrawStringScaledUTF8("!",pos.X+40,pos.Y-2,1,1,warncolor,0,false)
+		else
+			self.textcolor = nil
+		end
+		font:DrawStringScaledUTF8("subtype",pos.X+1,pos.Y-9,0.5,0.5,Menu.wma.DefTextColor,0,false)
 	end)
 	self.text = EntSpawner.TVS[3]
 
+	local v1X = 48
+	if REPENTOGON then
+		v1X = 54
+		EntSpawner.size = Vector(126,96)
+	end
+
+
 	local self
-	self = Menu.wma.AddButton(EntSpawner.name, "odin_chel", Vector(73,48), 16, 16, UIs.Chlen_1(), function(button) 
+	self = Menu.wma.AddButton(EntSpawner.name, "odin_chel", Vector(73,v1X), 16, 16, UIs.Chlen_1(), function(button) 
 		if button ~= 0 then return end
 		Menu.PlaceMode("EntSpawner_odin", nil, Menu.EntSpawnerLogic, 
 		function()
@@ -949,7 +1016,7 @@ do
 	Menu.wma.ButtonSetHintTextR(self, GetStr("EntSpawner odin"))
 
 	local self
-	self = Menu.wma.AddButton(EntSpawner.name, "mnogo_chel", Vector(91,48), 16, 16, UIs.Chlen_multi, function(button) 
+	self = Menu.wma.AddButton(EntSpawner.name, "mnogo_chel", Vector(91,v1X), 16, 16, UIs.Chlen_multi, function(button) 
 		if button ~= 0 then return end
 
 		Menu.PlaceMode("EntSpawner_mnogo", nil, Menu.EntSpawnerLogic, 
@@ -968,7 +1035,7 @@ do
 	Menu.wma.ButtonSetHintTextR(self, GetStr("EntSpawner mnogo"))
 
 	local self
-	self = Menu.wma.AddButton(EntSpawner.name, "стереть", Vector(19,48), 16, 16, UIs.CCCCCCCC(), function(button) 
+	self = Menu.wma.AddButton(EntSpawner.name, "стереть", Vector(19,v1X), 16, 16, UIs.CCCCCCCC(), function(button) 
 		if button ~= 0 then return end
 		EntSpawner.SpawnList = {}
 		EntSpawner.LastSpawns = {}
@@ -976,7 +1043,7 @@ do
 	Menu.wma.ButtonSetHintTextR(self, GetStr("removeAllSpawnpoint"))
 
 	local self
-	self = Menu.wma.AddButton(EntSpawner.name, "nasad", Vector(37,48), 16, 16, UIs.nasad(), function(button) 
+	self = Menu.wma.AddButton(EntSpawner.name, "nasad", Vector(37,v1X), 16, 16, UIs.nasad(), function(button) 
 		if button ~= 0 then return end
 		if #EntSpawner.SpawnList > 0 then
 			table.remove(EntSpawner.SpawnList, #EntSpawner.SpawnList)
@@ -985,7 +1052,7 @@ do
 	Menu.wma.ButtonSetHintTextR(self, GetStr("nasadSpawnpoint"))
 
 	local self
-	self = Menu.wma.AddButton(EntSpawner.name, "povtor", Vector(55,48), 16, 16, UIs.reset(), function(button) 
+	self = Menu.wma.AddButton(EntSpawner.name, "povtor", Vector(55,v1X), 16, 16, UIs.reset(), function(button) 
 		if button ~= 0 then return end
 		if EntSpawner.LastSpawns then
 			EntSpawner.EntSpawner_SpawnList(EntSpawner.LastSpawns)
@@ -993,15 +1060,17 @@ do
 	end)
 	Menu.wma.ButtonSetHintTextR(self, GetStr("povtorSpawnpoint"))
 
+	v1X = v1X + 18 --66
+
 	local self
-	self = Menu.wma.AddButton(EntSpawner.name, "multispawn", Vector(73,66), 34, 16, nil, function(button) 
+	self = Menu.wma.AddButton(EntSpawner.name, "multispawn", Vector(73,v1X), 34, 16, nil, function(button) 
 		if button ~= 0 then return end
 		if EntSpawner.SpawnList then
 			EntSpawner.EntSpawner_SpawnList(EntSpawner.SpawnList)
 		end
 	end, function(pos)
 		Menu.wma.RenderCustomButton(pos, Vector(self.x,self.y), self.IsSelected)
-		font:DrawStringScaledUTF8(GetStr("spawn"),pos.X-.5+self.x/2,pos.Y+1,0.5,0.5,KColor(0.1,0.1,0.2,1),1,true)
+		font:DrawStringScaledUTF8(GetStr("spawn"),pos.X-.5+self.x/2,pos.Y+1,0.5,0.5,Menu.wma.DefTextColor,1,true)
 	end)
 
 	function EntSpawner.EntSpawner_SpawnList(tab)
@@ -1257,7 +1326,7 @@ do --UIs.GridSpawner
 
 	end, function(pos)
 		Menu.wma.RenderCustomTextBox(pos, Vector(self.x,14), self.IsSelected)
-		font:DrawStringScaledUTF8(GridSpawner.GridName,pos.X+3,pos.Y+1,0.5,0.5,KColor(0.1,0.1,0.2,1),0,false)
+		font:DrawStringScaledUTF8(GridSpawner.GridName,pos.X+3,pos.Y+1,0.5,0.5,Menu.wma.DefTextColor,0,false)
 
 		if Menu.wma.GetButton(GridSpawner.name, "_Listshadow") 
 		and Menu.wma.ScrollOffset then
@@ -1308,9 +1377,9 @@ do --UIs.GridSpawner
 	end, function(pos)
 		if GridSpawner.SelGridIndex then
 			Menu.wma.RenderCustomTextBox(pos, Vector(self.x,14), self.IsSelected)
-			font:DrawStringScaledUTF8("VarData", pos.X+3,pos.Y-10,0.5,0.5,KColor(0.1,0.1,0.2,1),0,false)
+			font:DrawStringScaledUTF8("VarData", pos.X+3,pos.Y-10,0.5,0.5,Menu.wma.DefTextColor,0,false)
 
-			font:DrawStringScaledUTF8(GridSpawner.SelGridIndex.VarData, pos.X+3,pos.Y+1,0.5,0.5,KColor(0.1,0.1,0.2,1),0,false)
+			font:DrawStringScaledUTF8(GridSpawner.SelGridIndex.VarData, pos.X+3,pos.Y+1,0.5,0.5,Menu.wma.DefTextColor,0,false)
 
 			
 			GridSpawner.size.Y = 82
@@ -1335,7 +1404,7 @@ do --UIs.GridSpawner
 	end, true, function(pos)
 		if GridSpawner.SelGridIndex then
 			--Menu.wma.RenderCustomTextBox(pos, Vector(self.x,14), self.IsSelected)
-			font:DrawStringScaledUTF8("VarData", pos.X-1,pos.Y-10,0.5,0.5,KColor(0.1,0.1,0.2,1),0,false)
+			font:DrawStringScaledUTF8("VarData", pos.X-1,pos.Y-10,0.5,0.5,Menu.wma.DefTextColor,0,false)
 			
 			GridSpawner.size.Y = 82
 			GridSpawner.btn.vardata.canPressed = true
@@ -1368,7 +1437,7 @@ do --UIs.GridSpawner
 	end, true, function(pos)
 		if GridSpawner.SelGridIndex then
 			--Menu.wma.RenderCustomTextBox(pos, Vector(self.x,14), self.IsSelected)
-			font:DrawStringScaledUTF8("state", pos.X+3,pos.Y-10,0.5,0.5,KColor(0.1,0.1,0.2,1),0,false)
+			font:DrawStringScaledUTF8("state", pos.X+3,pos.Y-10,0.5,0.5,Menu.wma.DefTextColor,0,false)
 			
 			GridSpawner.btn.state.canPressed = true
 			GridSpawner.btn.state.visible = true
@@ -1449,7 +1518,7 @@ do
 	Menu.AnimTest = {name = "Anim_Test", subnames = {}, size = Vector(166+24,196), btn = {}, anim = {anm2 = "", animation = "", 
 	col = Color(1,1,1,1), colorize = Color(1,1,1,0)}}
 	local AnimTest = Menu.AnimTest
-	local sizev = AnimTest.size
+	local sizev = AnimTest.size 
 
 	AnimTest.anim.spr = GenSprite("gfx/editor/ui copy.anm2","режим_сетки")   --Sprite()
 	AnimTest.anim.RenderPos = Vector(0,0)
@@ -1493,7 +1562,8 @@ do
 		AnimTest.anim.RenderPos = newpos
 	end, function(pos)
 		Menu.wma.RenderCustomButton(pos, si, self.IsSelected)
-		AnimTest.anim.spr:Render(pos+Vector(84,24)+AnimTest.anim.RenderPos)
+		AnimTest.FinalRenderPos = pos+Vector(84,24)+AnimTest.anim.RenderPos
+		AnimTest.anim.spr:Render(AnimTest.FinalRenderPos)
 		if Isaac.GetFrameCount() % 2 == 0 then
 			AnimTest.anim.spr:Update()
 			if AnimTest.anim.AutoPlay and not AnimTest.anim.OnPause and AnimTest.anim.spr:IsFinished(AnimTest.anim.spr:GetAnimation()) then
@@ -1614,7 +1684,7 @@ do
 	end,
 	function(pos)
 		Menu.wma.RenderCustomButton(pos, Vector(self.x, self.y), self.IsSelected)
-		font:DrawStringScaledUTF8(GetStr("file"),pos.X+16,pos.Y+1,0.5,0.5,KColor(0.1,0.1,0.2,1),1,true)
+		font:DrawStringScaledUTF8(GetStr("file"),pos.X+16,pos.Y+1,0.5,0.5,Menu.wma.DefTextColor,1,true)
 	end)
 	vG.Y = vG.Y+18 + self.y
 
@@ -1643,12 +1713,16 @@ do
 			AnimTest.btn.anim.text = AnimTest.anim.animation
 			AnimTest.btn.overlay.text = ""
 			AnimTest.anim.overlayPriority = nil
+			AnimTest.BlendData.layer = {}
+			for i=0, AnimTest.anim.spr:GetLayerCount()-1 do
+				AnimTest.BlendData.layer[i] = {}
+			end
 			--self.text = AnimTest.TVS[2]
 			UpdateLstFrame()
 			return true
 		end
 	end, false, function(pos)
-		font:DrawStringScaledUTF8(GetStr("AnmFile"),pos.X+1,pos.Y-9,0.5,0.5,KColor(0.1,0.1,0.2,1),0,false)
+		font:DrawStringScaledUTF8(GetStr("AnmFile"),pos.X+1,pos.Y-9,0.5,0.5,Menu.wma.DefTextColor,0,false)
 	end)
 	AnimTest.btn.anm2.text = "gfx/"
 	vG.Y = vG.Y+16 + self.y
@@ -1670,7 +1744,7 @@ do
 			return false
 		end
 	end, false, function(pos)
-		font:DrawStringScaledUTF8(GetStr("AnimName"),pos.X+1,pos.Y-9,0.5,0.5,KColor(0.1,0.1,0.2,1),0,false)
+		font:DrawStringScaledUTF8(GetStr("AnimName"),pos.X+1,pos.Y-9,0.5,0.5,Menu.wma.DefTextColor,0,false)
 	end)
 	AnimTest.btn.anim.text = ""
 	vG.Y = vG.Y+12 + AnimTest.btn.anim.y
@@ -1692,7 +1766,7 @@ do
 			return false
 		end
 	end, false, function(pos)
-		font:DrawStringScaledUTF8(GetStr("AnimOVerlayName"),pos.X+1,pos.Y-9,0.5,0.5,KColor(0.1,0.1,0.2,1),0,false)
+		font:DrawStringScaledUTF8(GetStr("AnimOVerlayName"),pos.X+1,pos.Y-9,0.5,0.5,Menu.wma.DefTextColor,0,false)
 	end)
 	AnimTest.btn.overlay.text = ""
 	vG.Y = vG.Y+0 + AnimTest.btn.anim.y
@@ -1735,7 +1809,7 @@ do
 	end,
 	function(pos)
 		Menu.wma.RenderCustomButton(pos, Vector(self.x, self.y), self.IsSelected)
-		font:DrawStringScaledUTF8(GetStr("color"),pos.X+16,pos.Y+1,0.5,0.5,KColor(0.1,0.1,0.2,1),1,true)
+		font:DrawStringScaledUTF8(GetStr("color"),pos.X+16,pos.Y+1,0.5,0.5,Menu.wma.DefTextColor,1,true)
 	end)
 	vG.Y = vG.Y+18 + self.y
 	local leftv = 24
@@ -1762,8 +1836,8 @@ do
 		AnimTest.anim.col.R = value
 		selfR.text = math.ceil(value * 255)
 	end, function(pos)
-		font:DrawStringScaledUTF8("color",pos.X+3,pos.Y-9,0.5,0.5,KColor(0.1,0.1,0.2,1),0,false)
-		--font:DrawStringScaledUTF8(math.ceil(AnimTest.anim.col.R * 255), pos.X-10,pos.Y-1,0.5,0.5,KColor(0.1,0.1,0.2,1),1,true)
+		font:DrawStringScaledUTF8("color",pos.X+3,pos.Y-9,0.5,0.5,Menu.wma.DefTextColor,0,false)
+		--font:DrawStringScaledUTF8(math.ceil(AnimTest.anim.col.R * 255), pos.X-10,pos.Y-1,0.5,0.5,Menu.wma.DefTextColor,1,true)
 		UIs.ColorDrager:RenderLayer(0, pos)
 		self.dragCurPos.X = math.min(self.x, math.max(0, AnimTest.anim.col.R * self.x))
 	end)
@@ -1790,8 +1864,8 @@ do
 		AnimTest.anim.col.RO = value
 		selfR.text = math.ceil(value * 255)
 	end, function(pos)
-		font:DrawStringScaledUTF8(GetStr("offset"),pos.X+3,pos.Y-9,0.5,0.5,KColor(0.1,0.1,0.2,1),0,false)
-		--font:DrawStringScaledUTF8(math.ceil(AnimTest.anim.col.RO * 255), pos.X-10,pos.Y-1,0.5,0.5,KColor(0.1,0.1,0.2,1),1,true)
+		font:DrawStringScaledUTF8(GetStr("offset"),pos.X+3,pos.Y-9,0.5,0.5,Menu.wma.DefTextColor,0,false)
+		--font:DrawStringScaledUTF8(math.ceil(AnimTest.anim.col.RO * 255), pos.X-10,pos.Y-1,0.5,0.5,Menu.wma.DefTextColor,1,true)
 		UIs.ColorDrager:RenderLayer(0, pos)
 		self.dragCurPos.X = math.min(self.x, math.max(0, AnimTest.anim.col.RO * self.x))
 	end, 0)
@@ -1819,7 +1893,7 @@ do
 		AnimTest.anim.col.G = value
 		selfR.text = math.ceil(value * 255)
 	end, function(pos)
-		--font:DrawStringScaledUTF8(math.ceil(AnimTest.anim.col.G * 255), pos.X-10,pos.Y-1,0.5,0.5,KColor(0.1,0.1,0.2,1),1,true)
+		--font:DrawStringScaledUTF8(math.ceil(AnimTest.anim.col.G * 255), pos.X-10,pos.Y-1,0.5,0.5,Menu.wma.DefTextColor,1,true)
 		UIs.ColorDrager:RenderLayer(1, pos)
 		self.dragCurPos.X = math.min(self.x, math.max(0, AnimTest.anim.col.G * self.x))
 	end)
@@ -1846,7 +1920,7 @@ do
 		AnimTest.anim.col.GO = value
 		selfR.text = math.ceil(value * 255)
 	end, function(pos)
-		--font:DrawStringScaledUTF8(math.ceil(AnimTest.anim.col.GO * 255), pos.X-10,pos.Y-1,0.5,0.5,KColor(0.1,0.1,0.2,1),1,true)
+		--font:DrawStringScaledUTF8(math.ceil(AnimTest.anim.col.GO * 255), pos.X-10,pos.Y-1,0.5,0.5,Menu.wma.DefTextColor,1,true)
 		UIs.ColorDrager:RenderLayer(1, pos)
 		self.dragCurPos.X = math.min(self.x, math.max(0, AnimTest.anim.col.GO * self.x))
 	end, 0)
@@ -1874,7 +1948,7 @@ do
 		AnimTest.anim.col.B = value
 		selfR.text = math.ceil(value * 255)
 	end, function(pos)
-		--font:DrawStringScaledUTF8(math.ceil(AnimTest.anim.col.B * 255), pos.X-10,pos.Y-1,0.5,0.5,KColor(0.1,0.1,0.2,1),1,true)
+		--font:DrawStringScaledUTF8(math.ceil(AnimTest.anim.col.B * 255), pos.X-10,pos.Y-1,0.5,0.5,Menu.wma.DefTextColor,1,true)
 		UIs.ColorDrager:RenderLayer(2, pos)
 		self.dragCurPos.X = math.min(self.x, math.max(0, AnimTest.anim.col.B * self.x))
 	end)
@@ -1901,7 +1975,7 @@ do
 		AnimTest.anim.col.BO = value
 		selfR.text = math.ceil(value * 255)
 	end, function(pos)
-		--font:DrawStringScaledUTF8(math.ceil(AnimTest.anim.col.BO * 255), pos.X-10,pos.Y-1,0.5,0.5,KColor(0.1,0.1,0.2,1),1,true)
+		--font:DrawStringScaledUTF8(math.ceil(AnimTest.anim.col.BO * 255), pos.X-10,pos.Y-1,0.5,0.5,Menu.wma.DefTextColor,1,true)
 		UIs.ColorDrager:RenderLayer(2, pos)
 		self.dragCurPos.X = math.min(self.x, math.max(0, AnimTest.anim.col.BO * self.x))
 	end, 0)
@@ -1929,7 +2003,7 @@ do
 		AnimTest.anim.col.A = value
 		selfR.text = math.ceil(value * 255)
 	end, function(pos)
-		--font:DrawStringScaledUTF8(math.ceil(AnimTest.anim.col.A * 255), pos.X-10,pos.Y-1,0.5,0.5,KColor(0.1,0.1,0.2,1),1,true)
+		--font:DrawStringScaledUTF8(math.ceil(AnimTest.anim.col.A * 255), pos.X-10,pos.Y-1,0.5,0.5,Menu.wma.DefTextColor,1,true)
 		UIs.ColorDrager:RenderLayer(3, pos)
 		self.dragCurPos.X = math.min(self.x, math.max(0, AnimTest.anim.col.A* self.x))
 	end)
@@ -1959,8 +2033,8 @@ do
 		AnimTest.anim.colorize.R = value
 		selfR.text = math.ceil(value * 255)
 	end, function(pos)
-		font:DrawStringScaledUTF8(GetStr("colorize"),pos.X+3,pos.Y-9,0.5,0.5,KColor(0.1,0.1,0.2,1),0,false)
-		--font:DrawStringScaledUTF8(math.ceil(AnimTest.anim.colorize.R * 255), pos.X-10,pos.Y-1,0.5,0.5,KColor(0.1,0.1,0.2,1),1,true)
+		font:DrawStringScaledUTF8(GetStr("colorize"),pos.X+3,pos.Y-9,0.5,0.5,Menu.wma.DefTextColor,0,false)
+		--font:DrawStringScaledUTF8(math.ceil(AnimTest.anim.colorize.R * 255), pos.X-10,pos.Y-1,0.5,0.5,Menu.wma.DefTextColor,1,true)
 		UIs.ColorDrager:RenderLayer(0, pos)
 		self.dragCurPos.X = math.min(self.x, math.max(0, AnimTest.anim.colorize.R * self.x))
 	end)
@@ -1988,7 +2062,7 @@ do
 		AnimTest.anim.colorize.G = value
 		selfR.text = math.ceil(value * 255)
 	end, function(pos)
-		--font:DrawStringScaledUTF8(math.ceil(AnimTest.anim.colorize.G * 255), pos.X-10,pos.Y-1,0.5,0.5,KColor(0.1,0.1,0.2,1),1,true)
+		--font:DrawStringScaledUTF8(math.ceil(AnimTest.anim.colorize.G * 255), pos.X-10,pos.Y-1,0.5,0.5,Menu.wma.DefTextColor,1,true)
 		UIs.ColorDrager:RenderLayer(1, pos)
 		self.dragCurPos.X = math.min(self.x, math.max(0, AnimTest.anim.colorize.G * self.x))
 	end)
@@ -2016,7 +2090,7 @@ do
 		AnimTest.anim.colorize.B = value
 		selfR.text = math.ceil(value * 255)
 	end, function(pos)
-		--font:DrawStringScaledUTF8(math.ceil(AnimTest.anim.colorize.B * 255), pos.X-10,pos.Y-1,0.5,0.5,KColor(0.1,0.1,0.2,1),1,true)
+		--font:DrawStringScaledUTF8(math.ceil(AnimTest.anim.colorize.B * 255), pos.X-10,pos.Y-1,0.5,0.5,Menu.wma.DefTextColor,1,true)
 		UIs.ColorDrager:RenderLayer(2, pos)
 		self.dragCurPos.X = math.min(self.x, math.max(0, AnimTest.anim.colorize.B * self.x))
 	end)
@@ -2044,7 +2118,7 @@ do
 		AnimTest.anim.colorize.A = value
 		selfR.text = math.ceil(value * 255)
 	end, function(pos)
-		--font:DrawStringScaledUTF8(math.ceil(AnimTest.anim.colorize.A * 255), pos.X-10,pos.Y-1,0.5,0.5,KColor(0.1,0.1,0.2,1),1,true)
+		--font:DrawStringScaledUTF8(math.ceil(AnimTest.anim.colorize.A * 255), pos.X-10,pos.Y-1,0.5,0.5,Menu.wma.DefTextColor,1,true)
 		UIs.ColorDrager:RenderLayer(3, pos)
 		self.dragCurPos.X = math.min(self.x, math.max(0, AnimTest.anim.colorize.A * self.x))
 	end, 0)
@@ -2077,6 +2151,20 @@ do
 		return c
 	end
 
+	local function RGONFUMOMADNESS(frame, col)
+		if REPENTOGON then
+			local ceil = math.ceil
+			local rn = ceil(col.R*255) + (ceil(col.G*255) << 8) + (ceil(col.B*255) << 16)
+
+			Isaac.SetDwmWindowAttribute(34, rn)
+			Isaac.SetDwmWindowAttribute(35, rn)
+			--print(col, rn, string.format("%x",rn))
+
+			local rn2 = ceil((1-col.R)*255) + (ceil((1-col.G)*255) << 8) + (ceil((1-col.B)*255) << 16)
+			Isaac.SetDwmWindowAttribute(36, rn2)
+		end
+	end
+
 	---@type table
 	local fumo
 	fumo = Menu.wma.AddButton(AnimTest.subnames.color, "fumo", Vector(100,150), 64, 16, nil, function(button) 
@@ -2089,6 +2177,9 @@ do
 				fumo.fumo.PlaybackSpeed = .5
 			elseif not fumo.mode then
 				fumo.mode = 1
+				if REPENTOGON then
+					Isaac.SetWindowTitle(" Fumo")
+				end
 			elseif fumo.mode == 1 then
 				fumo.mode = 2
 			else
@@ -2117,6 +2208,8 @@ do
 				fumo.fumo.Color = c
 
 				if fumo.mode == 2 then
+
+					RGONFUMOMADNESS(frame, rn)
 				
 					if not fumo.fakefumo then
 						local rng = RNG()
@@ -2164,6 +2257,59 @@ do
 	end, false, -1)
 	fumo.fumoColor = Color(1,1,1,1)
 
+	------
+	local colPick
+	colPick = Menu.wma.AddButton(AnimTest.subnames.color, "colPick", Vector(100,180), 69, 16, nil, function(button) 
+		colPick.Active = not colPick.Active
+	end,
+	function(pos)
+		Menu.wma.RenderCustomButton2(pos, colPick)
+		Menu.wma.DrawText(0, "ColorPicker", pos.X+2, pos.Y+3, 0.5, 0.5)
+
+		if colPick.Active then
+			local spr = AnimTest.anim.spr
+			local rpos = AnimTest.FinalRenderPos
+			local MousePos = Menu.wma.MousePos
+			local collide = false
+			local color
+
+			for i,k in pairs(spr:GetCurrentAnimationData():GetAllLayers()) do
+				--print(i,k, spr:GetFrame(), k:GetLayerID())
+				local frame = k:GetFrame(spr:GetFrame())
+				if frame then
+					local xy = Vector(frame:GetWidth(), frame:GetHeight())
+					local offseded = rpos + frame:GetPos() - frame:GetPivot()
+
+					collide = (MousePos.X > offseded.X) and (MousePos.X < offseded.X + xy.X) and
+						(MousePos.Y > offseded.Y) and (MousePos.Y < offseded.Y + xy.Y)
+					--print(MousePos, "|", rpos)
+					if collide then
+						color = spr:GetTexel(MousePos - rpos, Vector(0,0), .5, i-1)
+					end
+				end
+			end
+			Menu.wma.DelayRender(function() 
+				if collide then
+					local text = color and ("R:"..color.Red .." G:"..color.Green .." B:"..color.Blue) or ""
+					Menu.wma.DrawText(0, "collide " .. text, MousePos.X +5, MousePos.Y, nil, nil, nil, KColor(1,1,1,1))
+					Menu.wma.DrawText(0, "collide " .. text, MousePos.X-1 +5, MousePos.Y-1, nil, nil, nil, KColor(1,1,1,1))
+					Menu.wma.DrawText(0, "collide " .. text, MousePos.X+1 +5, MousePos.Y-1, nil, nil, nil, KColor(1,1,1,1))
+					Menu.wma.DrawText(0, "collide " .. text, MousePos.X +5, MousePos.Y-2, nil, nil, nil, KColor(1,1,1,1))
+					Menu.wma.DrawText(0, "collide " .. text, MousePos.X +5, MousePos.Y-1, nil, nil, nil, color)
+				else
+					Menu.wma.DrawText(0, "huh", MousePos.X, MousePos.Y)
+				end
+			end, Menu.wma.Callbacks.WINDOW_POST_RENDER)
+			
+		end
+	end)
+
+
+
+	------
+
+
+
 
 	local vG = GetPlace(AnimTest.name)/1
 
@@ -2180,7 +2326,7 @@ do
 	end,
 	function(pos)
 		Menu.wma.RenderCustomButton(pos, Vector(self.x, self.y), self.IsSelected)
-		font:DrawStringScaledUTF8(GetStr("animation"),pos.X+self.x/2,pos.Y+1,0.5,0.5,KColor(0.1,0.1,0.2,1),1,true)
+		font:DrawStringScaledUTF8(GetStr("animation"),pos.X+self.x/2,pos.Y+1,0.5,0.5,Menu.wma.DefTextColor,1,true)
 	end)
 	vG.Y = vG.Y+18 + self.y
 
@@ -2190,8 +2336,8 @@ do
 		if button ~= 0 then return end
 		AnimTest.anim.spr:SetFrame(math.floor(value*AnimTest.anim.lastFrame+0.5))
 	end, function(pos)
-		font:DrawStringScaledUTF8(GetStr("frame"),pos.X+3,pos.Y-9,0.5,0.5,KColor(0.1,0.1,0.2,1),0,false)
-		font:DrawStringScaledUTF8(AnimTest.anim.spr:GetFrame() or "",pos.X-8,pos.Y-1,0.5,0.5,KColor(0.1,0.1,0.2,1),1,true)
+		font:DrawStringScaledUTF8(GetStr("frame"),pos.X+3,pos.Y-9,0.5,0.5,Menu.wma.DefTextColor,0,false)
+		font:DrawStringScaledUTF8(AnimTest.anim.spr:GetFrame() or "",pos.X-8,pos.Y-1,0.5,0.5,Menu.wma.DefTextColor,1,true)
 		Menu.wma.RenderCustomTextBox(pos, Vector(self.x, self.y-2), self.IsSelected)
 		self.dragCurPos.X = ((AnimTest.anim.spr:GetFrame()/AnimTest.anim.lastFrame)) * self.x
 	end, 0)
@@ -2203,9 +2349,9 @@ do
 		if button ~= 0 then return end
 		AnimTest.anim.spr:SetOverlayFrame(math.floor(value*AnimTest.anim.lastOverlayFrame+0.5))
 	end, function(pos)
-		font:DrawStringScaledUTF8(GetStr("overlay frame"),pos.X+3,pos.Y-9,0.5,0.5,KColor(0.1,0.1,0.2,1),0,false)
+		font:DrawStringScaledUTF8(GetStr("overlay frame"),pos.X+3,pos.Y-9,0.5,0.5,Menu.wma.DefTextColor,0,false)
 		---@diagnostic disable-next-line
-		font:DrawStringScaledUTF8(AnimTest.anim.spr:GetOverlayFrame() or "",pos.X-8,pos.Y-1,0.5,0.5,KColor(0.1,0.1,0.2,1),1,true)
+		font:DrawStringScaledUTF8(AnimTest.anim.spr:GetOverlayFrame() or "",pos.X-8,pos.Y-1,0.5,0.5,Menu.wma.DefTextColor,1,true)
 		Menu.wma.RenderCustomTextBox(pos, Vector(self.x, self.y-2), self.IsSelected)
 		local frame = AnimTest.anim.spr:GetOverlayFrame()
 		if frame == -1 then
@@ -2231,8 +2377,8 @@ do
 		end
 	end, true,
 	function(pos)
-		font:DrawStringScaledUTF8(GetStr("scale"),pos.X-52,pos.Y+3,0.5,0.5,KColor(0.1,0.1,0.2,1),0,false)
-		font:DrawStringScaledUTF8("X",pos.X-13,pos.Y-2,1,1,KColor(0.1,0.1,0.2,1),0,false)
+		font:DrawStringScaledUTF8(GetStr("scale"),pos.X-52,pos.Y+3,0.5,0.5,Menu.wma.DefTextColor,0,false)
+		font:DrawStringScaledUTF8("X",pos.X-13,pos.Y-2,1,1,Menu.wma.DefTextColor,0,false)
 		self.text = string.format("%.2f", AnimTest.anim.spr.Scale.X)
 	end)
 	self.text = 1
@@ -2253,7 +2399,7 @@ do
 	end, true,
 	function(pos)
 		--Menu.wma.RenderCustomTextBox(pos, Vector(self.x, self.y), self.IsSelected)
-		font:DrawStringScaledUTF8("Y",pos.X-13,pos.Y-2,1,1,KColor(0.1,0.1,0.2,1),0,false)
+		font:DrawStringScaledUTF8("Y",pos.X-13,pos.Y-2,1,1,Menu.wma.DefTextColor,0,false)
 		self.text = string.format("%.2f", AnimTest.anim.spr.Scale.Y)
 	end)
 	self.text = 1
@@ -2286,13 +2432,243 @@ do
 		if button ~= 0 then return end
 		AnimTest.anim.spr.Rotation = value*359
 	end, function(pos)
-		font:DrawStringScaledUTF8(GetStr("Rotation"),pos.X+3,pos.Y-9,0.5,0.5,KColor(0.1,0.1,0.2,1),0,false)
+		font:DrawStringScaledUTF8(GetStr("Rotation"),pos.X+3,pos.Y-9,0.5,0.5,Menu.wma.DefTextColor,0,false)
 		Menu.wma.RenderCustomTextBox(pos, Vector(self.x, self.y-2), self.IsSelected)
 		local rot = math.ceil(AnimTest.anim.spr.Rotation) -- string.format("%.2f", AnimTest.anim.spr.Rotation)
-		font:DrawStringScaledUTF8(rot,pos.X-8,pos.Y-1,0.5,0.5,KColor(0.1,0.1,0.2,1),1,true)
+		font:DrawStringScaledUTF8(rot,pos.X-8,pos.Y-1,0.5,0.5,Menu.wma.DefTextColor,1,true)
 	end, 0)
 	vG.Y = vG.Y+2 + self.y
 	
+
+	AnimTest.subnames.blend = "Anim_Test_blendmode"   --editor/blend mode test
+	local vG = GetPlace(AnimTest.name)/1
+	AnimTest.BlendData = {layer = {}, id = 0}
+	local blendd = AnimTest.BlendData
+
+	------------------------------------------------------------------------------------
+	------------------------------------------------------------------------------------
+	local function swaplayercallback()
+		if not blendd.layer[blendd.id] then
+			blendd.layer[blendd.id] = {}
+		end
+		blendd.setmodebtn.text = tostring(blendd.layer[blendd.id].m or 1)
+
+		local bm = AnimTest.anim.spr:GetLayer(blendd.id):GetBlendMode()
+		blendd.flag1.text = tostring(bm.Flag1)
+		blendd.flag2.text = tostring(bm.Flag2)
+		blendd.flag3.text = tostring(bm.Flag3)
+		blendd.flag4.text = tostring(bm.Flag4)
+	end
+	------------------------------------------------------------------------------------
+	------------------------------------------------------------------------------------
+
+	local self
+	self = Menu.wma.AddButton(AnimTest.name, "blendmodeset", Vector(138,vG.Y+5), 38, 12, nil, function(button) 
+		if button ~= 0 then return end
+		for i,k in pairs(AnimTest.subnames) do
+			AnimTest.wind:SetSubMenuVisible(k, false)
+		end
+		AnimTest.wind:SetSubMenuVisible(AnimTest.subnames.blend, true)
+		AnimTest.wind:SetSize(Vector(AnimTest.size.X, AnimTest.size.Y + 34))
+
+		swaplayercallback()
+	end,
+	function(pos)
+		Menu.wma.RenderCustomButton(pos, Vector(self.x, self.y), self.IsSelected)
+		font:DrawStringScaledUTF8(GetStr("blend"),pos.X+18,pos.Y+1,0.5,0.5,Menu.wma.DefTextColor,1,true)
+	end)
+	vG.Y = vG.Y+8 + self.y
+
+	local toleftarrow = GenSprite("gfx/editor/ui copy.anm2","play btn")
+	toleftarrow.FlipX = true
+	toleftarrow.Offset = Vector(-16,0)
+	local self
+	self = Menu.wma.AddButton(AnimTest.subnames.blend, "layersetL", Vector(12,vG.Y), 16, 16, toleftarrow, function(button) 
+		if button ~= 0 then return end
+		blendd.id = math.max(0, blendd.id - 1)
+		swaplayercallback()
+	end)
+	
+	local torightarrow = GenSprite("gfx/editor/ui copy.anm2","play btn")
+	local self
+	self = Menu.wma.AddButton(AnimTest.subnames.blend, "layersetR", Vector(30+54+2,vG.Y), 16, 16, torightarrow, function(button) 
+		if button ~= 0 then return end
+		local minl = AnimTest.anim.spr:GetLayerCount() - 1
+		blendd.id = math.min(minl, blendd.id + 1)
+		swaplayercallback()
+	end)
+
+	local self
+	self = Menu.wma.AddTextBox(AnimTest.subnames.blend, "layerset", Vector(30,vG.Y), Vector(54, 16), nil, 
+	function(result) 
+		if not result then
+			return true
+		else
+			if not tonumber(result) then
+				return GetStr("incorrectNumber")
+			end
+			local minl = AnimTest.anim.spr:GetLayerCount() - 1
+			blendd.id = math.max(0, math.min(minl, math.floor(result)))
+			self.text = result
+			swaplayercallback()
+			return false
+		end
+	end, true,
+	function(pos)
+		local minl = AnimTest.anim.spr:GetLayerCount() - 1
+		blendd.id = math.max(0, math.min(minl, blendd.id))
+		font:DrawStringScaledUTF8(GetStr("layer") .. ":", pos.X+4, pos.Y+3 ,0.5,0.5,Menu.wma.DefTextColor,0,false)
+		self.text = blendd.id -- string.format("%.2f", blendd.id)
+	end)
+	self.text = blendd.id
+	self.textoffset = Vector(40,0)
+
+	vG.Y = vG.Y+24
+
+	blendd.setmodebtn = Menu.wma.AddCounter(AnimTest.subnames.blend, "setblendmode", Vector(72,vG.Y), 40, nil,
+	Menu.wma.DefNumberResultCheck(function(result)
+		
+		return 
+	end),
+	function(pos)
+		font:DrawStringScaledUTF8("blendmode", pos.X-60, pos.Y+2, .5, .5, Menu.wma.DefTextColor,0,false)
+		--if self._cachetext ~= self.text then
+		--	AnimTest.anim.spr:GetLayer(blendd.id):GetBlendMode():SetMode(tonumber(self.text))
+		--end
+	end, true, 1, 
+	function (btn)
+		if btn ~= 0 then return end
+		blendd.layer[blendd.id].m = math.max(0, (blendd.layer[blendd.id].m or 1) - 1)
+		AnimTest.anim.spr:GetLayer(blendd.id):GetBlendMode():SetMode( blendd.layer[blendd.id].m )
+		blendd.setmodebtn.text = tostring(blendd.layer[blendd.id].m)
+
+		swaplayercallback()
+	end, 
+	function (btn)
+		if btn ~= 0 then return end
+		blendd.layer[blendd.id].m = math.min(2, (blendd.layer[blendd.id].m or 1) + 1)
+		AnimTest.anim.spr:GetLayer(blendd.id):GetBlendMode():SetMode( blendd.layer[blendd.id].m )
+		blendd.setmodebtn.text = tostring(blendd.layer[blendd.id].m)
+
+		swaplayercallback()
+	end, true)
+	vG.Y = vG.Y+22
+
+
+	-----------------------------		editor/blend mode test
+
+	-- 1:
+	-- 2: 1 7 3 5
+	-- 3: 4 3 3 1
+
+	-- вверх: 4 5 2 5
+
+
+	blendd.flag1 = Menu.wma.AddCounter(AnimTest.subnames.blend, "setflag1", Vector(52,vG.Y), 40, nil,
+	Menu.wma.DefNumberResultCheck(function(result)
+		local bm = AnimTest.anim.spr:GetLayer(blendd.id):GetBlendMode()
+		bm.Flag1 = math.floor(result)
+		blendd.flag1.text = tostring(bm.Flag1)
+		return false
+	end),
+	function(pos)
+		font:DrawStringScaledUTF8("flag 1: ", pos.X-40, pos.Y+2, .5, .5, Menu.wma.DefTextColor,0,false)
+	end, true, 1, 
+	function (btn)
+		if btn ~= 0 then return end
+		local bm = AnimTest.anim.spr:GetLayer(blendd.id):GetBlendMode()
+		blendd.layer[blendd.id].f1 = math.max(0, bm.Flag1 - 1)
+		bm.Flag1 = blendd.layer[blendd.id].f1
+		blendd.flag1.text = tostring(bm.Flag1)
+	end, 
+	function (btn)
+		if btn ~= 0 then return end
+		local bm = AnimTest.anim.spr:GetLayer(blendd.id):GetBlendMode()
+		blendd.layer[blendd.id].f1 = math.min(20, bm.Flag1 + 1)
+		bm.Flag1 = blendd.layer[blendd.id].f1
+		blendd.flag1.text = tostring(bm.Flag1)
+	end)
+	vG.Y = vG.Y+18
+
+	blendd.flag2 = Menu.wma.AddCounter(AnimTest.subnames.blend, "setflag2", Vector(52,vG.Y), 40, nil,
+	Menu.wma.DefNumberResultCheck(function(result)
+		local bm = AnimTest.anim.spr:GetLayer(blendd.id):GetBlendMode()
+		bm.Flag2 = math.floor(result)
+		blendd.flag2.text = tostring(bm.Flag2)
+		return false
+	end),
+	function(pos)
+		font:DrawStringScaledUTF8("flag 2: ", pos.X-40, pos.Y+2, .5, .5, Menu.wma.DefTextColor,0,false)
+	end, true, 1, 
+	function (btn)
+		if btn ~= 0 then return end
+		local bm = AnimTest.anim.spr:GetLayer(blendd.id):GetBlendMode()
+		blendd.layer[blendd.id].f2 = math.max(0, bm.Flag2 - 1)
+		bm.Flag2 = blendd.layer[blendd.id].f2
+		blendd.flag2.text = tostring(bm.Flag2)
+	end, 
+	function (btn)
+		if btn ~= 0 then return end
+		local bm = AnimTest.anim.spr:GetLayer(blendd.id):GetBlendMode()
+		blendd.layer[blendd.id].f2 = math.min(20, bm.Flag2 + 1)
+		bm.Flag2 = blendd.layer[blendd.id].f2
+		blendd.flag2.text = tostring(bm.Flag2)
+	end)
+	vG.Y = vG.Y+18
+
+	blendd.flag3 = Menu.wma.AddCounter(AnimTest.subnames.blend, "setflag3", Vector(52,vG.Y), 40, nil,
+	Menu.wma.DefNumberResultCheck(function(result)
+		local bm = AnimTest.anim.spr:GetLayer(blendd.id):GetBlendMode()
+		bm.Flag3 = math.floor(result)
+		blendd.flag3.text = tostring(bm.Flag3)
+		return false
+	end),
+	function(pos)
+		font:DrawStringScaledUTF8("flag 3: ", pos.X-40, pos.Y+2, .5, .5, Menu.wma.DefTextColor,0,false)
+	end, true, 1, 
+	function (btn)
+		if btn ~= 0 then return end
+		local bm = AnimTest.anim.spr:GetLayer(blendd.id):GetBlendMode()
+		blendd.layer[blendd.id].f3 = math.max(0, bm.Flag3 - 1)
+		bm.Flag3 = blendd.layer[blendd.id].f3
+		blendd.flag3.text = tostring(bm.Flag3)
+	end, 
+	function (btn)
+		if btn ~= 0 then return end
+		local bm = AnimTest.anim.spr:GetLayer(blendd.id):GetBlendMode()
+		blendd.layer[blendd.id].f3 = math.min(20, bm.Flag3 + 1)
+		bm.Flag3 = blendd.layer[blendd.id].f3
+		blendd.flag3.text = tostring(bm.Flag3)
+	end)
+	vG.Y = vG.Y+18
+
+	blendd.flag4 = Menu.wma.AddCounter(AnimTest.subnames.blend, "setflag4", Vector(52,vG.Y), 40, nil,
+	Menu.wma.DefNumberResultCheck(function(result)
+		local bm = AnimTest.anim.spr:GetLayer(blendd.id):GetBlendMode()
+		bm.Flag4 = math.floor(result)
+		blendd.flag4.text = tostring(bm.Flag4)
+		return false
+	end),
+	function(pos)
+		font:DrawStringScaledUTF8("flag 4: ", pos.X-40, pos.Y+2, .5, .5, Menu.wma.DefTextColor,0,false)
+	end, true, 1, 
+	function (btn)
+		if btn ~= 0 then return end
+		local bm = AnimTest.anim.spr:GetLayer(blendd.id):GetBlendMode()
+		blendd.layer[blendd.id].f4 = math.max(0, bm.Flag4 - 1)
+		bm.Flag4 = blendd.layer[blendd.id].f4
+		blendd.flag4.text = tostring(bm.Flag4)
+	end, 
+	function (btn)
+		if btn ~= 0 then return end
+		local bm = AnimTest.anim.spr:GetLayer(blendd.id):GetBlendMode()
+		blendd.layer[blendd.id].f4 = math.min(20, bm.Flag4 + 1)
+		bm.Flag4 = blendd.layer[blendd.id].f4
+		blendd.flag4.text = tostring(bm.Flag4)
+	end)
+	vG.Y = vG.Y+22
+
+
 end
 
 do
@@ -2306,7 +2682,7 @@ do
 	--WORSTDEBUGMENU.AddButtonOnDebugBar(buttonName, size, sprite, pressFunc, renderFunc)
 
 	Menu.ItemList = {name = "Item_List", size = Vector(250,156), btn = {}, poisk = {text = ""}, curtype = "col", list = {}, page = 1,
-		MainList = {}, playerindex = 0, activeslot = 0, extrafilter = {MinQual=0, MaxQual=4},
+		MainList = {}, playerindex = 0, activeslot = 0, extrafilter = {MinQual=0, MaxQual=4}, moddedIds = {},
 		subnames = {
 			trink_e = "Item_List_trinkets", filter = "Item_List_filter", 
 			fil_col = "Item_List_filter_col", fil_trink = "Item_List_filter_trink", fil_card = "Item_List_filter_card"
@@ -2336,6 +2712,7 @@ do
 
 	ItemList.IsGen = false
 	function ItemList.PreGenList()
+		local typ = IsType()
 		if ItemList.extrafilter then
 			if ItemList.extrafilter.OnlyType then
 				local breake = true
@@ -2348,14 +2725,72 @@ do
 			end
 		end
 		local extrafilter = ItemList.extrafilter
-		if ItemList.MainList[IsType()] and ItemList.poisk.text == "" then
-			ItemList.list[IsType()] = ItemList.MainList[IsType()]
+		if ItemList.MainList[typ] and ItemList.poisk.text == "" then
+			ItemList.list[typ] = ItemList.MainList[typ]
 		end
 		local poisktext = ItemList.poisk.text
+
+		local moddedIds
+		local ModIdToName
+		if REPENTOGON then
+			if not ItemList.moddedIds[typ] then
+				ItemList.moddedIds[typ] = {}
+				ItemList.SourceModIdToName = {}
+				moddedIds = ItemList.moddedIds[typ]
+				ModIdToName = ItemList.SourceModIdToName
+				--local modname = {}
+
+				local entry = typ == "col" and XMLNode.ITEM
+					or typ == "trin" and XMLNode.TRINKET
+					or typ == "card" and XMLNode.CARD
+				for i = 1, itemsize do
+					local xmlConf = XMLData.GetEntryById(entry, i)
+					if xmlConf then
+						local source --= tonumber(string.sub(xmlConf.sourceid, 1, 1)) 
+						--	and XMLData.GetModById(tonumber(xmlConf.sourceid)) 
+						--	or xmlConf.sourceid
+
+						if ItemList.SourceModIdToName[xmlConf.sourceid] then
+							source = ItemList.SourceModIdToName[xmlConf.sourceid]
+						else
+							local modConf = tonumber(string.sub(xmlConf.sourceid, 1, 1)) 
+								and XMLData.GetModById(tonumber(xmlConf.sourceid))
+							
+							if type(modConf) == "table" then
+								if not ModIdToName[xmlConf.sourceid] then
+									local name = modConf.name
+									if utf8.len(name) > 25 then
+										--name = Menu.wma.utf8_Sub(name, 1, 25) .. " \n " .. Menu.wma.utf8_Sub(name, 26)
+										name = Menu.wma.stringMultiline(name, 100)
+										--name[#name] = name[#name]:sub(1, -2)
+									end
+									ModIdToName[xmlConf.sourceid] = name
+								end
+								source = ModIdToName[xmlConf.sourceid] or xmlConf.sourceid
+							end
+						end
+
+						
+
+						moddedIds[tonumber(xmlConf.id)] = {source, xmlConf.sourceid}
+						--for j,k in pairs(xmlConf) do
+						--	print(j,k)
+						--end
+					end
+				end
+			else
+				moddedIds = ItemList.moddedIds[typ]
+			end
+		end
+		local sss = ""
+		--for i,k in pairs(moddedIds) do
+			--sss = sss .. "  " .. i .. ":" .. k
+		--end
+		--print(sss)
 		
-		ItemList.list[IsType()] = {}
-		local list = ItemList.list[IsType()]
-		if IsType() == "col" then
+		ItemList.list[typ] = {}
+		local list = ItemList.list[typ]
+		if typ == "col" then
 			for i=1, itemsize do
 				local id = i
 				local item = config:GetCollectible(id)
@@ -2381,14 +2816,46 @@ do
 					end
 					if addthit then
 						--local conf = config:GetCollectible(id)
-						local hint = "ID: " .. id .." \n " 
-						.. "TYPE: " .. (ItemTypeToStr[item.Type][Options.Language] or ItemTypeToStr[item.Type].en) .." \n " .." \n " 
-						.. itemname .." \n " .. desc
-						list[#list+1] = {Name = itemname, Description = desc, id = id, hint = hint}
+						if REPENTOGON then
+							local truename = item.Name:sub(1,1) == "#" and Isaac.GetLocalizedString("Items", item.Name, ItemList.SelLang)
+								or itemname
+							local truedesc = item.Description:sub(1,1) == "#" and Isaac.GetLocalizedString("Items", item.Description, ItemList.SelLang)
+								or desc
+							
+							local source = moddedIds and moddedIds[id] and moddedIds[id][1]
+							local fromMod = ""
+							if source == "BaseGame" then
+								--source = GetStr(source)
+							else
+								local modname = ""
+								if type(source) == "table" then
+									for strid=1, #source do
+										modname = modname .. source[strid] .. " \n "
+									end
+									modname = modname:sub(1, -3)
+								else
+									modname = source
+								end
+								fromMod = source and (GetStr("FromMod") .. ": ".. modname .. " \n ") or ""
+							end
+							--local fromMod = source and (GetStr("FromMod") .. ": ".. source .. " \n ") or ""
+
+							local hint = "ID: " .. id .." \n " 
+							.. "TYPE: " .. (ItemTypeToStr[item.Type][Options.Language] or ItemTypeToStr[item.Type].en) .." \n " 
+							.. fromMod .. " \n "
+							local tranlatednamedesc = truename .." \n " .. truedesc
+							list[#list+1] = {Name = itemname, Description = desc, id = id, hint = hint, namedesc = tranlatednamedesc,
+								sourceId = source and moddedIds[id][2]}
+						else
+							local hint = "ID: " .. id .." \n " 
+							.. "TYPE: " .. (ItemTypeToStr[item.Type][Options.Language] or ItemTypeToStr[item.Type].en) .." \n " .." \n " 
+							.. itemname .." \n " .. desc
+							list[#list+1] = {Name = itemname, Description = desc, id = id, hint = hint}
+						end
 					end
 				end
 			end
-		elseif IsType() == "trin" then
+		elseif typ == "trin" then
 			for i=1, trinkesize-1 do
 				local id = i
 				local item = config:GetTrinket(id)
@@ -2403,14 +2870,45 @@ do
 					or string.find(string.lower(itemname), string.lower(poisktext))
 					or string.find(string.lower(desc), string.lower(poisktext)) then
 						local conf = config:GetTrinket(id)
-						local hint = "ID: " .. id .." \n " 
-						.. "TYPE: " .. (ItemTypeToStr[conf.Type][Options.Language] or ItemTypeToStr[conf.Type].en) .." \n " .." \n " 
-						.. itemname .." \n " .. desc
-						list[#list+1] = {Name = itemname, Description = desc, id = id, hint = hint}
+						if REPENTOGON then
+							local truename = item.Name:sub(1,1) == "#" and Isaac.GetLocalizedString("Items", item.Name, ItemList.SelLang)
+								or itemname
+							local truedesc = item.Description:sub(1,1) == "#" and Isaac.GetLocalizedString("Items", item.Description, ItemList.SelLang)
+								or desc
+
+							local source = moddedIds and moddedIds[id] and moddedIds[id][1]
+							local fromMod = ""
+							if source == "BaseGame" then
+								--source = GetStr(source)
+							else
+								local modname = ""
+								if type(source) == "table" then
+									for strid=1, #source do
+										modname = modname .. source[strid] .. " \n "
+									end
+									modname = modname:sub(1, -3)
+								else
+									modname = source
+								end
+								fromMod = source and (GetStr("FromMod") .. ": ".. modname .. " \n ") or ""
+							end
+
+							local hint = "ID: " .. id .." \n " 
+							.. "TYPE: " .. (ItemTypeToStr[item.Type][Options.Language] or ItemTypeToStr[item.Type].en) .." \n " --.." \n "
+							.. fromMod .. " \n "
+							local tranlatednamedesc = truename .." \n " .. truedesc
+							list[#list+1] = {Name = itemname, Description = desc, id = id, hint = hint, namedesc = tranlatednamedesc,
+								sourceId = source and moddedIds[id][2]}
+						else
+							local hint = "ID: " .. id .." \n " 
+							.. "TYPE: " .. (ItemTypeToStr[conf.Type][Options.Language] or ItemTypeToStr[conf.Type].en) .." \n " .." \n " 
+							.. itemname .." \n " .. desc
+							list[#list+1] = {Name = itemname, Description = desc, id = id, hint = hint}
+						end
 					end
 				end
 			end
-		elseif IsType() == "card" then
+		elseif typ == "card" then
 			for i=1, cardsize-1 do
 				local id = i
 				local item = config:GetCard(id)
@@ -2425,16 +2923,46 @@ do
 					or string.find(string.lower(itemname), string.lower(poisktext))
 					or string.find(string.lower(desc), string.lower(poisktext)) then
 						local conf = config:GetCard(id)
-						local hint = "ID: " .. id .." \n " .." \n "
-						.. itemname .." \n " .. desc
-						list[#list+1] = {Name = itemname, Description = desc, id = id, hint = hint}
+						if REPENTOGON then
+							local truename = item.Name:sub(1,1) == "#" and Isaac.GetLocalizedString("PocketItems", item.Name, ItemList.SelLang)
+								or itemname
+							local truedesc = item.Description:sub(1,1) == "#" and Isaac.GetLocalizedString("PocketItems", item.Description, ItemList.SelLang)
+								or desc
+
+							local source = moddedIds and moddedIds[id] and moddedIds[id][1]
+							local fromMod = ""
+							if source == "BaseGame" then
+								--source = GetStr(source)
+							else
+								local modname = ""
+								if type(source) == "table" then
+									for strid=1, #source do
+										modname = modname .. source[strid] .. " \n "
+									end
+									modname = modname:sub(1, -3)
+								else
+									modname = source
+								end
+								fromMod = source and (GetStr("FromMod") .. ": ".. modname .. " \n ") or ""
+							end
+
+							local hint = "ID: " .. id .." \n " --.." \n "
+							.. fromMod .. " \n "
+							local tranlatednamedesc = truename .." \n " .. truedesc
+							list[#list+1] = {Name = itemname, Description = desc, id = id, hint = hint, namedesc = tranlatednamedesc,
+								sourceId = source and moddedIds[id][2]}
+						else
+							local hint = "ID: " .. id .." \n " .." \n "
+							.. itemname .." \n " .. desc
+							list[#list+1] = {Name = itemname, Description = desc, id = id, hint = hint}
+						end
 					end
 				end
 			end
 		end
-		if not ItemList.MainList[IsType()] then
+		if not ItemList.MainList[typ] then
 			--ItemList.IsGen = true
-			ItemList.MainList[IsType()] = TabDeepCopy(ItemList.list[IsType()])
+			ItemList.MainList[typ] = TabDeepCopy(ItemList.list[typ])
 		end
 	end
 
@@ -2447,11 +2975,77 @@ do
 				local path = "mods/" .. ItemList.ModsPath[i] .. "/content/gfx/ui_cardfronts.anm2"
 				local spr = GenSprite(path, name)
 				if spr:GetAnimation() == name then
+					ItemList.CardIdToPath[id] = ItemList.ModsPath[i]
 					return spr
 				end
 			end
 		end
 		return nilspr
+	end
+
+	function ItemList.GenPageBtns()
+		local typ = IsType()
+		local nums = #ItemList.list[typ]
+		local pagecount = math.ceil(nums/70)
+
+		local blockPre = ItemList.page <= 1
+		--if ItemList.page > 1 then
+			local self
+			self = Menu.wma.AddButton(ItemList.name, "pre", Vector(10,130), 16, 16, UIs.PrePage16(), function(button) 
+				if button ~= 0 then return end
+				ItemList.page = ItemList.page - 1
+				ItemList.GetCollectibleList(ItemList.page)
+			end, nil, blockPre)
+			if blockPre then
+				local gray = Color(1,1,1,1)
+				gray:SetColorize(0.8,0.8,0.9,1)
+				self.spr.Color = gray
+			end
+		--else
+		--	Menu.wma.RemoveButton(ItemList.name, "pre")
+		--end
+		
+		local blockNext = ItemList.page >= pagecount
+		--if ((ItemList.page) * 70) < nums then
+			local self
+			self = Menu.wma.AddButton(ItemList.name, "next", Vector(28,130), 16, 16, UIs.NextPage16(), function(button) 
+				if button ~= 0 then return end
+				ItemList.page = ItemList.page + 1
+				ItemList.GetCollectibleList(ItemList.page)
+			end, nil, blockNext)
+			if blockNext then
+				local gray = Color(1,1,1,1)
+				gray:SetColorize(0.8,0.8,0.9,1)
+				self.spr.Color = gray
+			end
+		--else
+		--	Menu.wma.RemoveButton(ItemList.name, "next")
+		--end
+
+		local lists = {}
+		for i=1, pagecount do
+			lists[i] = ""
+		end
+
+		--if nums > 70 then
+			local self
+			self = Menu.wma.AddButton(ItemList.name, "counter", Vector(46,130), 16, 16, nilspr, function(button) 
+				if button ~= 0 then return end
+
+				if pagecount > 2 then
+					Menu.wma.FastCreatelist(ItemList.name, self.pos - ItemList.wind.pos, 16, lists, 
+					function(button, arg1)
+						if button ~= 0 then return end
+						ItemList.page = arg1
+						ItemList.GetCollectibleList(ItemList.page)
+					end, true)
+				end
+			end, 
+			function (pos, visible)
+				local str = ItemList.page .. "/" .. pagecount
+				Menu.wma.DrawText(0, str, pos.X+1, pos.Y+2, 0.5, 0.5)
+			end)
+		--end
 	end
 	
 
@@ -2536,6 +3130,9 @@ do
 						spr:Render(pos)
 					end)
 					local text = item.hint
+					if REPENTOGON then
+						text = text .. item.namedesc
+					end
 					--[[if typ == "col" or typ == "trin" then
 						local typeitem = ItemTypeToStr[conf.Type][Options.Language] or ItemTypeToStr[conf.Type].en
 						text = "ID: " .. id .." \n " 
@@ -2550,6 +3147,9 @@ do
 				end
 			end
 		end
+
+		ItemList.GenPageBtns()
+		--[[
 		if ItemList.page > 1 then
 			local self
 			self = Menu.wma.AddButton(ItemList.name, "pre", Vector(10,130), 16, 16, UIs.PrePage16(), function(button) 
@@ -2571,6 +3171,7 @@ do
 		else
 			Menu.wma.RemoveButton(ItemList.name, "next")
 		end
+		]]
 	end
 
 	Menu:AddCallback(ModCallbacks.MC_POST_UPDATE, function()
@@ -2650,6 +3251,8 @@ do
 
 		ItemList.GetCollectibleList(ItemList.page)
 		
+		ItemList.GenPageBtns()
+		--[[
 		if ItemList.page > 1 then
 			local self
 			self = Menu.wma.AddButton(ItemList.name, "pre", Vector(10,130), 16, 16, UIs.PrePage16(), function(button) 
@@ -2665,14 +3268,15 @@ do
 				ItemList.page = ItemList.page + 1
 				ItemList.GetCollectibleList(ItemList.page)
 			end)
-		end
+		end]]
+
 	end, nil)
 	Menu.wma.ButtonSetHintText("__debug_menu", "Item_List_Menu", GetStr("Item_List_Menu_hintText"))
 
 	local self
 	self = Menu.wma.AddButton(ItemList.name, "поиск", Vector(10,12), 16, 16, UIs.poisk(), function(button) 
 		if button ~= 0 then return end
-		ItemList.page = 1
+		--ItemList.page = 1
 		ItemList.PreGenList()
 		ItemList.GetCollectibleList(ItemList.page)
 	end)
@@ -2728,19 +3332,19 @@ do
 	end)
 
 	local self
-	self = Menu.wma.AddButton(ItemList.name, "playerindex", Vector(28+34,130), 52, 16, nil, function(button) 
+	self = Menu.wma.AddButton(ItemList.name, "playerindex", Vector(62 + 16+32,130), 52, 16, nil, function(button) 
 		if button ~= 0 then return end
 		ItemList.playerindex = (ItemList.playerindex + 1) % (game:GetNumPlayers())
 	end,
 	function(pos)
 		Menu.wma.RenderCustomButton(pos, Vector(self.x, self.y), self.IsSelected)
-		font:DrawStringScaledUTF8(GetStr("playerindex") .. " " .. ItemList.playerindex, pos.X+2,pos.Y+2,.5,.5,KColor(0.1,0.1,0.2,1),0,false)
+		font:DrawStringScaledUTF8(GetStr("playerindex") .. " " .. ItemList.playerindex, pos.X+2,pos.Y+2,.5,.5,Menu.wma.DefTextColor,0,false)
 	end)
 
 	UIs.ActiveSlot = GenSprite("gfx/editor/ui copy2.anm2","slots")
 	UIs.ActiveSlotOverlay = GenSprite("gfx/editor/ui copy2.anm2","slots_ov")
 	local self
-	self = Menu.wma.AddButton(ItemList.name, "activeslot", Vector(116,130), 16, 16, UIs.ActiveSlot, function(button) 
+	self = Menu.wma.AddButton(ItemList.name, "activeslot", Vector(132+32,130), 16, 16, UIs.ActiveSlot, function(button) 
 		if button ~= 0 then return end
 		if ItemList.predestal then
 			ItemList.predestal = not ItemList.predestal
@@ -2764,7 +3368,7 @@ do
 
 	UIs.ItemRock = GenSprite("gfx/editor/ui copy2.anm2","пьедистал")
 	local self
-	self = Menu.wma.AddButton(ItemList.name, "onrock", Vector(134,130), 16, 16, UIs.ItemRock, function(button) 
+	self = Menu.wma.AddButton(ItemList.name, "onrock", Vector(150+32,130), 16, 16, UIs.ItemRock, function(button) 
 		if button ~= 0 then return end
 		ItemList.predestal = not ItemList.predestal
 		UIs.ActiveSlot.Color = Color(1,1,1,1)
@@ -2833,14 +3437,14 @@ do
 	end, false,
 	function(pos)
 		--Menu.wma.RenderCustomTextBox(pos, Vector(self.x, self.y), self.IsSelected)
-		--font:DrawStringScaledUTF8("Y",pos.X-13,pos.Y-2,1,1,KColor(0.1,0.1,0.2,1),0,false)
+		--font:DrawStringScaledUTF8("Y",pos.X-13,pos.Y-2,1,1,Menu.wma.DefTextColor,0,false)
 	end)
 	self.text = ""
 	--ItemList.subnames.trink_e
 
 	UIs.GulpedTrink = GenSprite("gfx/editor/ui copy2.anm2","gulp_trink")
 	local self
-	self = Menu.wma.AddButton(ItemList.subnames.trink_e, "gulp", Vector(152,130), 16, 16, UIs.GulpedTrink, function(button) 
+	self = Menu.wma.AddButton(ItemList.subnames.trink_e, "gulp", Vector(168+32,130), 16, 16, UIs.GulpedTrink, function(button) 
 		if button ~= 0 then return end
 		ItemList.gulp = not ItemList.gulp
 	end,
@@ -2852,7 +3456,7 @@ do
 	Menu.wma.ButtonSetHintText(ItemList.subnames.trink_e, "gulp", GetStr("itemlist_gulp"))
 	UIs.GoldemTrink = GenSprite("gfx/editor/ui copy2.anm2","gold_trink")
 	local self
-	self = Menu.wma.AddButton(ItemList.subnames.trink_e, "gold", Vector(170,130), 16, 16, UIs.GoldemTrink, function(button) 
+	self = Menu.wma.AddButton(ItemList.subnames.trink_e, "gold", Vector(186+32,130), 16, 16, UIs.GoldemTrink, function(button) 
 		if button ~= 0 then return end
 		ItemList.goldtrink = not ItemList.goldtrink
 	end,
@@ -2916,14 +3520,14 @@ do
 	end, function(pos)
 		Menu.wma.RenderCustomButton(pos, Vector(self.x,self.y), self.IsSelected)
 		local text = ItemTypeToStr[ItemType.ITEM_PASSIVE][Options.Language] or ItemTypeToStr[ItemType.ITEM_PASSIVE].en
-		--font:DrawStringScaledUTF8(text, pos.X +1, pos.Y, .5, .5, KColor(0.1,0.1,0.2,1),0,false)
+		--font:DrawStringScaledUTF8(text, pos.X +1, pos.Y, .5, .5, Menu.wma.DefTextColor,0,false)
 		if not self.Show then
 			--UIs.Var_Sel:Render(pos+Vector(-5,-2))
 			font:DrawStringScaledUTF8(text, pos.X +1, pos.Y+1, .5, .5, KColor(0.4,0.5,0.7,1),0,false)
 		else
-			font:DrawStringScaledUTF8(text, pos.X +1, pos.Y+1, .5, .5, KColor(0.1,0.1,0.2,1),0,false)
+			font:DrawStringScaledUTF8(text, pos.X +1, pos.Y+1, .5, .5, Menu.wma.DefTextColor,0,false)
 		end
-		font:DrawStringScaledUTF8(GetStr("ByType"), pos.X, pos.Y-12, .5, .5, KColor(0.1,0.1,0.2,1),0,false)
+		font:DrawStringScaledUTF8(GetStr("ByType"), pos.X, pos.Y-12, .5, .5, Menu.wma.DefTextColor,0,false)
 	end)
 	rlvec.Y = rlvec.Y + 11
 
@@ -2943,12 +3547,12 @@ do
 	end, function(pos)
 		Menu.wma.RenderCustomButton(pos, Vector(self.x,self.y), self.IsSelected)
 		local text = ItemTypeToStr[ItemType.ITEM_ACTIVE][Options.Language] or ItemTypeToStr[ItemType.ITEM_ACTIVE].en
-		--font:DrawStringScaledUTF8(text, pos.X +1, pos.Y, .5, .5, KColor(0.1,0.1,0.2,1),0,false)
+		--font:DrawStringScaledUTF8(text, pos.X +1, pos.Y, .5, .5, Menu.wma.DefTextColor,0,false)
 		if not self.Show then
 			--UIs.Var_Sel:Render(pos+Vector(-5,-2))
 			font:DrawStringScaledUTF8(text, pos.X +1, pos.Y+1, .5, .5, KColor(0.4,0.5,0.7,1),0,false)
 		else
-			font:DrawStringScaledUTF8(text, pos.X +1, pos.Y+1, .5, .5, KColor(0.1,0.1,0.2,1),0,false)
+			font:DrawStringScaledUTF8(text, pos.X +1, pos.Y+1, .5, .5, Menu.wma.DefTextColor,0,false)
 		end
 	end)
 	rlvec.Y = rlvec.Y + 11
@@ -2969,12 +3573,12 @@ do
 	end, function(pos)
 		Menu.wma.RenderCustomButton(pos, Vector(self.x,self.y), self.IsSelected)
 		local text = ItemTypeToStr[ItemType.ITEM_FAMILIAR][Options.Language] or ItemTypeToStr[ItemType.ITEM_FAMILIAR].en
-		--font:DrawStringScaledUTF8(text, pos.X +1, pos.Y, .5, .5, KColor(0.1,0.1,0.2,1),0,false)
+		--font:DrawStringScaledUTF8(text, pos.X +1, pos.Y, .5, .5, Menu.wma.DefTextColor,0,false)
 		if not self.Show then
 			--UIs.Var_Sel:Render(pos+Vector(-5,-2))
 			font:DrawStringScaledUTF8(text, pos.X +1, pos.Y+1, .5, .5, KColor(0.4,0.5,0.7,1),0,false)
 		else
-			font:DrawStringScaledUTF8(text, pos.X +1, pos.Y+1, .5, .5, KColor(0.1,0.1,0.2,1),0,false)
+			font:DrawStringScaledUTF8(text, pos.X +1, pos.Y+1, .5, .5, Menu.wma.DefTextColor,0,false)
 		end
 	end)
 	rlvec.Y = rlvec.Y + 14
@@ -2993,7 +3597,7 @@ do
 		if self.Show then
 			self.flag:Render(pos)
 		end
-		font:DrawStringScaledUTF8(GetStr("quality"), pos.X+13, pos.Y+.5, .5, .5, KColor(0.1,0.1,0.2,1),0,false)
+		font:DrawStringScaledUTF8(GetStr("quality"), pos.X+13, pos.Y+.5, .5, .5, Menu.wma.DefTextColor,0,false)
 	end)
 	self.flag = UIs.Flag() self.flag.Offset = Vector(-2,-3)
 	rlvec.Y = rlvec.Y + 20
@@ -3017,7 +3621,7 @@ do
 		return toret
 	end),
 	function(pos)
-		font:DrawStringScaledUTF8(GetStr("min"), pos.X+1, pos.Y-8, .5, .5, KColor(0.1,0.1,0.2,1),0,false)
+		font:DrawStringScaledUTF8(GetStr("min"), pos.X+1, pos.Y-8, .5, .5, Menu.wma.DefTextColor,0,false)
 	end, true, 0, 0, 4, true)
 
 	local self
@@ -3039,7 +3643,7 @@ do
 		return toret
 	end),
 	function(pos)
-		font:DrawStringScaledUTF8(GetStr("max"), pos.X+1, pos.Y-8, .5, .5, KColor(0.1,0.1,0.2,1),0,false)
+		font:DrawStringScaledUTF8(GetStr("max"), pos.X+1, pos.Y-8, .5, .5, Menu.wma.DefTextColor,0,false)
 	end, true, 4, 0, 4, true)
 
 
@@ -3050,6 +3654,34 @@ do
 	local self
 	self = Menu.wma.AddButton(ItemList.subnames.fil_card, "nil", Vector(230,12), 16, 16, nilspr, function(button) 
 	end)
+
+	if REPENTOGON then
+		function ItemList.UpdateNameDescItems()
+			
+		end
+
+
+		local langs = {"en","ru","es","de","fr","jp","kr","zh"}
+		ItemList.SelLang = Options.Language
+
+		local self
+		self = Menu.wma.AddButton(ItemList.name, "language", Vector(28+16+48,130), 16, 16, nilspr, function(button)
+			for i = 1, #langs do
+				local la = langs[i]
+				if la == ItemList.SelLang then
+					ItemList.SelLang = langs[(i) % #langs + 1]
+					ItemList.PreGenList()
+					ItemList.GetCollectibleList(ItemList.page)
+					break
+				end
+			end
+		end,function(pos,visible)
+			Menu.wma.RenderCustomButton2(self.pos, self)
+			font:DrawStringScaledUTF8(ItemList.SelLang,pos.X+7, pos.Y+2, .5, .5, Menu.wma.DefTextColor,1,true)
+		end)
+	end
+
+
 
 
 	Menu:AddCallback("WORSTDEBUGMENU_GET_MODS_PATH", function()
@@ -3133,8 +3765,49 @@ do
 			goto loop
 		end
 	end
+
+	local function mkeytablec(t, a)
+		for i=1,#t do
+			if t[i] == a then
+				return false
+			end
+		end
+		return true
+	end
+
+	function ItemList.TryGenCardpathListREPENTOGONVERSION()
+		local calls = Isaac.GetCallbacks(ModCallbacks.MC_USE_CARD)
+		ItemList.CardIdToPath = {}
+		ItemList.ModsPath = {}
+		local mods = {}
+
+		local precalls = Isaac.GetCallbacks("WORSTDEBUGMENU_GET_MODS_PATH")
+		for i=1, #precalls do
+			local cal = precalls[i]
+			local result, result2 = cal.Function()
+			if type(result2) == "string" then
+				mods[result] = {path = result2, ids = {}}
+				ItemList.ModsPath[#ItemList.ModsPath+1] = result2
+			end
+		end
+		for i=0, XMLData.GetNumEntries(XMLNode.MOD) do
+			local conf = XMLData.GetEntryById(XMLNode.MOD, i)
+			if type(conf) == "table" and conf.enabled == "true" then
+				if conf.realdirectory and mkeytablec(ItemList.ModsPath, conf.realdirectory) then
+					ItemList.ModsPath[#ItemList.ModsPath+1] = conf.realdirectory
+				end
+			end
+		end
+
+
+	end
+
 	if not Isaac.GetPlayer() and TryGetPathForCard then
-		ItemList.TryGenCardpathList()
+		if REPENTOGON then
+			ItemList.TryGenCardpathListREPENTOGONVERSION()
+		else
+			ItemList.TryGenCardpathList()
+		end
 	elseif ibackthis.ModsPath then
 		ItemList.ModsPath = ibackthis.ModsPath
 		ItemList.CardIdToPath = ibackthis.CardIdToPath
@@ -3204,12 +3877,12 @@ do
 				UIs.HintTextBG1.Scale = Vector(self.x/2, self.y/2)
 				UIs.HintTextBG1:Render(pos)
 
-				local kc = KColor(0.1,0.1,0.2,1)
+				local kc = Menu.wma.DefTextColor
 				--[[if list[i][3] then
-					font:DrawStringScaledUTF8(list[i][1], pos.X+1, pos.Y-1, .5, .5, KColor(0.1,0.1,0.2,1),0,false)
-					font:DrawStringScaledUTF8(list[i][2], pos.X+1+offst, pos.Y-1, .5, .5, KColor(0.1,0.1,0.2,1),0,false)
+					font:DrawStringScaledUTF8(list[i][1], pos.X+1, pos.Y-1, .5, .5, Menu.wma.DefTextColor,0,false)
+					font:DrawStringScaledUTF8(list[i][2], pos.X+1+offst, pos.Y-1, .5, .5, Menu.wma.DefTextColor,0,false)
 				else
-					font:DrawStringScaledUTF8(list[i][2], pos.X+1, pos.Y-1, .5, .5, KColor(0.1,0.1,0.2,1),0,false)
+					font:DrawStringScaledUTF8(list[i][2], pos.X+1, pos.Y-1, .5, .5, Menu.wma.DefTextColor,0,false)
 				end]]
 				if self.IsSelected then
 					if list[i][3] then
@@ -3222,8 +3895,8 @@ do
 								text = Menu.wma.utf8_Sub(text, 0, utf8.len(text)-2) .. "..."
 							end
 						end
-						font:DrawStringScaledUTF8(list[i][1], pos.X+1, pos.Y-1, .5, .5, KColor(0.1,0.1,0.2,1),0,false)
-						font:DrawStringScaledUTF8(text, pos.X+1+offst, pos.Y-1, .5, .5, KColor(0.1,0.1,0.2,1),0,false)
+						font:DrawStringScaledUTF8(list[i][1], pos.X+1, pos.Y-1, .5, .5, Menu.wma.DefTextColor,0,false)
+						font:DrawStringScaledUTF8(text, pos.X+1+offst, pos.Y-1, .5, .5, Menu.wma.DefTextColor,0,false)
 					else
 						local text = list[i][2]
 						if font:GetStringWidth(text)/2 > 160 then
@@ -3233,16 +3906,16 @@ do
 								text = Menu.wma.utf8_Sub(text, 0, utf8.len(text)-2) .. "..."
 							end
 						end
-						font:DrawStringScaledUTF8(text, pos.X+1, pos.Y-1, .5, .5, KColor(0.1,0.1,0.2,1),0,false)
+						font:DrawStringScaledUTF8(text, pos.X+1, pos.Y-1, .5, .5, Menu.wma.DefTextColor,0,false)
 					end
 
 					UIs.playsoundsmol:Render(pos + Vector(self.x-11,1))
 				else
 					if list[i][3] then
-						font:DrawStringScaledUTF8(list[i][1], pos.X+1, pos.Y-1, .5, .5, KColor(0.1,0.1,0.2,1),0,false)
-						font:DrawStringScaledUTF8(list[i][2], pos.X+1+offst, pos.Y-1, .5, .5, KColor(0.1,0.1,0.2,1),0,false)
+						font:DrawStringScaledUTF8(list[i][1], pos.X+1, pos.Y-1, .5, .5, Menu.wma.DefTextColor,0,false)
+						font:DrawStringScaledUTF8(list[i][2], pos.X+1+offst, pos.Y-1, .5, .5, Menu.wma.DefTextColor,0,false)
 					else
-						font:DrawStringScaledUTF8(list[i][2], pos.X+1, pos.Y-1, .5, .5, KColor(0.1,0.1,0.2,1),0,false)
+						font:DrawStringScaledUTF8(list[i][2], pos.X+1, pos.Y-1, .5, .5, Menu.wma.DefTextColor,0,false)
 					end
 				end
 			elseif not list[i] then
@@ -3339,7 +4012,7 @@ do
 		end, function(pos)
 			if list[i] then
 				Menu.wma.RenderCustomButton(pos, Vector(self.x,self.y), self.IsSelected)
-				font:DrawStringScaledUTF8(list[i][2], pos.X+1, pos.Y-1, .5, .5, KColor(0.1,0.1,0.2,1),0,false)
+				font:DrawStringScaledUTF8(list[i][2], pos.X+1, pos.Y-1, .5, .5, Menu.wma.DefTextColor,0,false)
 			end
 		end)
 		SoundTest.btn[i] = self
@@ -3366,6 +4039,9 @@ do
 	self.visible = false
 	self.canPressed = false
 
+	if REPENTOGON then
+		Menu.wma.SetMouseWheelZone(self, Vector(10,20), Vector(217,20 + SoundTest.showmax*9-6))
+	end
 
 	local self
 	self = Menu.wma.AddButton(SoundTest.name, "recordseter", Vector(20,10), 16, 10, nilspr, function(button) 
@@ -3376,7 +4052,7 @@ do
 		if SoundTest.RecordEnabled then
 			self.flag:Render(pos + Vector(0,-5))
 		end
-		font:DrawStringScaledUTF8(GetStr("sound_record"), pos.X+2+self.x, pos.Y, .5, .5, KColor(0.1,0.1,0.2,1),0,false)
+		font:DrawStringScaledUTF8(GetStr("sound_record"), pos.X+2+self.x, pos.Y, .5, .5, Menu.wma.DefTextColor,0,false)
 	end, nil, -2)
 	self.flag = UIs.Flag()
 
@@ -3390,8 +4066,8 @@ do
 	end)
 	, function (pos, visible)
 		--Menu.wma.RenderCustomTextBox(pos,Vector(self.x,self.y),false)
-		font:DrawStringScaledUTF8(GetStr("volume"), pos.X+1, pos.Y+3, .5, .5, KColor(0.1,0.1,0.2,1),0,false)
-		--font:DrawStringScaledUTF8(string.format("%.2f", tostring(self.text)), pos.X+42, pos.Y+3, .5, .5, KColor(0.1,0.1,0.2,1),0,false)
+		font:DrawStringScaledUTF8(GetStr("volume"), pos.X+1, pos.Y+3, .5, .5, Menu.wma.DefTextColor,0,false)
+		--font:DrawStringScaledUTF8(string.format("%.2f", tostring(self.text)), pos.X+42, pos.Y+3, .5, .5, Menu.wma.DefTextColor,0,false)
 	end,
 	true, 1, function (btn)
 		self.text = self.text - .1
@@ -3417,8 +4093,8 @@ do
 	end)
 	, function (pos, visible)
 		--Menu.wma.RenderCustomTextBox(pos,Vector(self.x,self.y),false)
-		font:DrawStringScaledUTF8(GetStr("pitch"), pos.X+1, pos.Y+3, .5, .5, KColor(0.1,0.1,0.2,1),0,false)
-		--font:DrawStringScaledUTF8(string.format("%.2f", tostring(self.text)), pos.X+42, pos.Y+3, .5, .5, KColor(0.1,0.1,0.2,1),0,false)
+		font:DrawStringScaledUTF8(GetStr("pitch"), pos.X+1, pos.Y+3, .5, .5, Menu.wma.DefTextColor,0,false)
+		--font:DrawStringScaledUTF8(string.format("%.2f", tostring(self.text)), pos.X+42, pos.Y+3, .5, .5, Menu.wma.DefTextColor,0,false)
 	end,
 	true, 1, function (btn)
 		self.text = self.text - .1
@@ -3440,7 +4116,7 @@ do
 		return false
 	end)
 	, function (pos, visible)
-		font:DrawStringScaledUTF8(GetStr("pan"), pos.X+1, pos.Y+3, .5, .5, KColor(0.1,0.1,0.2,1),0,false)
+		font:DrawStringScaledUTF8(GetStr("pan"), pos.X+1, pos.Y+3, .5, .5, Menu.wma.DefTextColor,0,false)
 	end,
 	true, 0, function (btn)
 		self.text = math.max(-1, self.text - .25) % 4
@@ -3478,7 +4154,7 @@ do
 		return false
 	end, true, 
 	function(pos, Visible)
-		font:DrawStringScaledUTF8(GetStr("manual_sound"), pos.X+1-54, pos.Y+1, .5, .5, KColor(0.1,0.1,0.2,1),0,false)
+		font:DrawStringScaledUTF8(GetStr("manual_sound"), pos.X+1-54, pos.Y+1, .5, .5, Menu.wma.DefTextColor,0,false)
 	end)
 	self.textoffset = Vector(0,-1)
 
@@ -3526,8 +4202,8 @@ do
 		UIs["EntDebug_debug" .. i] = GenSprite("gfx/editor/ui copy2.anm2","ent_debug", i)
 	end
 
-	Menu.EntDebug = {name = "EntDebug", subnames = {status = "Ent_Debug_Menu_status"}, size = Vector(160,80), btn = {}, 
-		mode = "all",
+	Menu.EntDebug = {name = "EntDebug", subnames = {status = "Ent_Debug_Menu_status", info = "Ent_Debug_Menu_info"}, size = Vector(160,80), btn = {}, 
+		mode = "all", info = {}, keyinfo = {}
 	}
 	local EntDebug = Menu.EntDebug
 	local sizev = EntDebug.size
@@ -3542,7 +4218,7 @@ do
 			EntDebug.wind:SetSubMenuVisible(k, false)
 		end
 		EntDebug.wind:SetSubMenuVisible(EntDebug.subnames.status, true)
-	end, nil)
+	end, function() if EntDebug.wind and EntDebug.wind.Removed then EntDebug.wind = nil end end)
 	Menu.wma.ButtonSetHintText("__debug_menu", "Ent_Debug_Menu", GetStr("Ent_Debug_Menu_hintText"))
 
 	local vl = Vector(6, 14)
@@ -3555,7 +4231,20 @@ do
 		EntDebug.wind:SetSubMenuVisible(EntDebug.subnames.status, true)
 	end, function(pos, visible)
 		Menu.wma.RenderCustomButton2(pos, self)
-		font:DrawStringScaledUTF8(GetStr("ent_status"), pos.X+2, pos.Y, .5, .5, KColor(0.1,0.1,0.2,1),0,false)
+		font:DrawStringScaledUTF8(GetStr("ent_status"), pos.X+2, pos.Y, .5, .5, Menu.wma.DefTextColor,0,false)
+	end)
+	vl.X = vl.X + 49
+
+	local self
+	self = Menu.wma.AddButton(EntDebug.name, "info", vl/1, 28, 12, nilspr, function(button)
+		if button ~= 0 then return end
+		for i,k in pairs(EntDebug.subnames) do
+			EntDebug.wind:SetSubMenuVisible(k, false)
+		end
+		EntDebug.wind:SetSubMenuVisible(EntDebug.subnames.info, true)
+	end, function(pos, visible)
+		Menu.wma.RenderCustomButton2(pos, self)
+		font:DrawStringScaledUTF8(GetStr("info"), pos.X+2, pos.Y, .5, .5, Menu.wma.DefTextColor,0,false)
 	end)
 
 
@@ -3677,8 +4366,8 @@ do
 		end
 	end
 
-	Menu:AddCallback(ModCallbacks.MC_POST_UPDATE, function()
-		if EntDebug.wind and not EntDebug.wind.IsHided then
+	function EntDebug.PostUpdate()
+		if EntDebug.wind then --and not EntDebug.wind.IsHided then
 			local playerref = EntityRef(Isaac.GetPlayer())
 			local flag = 0
 			 fear = btn.fear.IsActived
@@ -3710,9 +4399,419 @@ do
 				end
 			end
 		end
+	end
+	Menu:AddCallback(ModCallbacks.MC_POST_UPDATE, EntDebug.PostUpdate)
+
+	UIs.HPBar = GenSprite("gfx/editor/ui copy.anm2","батончик здоровья")
+	function EntDebug.PostRender()
+		if EntDebug.wind then
+			local rhp = EntDebug.RenderHp
+			local textcol = KColor(1,1,1, 0.5)
+			if #EntDebug.keyinfo > 0 then
+				local list = Isaac.GetRoomEntities() --Isaac.FindInRadius(Isaac.GetPlayer().Position, 500)
+				for i = 1, #list do
+					local ent = list[i]
+					if ent.Type < 1000 then
+						local entData = ent:GetData()
+						local rpos = Isaac.WorldToScreen(ent.Position)
+		
+						local num = 20
+						if rhp then
+
+						end
+						--for key, rfunc in pairs(EntDebug.info) do
+						for k=1, #EntDebug.keyinfo do
+							local key = EntDebug.keyinfo[k]
+							local rfunc = EntDebug.info[key]
+							local cus, result = pcall(rfunc, ent, entData)
+							if cus and result then
+								Menu.wma.DrawText(0, tostring(result), rpos.X, rpos.Y + num, .5, .5, 2, textcol)
+								num = num + 9
+							end
+						end
+					end
+				end
+			end
+			if rhp then
+				local list = Isaac.FindInRadius(Isaac.GetPlayer().Position, 500, EntityPartition.ENEMY)
+				
+				for i = 1, #list do
+					local ent = list[i]
+					if ent.MaxHitPoints > 0 then
+						local rpos = Isaac.WorldToScreen(ent.Position)
+						rpos.Y = rpos.Y + 8
+
+						local Xsize = math.min(100, ent.MaxHitPoints)
+						local xh = Xsize / 2
+						UIs.HPBar.Scale = Vector(1,1)
+						UIs.HPBar:RenderLayer(0, Vector(rpos.X - xh - 2, rpos.Y))
+
+						UIs.HPBar.Scale = Vector(xh,1)
+						UIs.HPBar:RenderLayer(1, Vector(rpos.X - xh, rpos.Y))
+
+						local hp = ent.HitPoints / ent.MaxHitPoints --* Xsize
+						UIs.HPBar:SetFrame(math.floor(hp * 10))
+						UIs.HPBar.Scale = Vector(hp * Xsize / 32, 1)
+						UIs.HPBar:RenderLayer(2, Vector(rpos.X - xh, rpos.Y))
+
+						UIs.HPBar.Scale = Vector(-1,1)
+						UIs.HPBar:RenderLayer(0, Vector(rpos.X + xh + 2, rpos.Y))
+					end
+				end
+			end
+		end
+	end
+	Menu:AddCallback(ModCallbacks.MC_POST_RENDER, EntDebug.PostRender)
+
+	function EntDebug.addinfo(key, func)
+		EntDebug.info[key] = func
+		for i=1,#EntDebug.keyinfo do
+			if EntDebug.keyinfo[i] == key then
+				return
+			end
+		end
+		EntDebug.keyinfo[#EntDebug.keyinfo+1] = key
+	end
+	function EntDebug.removeinfo(key)
+		EntDebug.info[key] = nil
+		for i=1,#EntDebug.keyinfo do
+			if EntDebug.keyinfo[i] == key then
+				table.remove(EntDebug.keyinfo, i)
+				break
+			end
+		end
+	end
+	function EntDebug.existinfo(key)
+		return EntDebug.info[key]
+	end
+
+	local vg = Vector(6, 34)
+
+	local self
+	self = Menu.wma.AddButton(EntDebug.subnames.info, "hp", vg/1, 16, 16, UIs.EmptyBtn(), function(button)
+		if button ~= 0 then return end
+		--[[if not EntDebug.existinfo("hp") then
+			EntDebug.addinfo("hp", function(ent)
+				return "hp: " .. string.format("%2f", ent.HitPoints)
+			end)
+		else
+			EntDebug.removeinfo("hp")
+		end]]
+		EntDebug.RenderHp = not EntDebug.RenderHp
+	end, function(pos, visible)
+		Menu.wma.RenderCustomButton(pos, self.size, self.IsSelected)
+		Menu.wma.DrawText(0, GetStr("hp"), pos.X+2, pos.Y+2, .5, .5)
+		if EntDebug.RenderHp then
+			UIs.Var_Sel:Render(pos + Vector(2,12))
+		end
 	end)
+	--vg.X = vg.X + 18
+
+
+	local printDataStr = function(str)
+		local t = {}
+		for w in str:gmatch("([^.]*)%.?") do
+			t[#t+1] = w
+		end
+		return function(ent, data)
+			local value
+			local odat = data
+			for i=1, #t do
+				if i < #t and odat[t[i] ] then
+					odat = odat[t[i] ]
+				elseif i == #t and odat[t[i] ] then
+					value = odat[t[i] ]
+				else
+					break
+				end
+			end
+			value = tostring(value)  --value or value == false and "false" or "nil"
+			return value
+			--Menu.wma.DrawText(1, value, pos.X, pos.Y, .5, .5)
+		end
+	end
+	---@param str string
+	local printClassFieldStr = function(str)
+		-- Проверка, что это строка с вызовом
+		local isCall = str:match("^([%a_][%w_]*%s*%([^%)]*%))$")
+		local Params
+		if isCall then
+			local funcName = str:match("^([%a_][%w_]*)%s*%([^%)]*%)$")
+			Params = {}
+			local conteiner = str:match("%([^%)]*%)"):sub(2,-2)..","
+			for i in conteiner:gmatch("%s?(.-)[,]") do
+				if i ~= ""  then
+					local fu = load("return " .. i .. ")")
+					if type(fu) == "function" then
+						Params[#Params+1] = fu()
+					end
+				end
+			end
+
+			return function(ent, data)
+				local value
+				local isPlayer = ent:ToPlayer()
+				local isNPC = ent:ToNPC()
+				if isNPC then
+					return tostring(isNPC[funcName] and isNPC[funcName](isNPC, table.unpack(Params)))
+				end
+				if isPlayer then
+					return tostring(isPlayer[funcName] and isPlayer[funcName](isPlayer,table.unpack(Params)))
+				end
+				value = tostring(value)  --value or value == false and "false" or "nil"
+				return "" --value
+				--Menu.wma.DrawText(1, value, pos.X, pos.Y, .5, .5)
+			end
+		end
+
+		return function(ent, data)
+			local value
+			local isNPC = ent:ToNPC()
+			if isNPC then
+				return tostring(isNPC[str])
+			end
+			local isPlayer = ent:ToPlayer()
+			if isPlayer then
+				return tostring(isPlayer[str])
+			end
+			value = tostring(value)  --value or value == false and "false" or "nil"
+			return "" --value
+			--Menu.wma.DrawText(1, value, pos.X, pos.Y, .5, .5)
+		end
+	end
+
+	vg.Y = vg.Y + 18
+
+	EntDebug.DataBtnCol = Color(1,1,1,0.15)
+	function EntDebug.UpdatePrintBtns()
+		for i=1, #EntDebug.btn do
+			local btn = EntDebug.btn[i]
+			Menu.wma.RemoveButton(EntDebug.subnames.info, btn.name)
+		end
+
+		EntDebug.btn = {}
+		for i=1, #EntDebug.keyinfo do
+			local self
+			self = Menu.wma.AddButton(EntDebug.subnames.info, i, vg/1 + Vector(0, (i)*17), 152, 16, nilspr, 
+			function(button)
+				if button ~= 0 then return end
+				EntDebug.removeinfo(EntDebug.keyinfo[i])
+				EntDebug.UpdatePrintBtns()
+			end, function(pos, visible)
+				Menu.wma.RenderCustomButton2(pos, self, EntDebug.DataBtnCol)
+				Menu.wma.DrawText(0, "D:", pos.X+2, pos.Y+2, .4, .5, nil, EntDebug.AddDataBtnCol)
+				Menu.wma.DrawText(1, EntDebug.keyinfo[i], pos.X+9, pos.Y+2, .3, .5)
+			end)
+			EntDebug.btn[#EntDebug.btn+1] = self
+		end
+	end
+
+	EntDebug.AddType = 0
+	
+	EntDebug.AddDataBtnCol = KColor(0.1,0.1,0.2,0.65)
+	local self
+	self = Menu.wma.AddTextBox(EntDebug.subnames.info, "addData", vg/1, Vector(152, 16), nil, 
+	Menu.wma.DefStringResultCheck(function(result)
+		
+		EntDebug.addinfo(result, 
+			EntDebug.AddType == 0 and printDataStr(result) 
+			or printClassFieldStr(result))
+		EntDebug.UpdatePrintBtns()
+		return false
+	end), 
+	nil, function(pos, visible)
+		--Menu.wma.RenderCustomTextBox(pos, Vector(self.x, self.y), self.IsSelected)
+		--local extratext = EntDebug.AddType == 0 and "DATA:" or "CLASS:"
+		--Menu.wma.DrawText(0, extratext, pos.X+2, pos.Y+2, .4, .5, nil, EntDebug.AddDataBtnCol)
+		
+	end)
+	self.textoffset = Vector(24,0)
+
+	local self
+	self = Menu.wma.AddButton(EntDebug.subnames.info, "DataOrClass", vg/1, 22, 16, nilspr, 
+	function(button)
+		if button ~= 0 then return end
+		EntDebug.AddType = (EntDebug.AddType + 1) % 2
+
+		self.x = EntDebug.AddType == 0 and 22 or 27
+	end, function(pos, visible)
+		Menu.wma.RenderCustomButton2(pos, self)
+		local extratext = EntDebug.AddType == 0 and "DATA:" or "CLASS:"
+		Menu.wma.DrawText(0, extratext, pos.X+1, pos.Y+2, .4, .5, nil, EntDebug.AddDataBtnCol)
+	end, nil, -1)
+
+
+
+
 end
 
+do
+	UIs.LevelDebug = GenSprite("gfx/editor/ui copy2.anm2","level_debug")
+	--UIs.blockThis = function() return GenSprite("gfx/editor/ui copy2.anm2","blocksy") end
+
+	Menu.LevelDebug = {name = "LevelDebug", subnames = {room = "Level_Debug_Menu_room", level = "Level_Debug_Menu_level"}, 
+		size = Vector(160,100), btn = {}, cur = "room",
+	}
+	local LevelDebug = Menu.LevelDebug
+	local sizev = LevelDebug.size
+	local btn = LevelDebug.btn
+
+	local self
+	self = WORSTDEBUGMENU.AddButtonOnDebugBar("Level_Debug_Menu", Vector(32,32), UIs.LevelDebug, function(button) 
+		if button ~= 0 then return end
+		---@type Window
+		LevelDebug.wind = Menu.wma.ShowWindow(LevelDebug.name, self.pos+Vector(0,15), sizev)
+		for i,k in pairs(LevelDebug.subnames) do
+			LevelDebug.wind:SetSubMenuVisible(k, false)
+		end
+		LevelDebug.wind:SetSubMenuVisible(LevelDebug.subnames.room, true)
+		LevelDebug.wind:SetSize(sizev)
+	end, nil)
+	Menu.wma.ButtonSetHintText("__debug_menu", "Ent_Debug_Menu", GetStr("Ent_Debug_Menu_hintText"))
+
+	local vl = Vector(6, 14)
+	local self
+	self = Menu.wma.AddButton(LevelDebug.name, "setroom", vl/1, 47, 12, nilspr, function(button)
+		if button ~= 0 then return end
+		for i,k in pairs(LevelDebug.subnames) do
+			LevelDebug.wind:SetSubMenuVisible(k, false)
+		end
+		LevelDebug.wind:SetSubMenuVisible(LevelDebug.subnames.room, true)
+		LevelDebug.wind:SetSize(sizev)
+	end, function(pos, visible)
+		Menu.wma.RenderCustomButton2(pos, self)
+		font:DrawStringScaledUTF8(GetStr("room"), pos.X+2, pos.Y, .5, .5, Menu.wma.DefTextColor,0,false)
+		if LevelDebug.cur == "room" then
+			UIs.HintTextBG1.Color = Color(.5,.5,.5)
+			UIs.HintTextBG1.Scale = Vector((LevelDebug.wind.size.X-22)/2, .5)
+			UIs.HintTextBG1:Render(pos +  Vector(0,14))
+		end
+	end)
+	local self
+	self = Menu.wma.AddButton(LevelDebug.name, "setlevel", vl/1+Vector(48,0), 47, 12, nilspr, function(button)
+		if button ~= 0 then return end
+		for i,k in pairs(LevelDebug.subnames) do
+			LevelDebug.wind:SetSubMenuVisible(k, false)
+		end
+		LevelDebug.wind:SetSubMenuVisible(LevelDebug.subnames.level, true)
+		LevelDebug.wind:SetSize(Vector(sizev.X, sizev.Y + 60))
+		LevelDebug.genMap()
+	end, function(pos, visible)
+		Menu.wma.RenderCustomButton2(pos, self)
+		font:DrawStringScaledUTF8(GetStr("level"), pos.X+2, pos.Y, .5, .5, Menu.wma.DefTextColor,0,false)
+		if LevelDebug.cur == "level" then
+			UIs.HintTextBG1.Color = Color(.5,.5,.5)
+			UIs.HintTextBG1.Scale = Vector((LevelDebug.wind.size.X-22)/2, .5)
+			UIs.HintTextBG1:Render(pos +  Vector(0,14))
+		end
+	end)
+
+	vl = vl + Vector(0,16)
+
+	local self
+	self = Menu.wma.AddButton(LevelDebug.subnames.room, "info", vl/1, 47, 12, nilspr, function(button)
+	end, function(pos, visible)
+		local yoff = 0
+		local roomdesc = game:GetLevel():GetCurrentRoomDesc()
+		local data = roomdesc.Data
+
+		local ind = roomdesc.GridIndex or ""
+		font:DrawStringScaledUTF8(GetStr("Index") .. ":    " .. (ind), pos.X+2, pos.Y+yoff, .5, .5, Menu.wma.DefTextColor,0,false)
+		yoff = yoff + 8
+
+		local name = data.Name or ""
+		font:DrawStringScaledUTF8(GetStr("name") .. ":    " .. (name), pos.X+2, pos.Y+yoff, .5, .5, Menu.wma.DefTextColor,0,false)
+		yoff = yoff + 8
+
+		local cariant = data.Variant or ""
+		font:DrawStringScaledUTF8(GetStr("var") .. ":    " .. (cariant), pos.X+2, pos.Y+yoff, .5, .5, Menu.wma.DefTextColor,0,false)
+		yoff = yoff + 8
+
+		local sub = data.Subtype or ""
+		font:DrawStringScaledUTF8(GetStr("subtype") .. ":    " .. (sub), pos.X+2, pos.Y+yoff, .5, .5, Menu.wma.DefTextColor,0,false)
+		yoff = yoff + 8
+
+		local Difficulty = data.Difficulty or ""
+		font:DrawStringScaledUTF8(GetStr("Difficulty") .. ":    " .. (Difficulty), pos.X+2, pos.Y+yoff, .5, .5, Menu.wma.DefTextColor,0,false)
+		yoff = yoff + 8
+
+		local Mode = data.Mode or ""
+		font:DrawStringScaledUTF8(GetStr("Mode") .. ":    " .. (Mode), pos.X+2, pos.Y+yoff, .5, .5, Menu.wma.DefTextColor,0,false)
+		yoff = yoff + 8
+
+		local Weight = data.InitialWeight or ""
+		font:DrawStringScaledUTF8(GetStr("Weight") .. ":    " .. (Weight), pos.X+2, pos.Y+yoff, .5, .5, Menu.wma.DefTextColor,0,false)
+		yoff = yoff + 8
+		--l local d = RoomConfigHolder.GetRandomRoom(math.random(0,1000000),false,0,2,1,5,6) print(d.Name, d.Variant, d.Subtype, d.Difficulty)
+	end, true)
+
+	local vl = Vector(6, 30)
+	local self
+	self = Menu.wma.AddButton(LevelDebug.subnames.level, "back", vl/1, 1, 1, nilspr, function(button)
+	end, function(pos, visible)
+		UIs.HintTextBG1.Color = Color(.2,.2,.2,.5)
+		UIs.HintTextBG1.Scale = Vector(54, 54)
+		UIs.HintTextBG1:Render(pos +  Vector(0,14))
+	end, true, 1)
+
+	local typetoicon = {
+		[RoomType.ROOM_ARCADE]="IconArcade", [RoomType.ROOM_DICE]="IconDiceRoom",
+		[RoomType.ROOM_BARREN]="IconBarrenRoom", [RoomType.ROOM_ISAACS]="IconIsaacsRoom",
+		[RoomType.ROOM_BOSS]="IconBoss", [RoomType.ROOM_LIBRARY]="IconLibrary",
+		[RoomType.ROOM_CHALLENGE]="IconAmbushRoom", [RoomType.ROOM_MINIBOSS]="IconMiniboss",
+		[RoomType.ROOM_CHEST]="IconChestRoom", [RoomType.ROOM_PLANETARIUM]="IconPlanetarium",
+		[RoomType.ROOM_CURSE]="IconCurseRoom", [RoomType.ROOM_SACRIFICE]="IconSacrificeRoom",
+		[RoomType.ROOM_SECRET]="IconSecretRoom", [RoomType.ROOM_SHOP]="IconShop",
+		[RoomType.ROOM_TREASURE]="IconTreasureRoom", [RoomType.ROOM_ULTRASECRET]="IconUltraSecretRoom",
+		[RoomType.ROOM_SUPERSECRET]="IconSuperSecretRoom",
+	}
+
+	function LevelDebug.genMap()
+		local level = game:GetLevel()
+
+		LevelDebug.map = {}
+		local cache = {}
+		for i = 0, 13*13 do
+			Menu.wma.RemoveButton(LevelDebug.subnames.level, i)
+		end
+		for i = 0, 13*13 do
+			local room = level:GetRoomByIdx(i, -1)
+			if room and room.GridIndex ~= -1 and not cache[room.SafeGridIndex] then
+				cache[room.SafeGridIndex] = true
+				local tab = {}
+				tab.spr = GenSprite("gfx/editor/minimap1.anm2", "RoomCurrent", room.Data.Shape-1)
+				tab.spr.Offset = Vector(-2,-2)
+				if typetoicon[room.Data.Type] then
+					tab.icon = GenSprite("gfx/editor/minimap_icons.anm2", typetoicon[room.Data.Type]) 
+					tab.icon.Offset = Vector(-2,-2)
+				end
+				LevelDebug.map[i] = tab
+				if room.Data.Shape == RoomShape.ROOMSHAPE_LTL then
+					tab.spr.Offset.X = tab.spr.Offset.X - 8
+				end
+
+				--Menu.wma.RemoveButton(LevelDebug.subnames.level, room.SafeGridIndex)
+
+				local col = (i) % 13
+				local row = math.floor(i/13)
+				local self
+				self = Menu.wma.AddButton(LevelDebug.subnames.level, room.SafeGridIndex, vl/1 + Vector(8*col,7*row+14), 8, 7, nilspr, function(button)
+					game:StartRoomTransition(room.SafeGridIndex, -1, 4)
+					--print(room.SafeGridIndex)
+				end, function(pos, visible)
+					tab.spr:Render(pos)
+					if tab.icon then
+						tab.icon:Render(pos)
+					end
+				end)
+				local text = room.SafeGridIndex .. " col:" .. col .. " row:" .. row 
+				Menu.wma.ButtonSetHintTextR(self, text)
+			end
+		end
+	end
+
+
+end
 
 
 
@@ -3722,3 +4821,29 @@ Menu:AddCallback(ModCallbacks.MC_POST_PLAYER_INIT, function()
 		Isaac.ExecuteCommand("reloadshaders")
 	end
 end)
+
+
+
+if false then
+	local keybord = {name = "ExtraDebug_KeyBordTest", size = Vector(160,32)}
+	local self
+	self = WORSTDEBUGMENU.AddButtonOnDebugBar("KeyBordTest_Menu", Vector(32,32), UIs.luamod_debug, function(button) 
+		if button ~= 0 then return end
+		---@type Window
+		keybord.wind = Menu.wma.ShowWindow(keybord.name, self.pos+Vector(0,15), keybord.size)
+	end, nil)
+
+	local self
+	self = Menu.wma.AddButton(keybord.name, "text", Vector(4,10), keybord.size.X-8, 16, nilspr, function(button)
+		if button ~= 0 then return end
+	end, function(pos, visible)
+		Menu.wma.RenderCustomButton2(pos, self)
+		for i,k in pairs (Keyboard) do
+			if Input.IsButtonPressed(k, Isaac.GetPlayer().ControllerIndex) then
+				font:DrawStringScaledUTF8(k .. " " .. i, pos.X+2, pos.Y+2, .5, .5, Menu.wma.DefTextColor,0,false)
+				break
+			end
+		end
+	end, true)
+end
+
