@@ -2,25 +2,27 @@
     <!-- Empty shader, only used for rendering above HUD workaround -->
     <shader name="WMA-RenderAboveHUD">
         <parameters>
+            <param name="RenderData" type="vec4"/>
+            <param name="Scale" type="float"/>
         </parameters>
         <vertex><![CDATA[
             attribute vec3 Position;
             attribute vec4 Color;
             attribute vec2 TexCoord;
-            attribute vec4 RenderData;
-            attribute float Scale;
+            //attribute vec4 RenderData;
+            //attribute float Scale;
             
             varying lowp vec4 Color0;
             varying mediump vec2 TexCoord0;
-            varying lowp vec4 RenderDataOut;
-            varying lowp float ScaleOut;
+            //varying lowp vec4 RenderDataOut;
+            //varying lowp float ScaleOut;
             uniform sampler2D Texture0;
 
             uniform mat4 Transform;
             void main(void)
             {
-                RenderDataOut = RenderData;
-                ScaleOut = Scale;
+                //RenderDataOut = RenderData;
+                //ScaleOut = Scale;
                 Color0 = Color;
                 TexCoord0 = TexCoord;
                 gl_Position = Transform * vec4(Position.xyz, 1.0);
@@ -29,8 +31,8 @@
         <fragment><![CDATA[
             varying lowp vec4 Color0;
             varying mediump vec2 TexCoord0;
-            varying lowp vec4 RenderDataOut;
-            varying lowp float ScaleOut;
+            //varying lowp vec4 RenderDataOut;
+            //varying lowp float ScaleOut;
             uniform sampler2D Texture0;
             void main(void)
             {

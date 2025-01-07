@@ -375,97 +375,97 @@ end
 --menuTab.UIs = {}
 local UIs = {} --menuTab.UIs
 --[[
-UIs.MenuUp = GenSprite("gfx/editor/ui copy.anm2","фон_вверх")
-UIs.MouseGrab = GenSprite("gfx/editor/ui copy.anm2","mouse_grab")
-UIs.Mouse_Tile_edit = GenSprite("gfx/editor/ui copy.anm2","mouse_tileEdit")
-UIs.GridList = GenSprite("gfx/editor/ui copy.anm2","gridListMenu")
-UIs.HintQ = GenSprite("gfx/editor/ui copy.anm2","hintQ")
-UIs.ToLog = GenSprite("gfx/editor/ui copy.anm2","ВЛог")
-UIs.TestRun = GenSprite("gfx/editor/ui copy.anm2","ТестовыйПрогон")
-UIs.OverlayBarL = GenSprite("gfx/editor/ui copy.anm2","оверлей_лпц",0)
-UIs.OverlayBarR = GenSprite("gfx/editor/ui copy.anm2","оверлей_лпц",1)
-UIs.OverlayBarC = GenSprite("gfx/editor/ui copy.anm2","оверлей_лпц",2)
---UIs.OverlayTab1 = GenSprite("gfx/editor/ui copy.anm2","оверлей_вкладка",0)
---UIs.OverlayTab2 = GenSprite("gfx/editor/ui copy.anm2","оверлей_вкладка",1)
---UIs.PositionSbros = GenSprite("gfx/editor/ui copy.anm2","сброс поз")
-UIs.TextBoxPopupBack = GenSprite("gfx/editor/ui copy.anm2","всплывашка")
-UIs.MouseTextEd = GenSprite("gfx/editor/ui copy.anm2","mouse_textEd")]]
-UIs.TextEdPos = GenSprite("gfx/editor/ui copy.anm2","TextEd_pos")
+UIs.MenuUp = GenSprite("gfx/wdm_editor/ui copy.anm2","фон_вверх")
+UIs.MouseGrab = GenSprite("gfx/wdm_editor/ui copy.anm2","mouse_grab")
+UIs.Mouse_Tile_edit = GenSprite("gfx/wdm_editor/ui copy.anm2","mouse_tileEdit")
+UIs.GridList = GenSprite("gfx/wdm_editor/ui copy.anm2","gridListMenu")
+UIs.HintQ = GenSprite("gfx/wdm_editor/ui copy.anm2","hintQ")
+UIs.ToLog = GenSprite("gfx/wdm_editor/ui copy.anm2","ВЛог")
+UIs.TestRun = GenSprite("gfx/wdm_editor/ui copy.anm2","ТестовыйПрогон")
+UIs.OverlayBarL = GenSprite("gfx/wdm_editor/ui copy.anm2","оверлей_лпц",0)
+UIs.OverlayBarR = GenSprite("gfx/wdm_editor/ui copy.anm2","оверлей_лпц",1)
+UIs.OverlayBarC = GenSprite("gfx/wdm_editor/ui copy.anm2","оверлей_лпц",2)
+--UIs.OverlayTab1 = GenSprite("gfx/wdm_editor/ui copy.anm2","оверлей_вкладка",0)
+--UIs.OverlayTab2 = GenSprite("gfx/wdm_editor/ui copy.anm2","оверлей_вкладка",1)
+--UIs.PositionSbros = GenSprite("gfx/wdm_editor/ui copy.anm2","сброс поз")
+UIs.TextBoxPopupBack = GenSprite("gfx/wdm_editor/ui copy.anm2","всплывашка")
+UIs.MouseTextEd = GenSprite("gfx/wdm_editor/ui copy.anm2","mouse_textEd")]]
+UIs.TextEdPos = GenSprite("gfx/wdm_editor/ui copy.anm2","TextEd_pos")
 --[[
-UIs.RoomSelectBack = GenSprite("gfx/editor/ui copy.anm2","фон_вверх")
+UIs.RoomSelectBack = GenSprite("gfx/wdm_editor/ui copy.anm2","фон_вверх")
 UIs.RoomSelectBack.Rotation = -90
-UIs.RoomSelect = GenSprite("gfx/editor/ui copy.anm2","room_select")
-UIs.RoomSelectWarn = GenSprite("gfx/editor/ui copy.anm2","room_select_warn")
-UIs.SpcEDIT_menu_Up = GenSprite("gfx/editor/ui copy.anm2","всплывашка_ручная")
-UIs.SpcEDIT_menu_Cen = GenSprite("gfx/editor/ui copy.anm2","всплывашка_ручная",1)
-UIs.SpcEDIT_menu_Down = GenSprite("gfx/editor/ui copy.anm2","всплывашка_ручная",2)
-UIs.Flag = GenSprite("gfx/editor/ui copy.anm2","флажок")
-UIs.Hint_MouseMoving = GenSprite("gfx/editor/ui copy.anm2","hint_mouse_move")
-UIs.Hint_tileEdit = GenSprite("gfx/editor/ui copy.anm2","hint_tile_edit")
-UIs.RG_icon = GenSprite("gfx/editor/ui copy.anm2","рг")
+UIs.RoomSelect = GenSprite("gfx/wdm_editor/ui copy.anm2","room_select")
+UIs.RoomSelectWarn = GenSprite("gfx/wdm_editor/ui copy.anm2","room_select_warn")
+UIs.SpcEDIT_menu_Up = GenSprite("gfx/wdm_editor/ui copy.anm2","всплывашка_ручная")
+UIs.SpcEDIT_menu_Cen = GenSprite("gfx/wdm_editor/ui copy.anm2","всплывашка_ручная",1)
+UIs.SpcEDIT_menu_Down = GenSprite("gfx/wdm_editor/ui copy.anm2","всплывашка_ручная",2)
+UIs.Flag = GenSprite("gfx/wdm_editor/ui copy.anm2","флажок")
+UIs.Hint_MouseMoving = GenSprite("gfx/wdm_editor/ui copy.anm2","hint_mouse_move")
+UIs.Hint_tileEdit = GenSprite("gfx/wdm_editor/ui copy.anm2","hint_tile_edit")
+UIs.RG_icon = GenSprite("gfx/wdm_editor/ui copy.anm2","рг")
 if Isaac_Tower and not Isaac_Tower.RG then
 	local gray = Color(1,1,1,1)
 	gray:SetColorize(1,1,1,1)
 	UIs.RG_icon.Color = gray
 end]]
-UIs.Hint_MouseMoving_Vert = GenSprite("gfx/editor/ui copy.anm2","hint_mouse_move",1)
-UIs.HintTextBG1 = GenSprite("gfx/editor/ui copy.anm2","фон_для_вспом_текста")
-UIs.HintTextBG2 = GenSprite("gfx/editor/ui copy.anm2","фон_для_вспом_текста",1)
-UIs.TextBoxBG = GenSprite("gfx/editor/ui copy.anm2","textbox_custom")
-UIs.ButtonBG = GenSprite("gfx/editor/ui copy.anm2","button_custom")
+UIs.Hint_MouseMoving_Vert = GenSprite("gfx/wdm_editor/ui copy.anm2","hint_mouse_move",1)
+UIs.HintTextBG1 = GenSprite("gfx/wdm_editor/ui copy.anm2","фон_для_вспом_текста")
+UIs.HintTextBG2 = GenSprite("gfx/wdm_editor/ui copy.anm2","фон_для_вспом_текста",1)
+UIs.TextBoxBG = GenSprite("gfx/wdm_editor/ui copy.anm2","textbox_custom")
+UIs.ButtonBG = GenSprite("gfx/wdm_editor/ui copy.anm2","button_custom")
 --[[
-UIs.SolidMode1 = GenSprite("gfx/editor/ui copy.anm2","твёрдаяКлетка")
-UIs.SolidMode2 = GenSprite("gfx/editor/ui copy.anm2","прозрачнаяКлетка")
-UIs.SolidMode3 = GenSprite("gfx/editor/ui copy.anm2","КлеткаБезКоллизии")
-UIs.SolidMode4 = GenSprite("gfx/editor/ui copy.anm2","ЛомающиесяКлетка")
-UIs.EnemiesMode1 = GenSprite("gfx/editor/ui copy.anm2","враги")
-UIs.EnemiesMode2 = GenSprite("gfx/editor/ui copy.anm2","бонусы")
-UIs.PinedPos = GenSprite("gfx/editor/special_tiles.anm2","pin point")
-UIs.Setting = GenSprite("gfx/editor/ui copy.anm2","настройки")
+UIs.SolidMode1 = GenSprite("gfx/wdm_editor/ui copy.anm2","твёрдаяКлетка")
+UIs.SolidMode2 = GenSprite("gfx/wdm_editor/ui copy.anm2","прозрачнаяКлетка")
+UIs.SolidMode3 = GenSprite("gfx/wdm_editor/ui copy.anm2","КлеткаБезКоллизии")
+UIs.SolidMode4 = GenSprite("gfx/wdm_editor/ui copy.anm2","ЛомающиесяКлетка")
+UIs.EnemiesMode1 = GenSprite("gfx/wdm_editor/ui copy.anm2","враги")
+UIs.EnemiesMode2 = GenSprite("gfx/wdm_editor/ui copy.anm2","бонусы")
+UIs.PinedPos = GenSprite("gfx/wdm_editor/special_tiles.anm2","pin point")
+UIs.Setting = GenSprite("gfx/wdm_editor/ui copy.anm2","настройки")
 ]]
 for i=0,6 do
-	UIs["MenuActulae" .. i] = GenSprite("gfx/editor/ui copy.anm2","меню наконец то", i)
+	UIs["MenuActulae" .. i] = GenSprite("gfx/wdm_editor/ui copy.anm2","меню наконец то", i)
 	UIs["MenuActulae" .. i].Color = Color(1,1,1,.25)
 end
-UIs.FakeDefMouse = GenSprite("gfx/editor/ui copy2.anm2","fakemouse")
-UIs.FakeTextMouse = GenSprite("gfx/editor/ui copy2.anm2","textedit_mouse")
+UIs.FakeDefMouse = GenSprite("gfx/wdm_editor/ui copy2.anm2","fakemouse")
+UIs.FakeTextMouse = GenSprite("gfx/wdm_editor/ui copy2.anm2","textedit_mouse")
 
 --[[
-UIs.RoomEditor_debug = GenSprite("gfx/editor/ui copy.anm2","room_editor_debug")
-UIs.luamod_debug = GenSprite("gfx/editor/ui copy.anm2","luamod_debug")
+UIs.RoomEditor_debug = GenSprite("gfx/wdm_editor/ui copy.anm2","room_editor_debug")
+UIs.luamod_debug = GenSprite("gfx/wdm_editor/ui copy.anm2","luamod_debug")
 
 
-function UIs.Box48() return GenSprite("gfx/editor/ui copy.anm2","контейнер") end
-function UIs.PrePage() return GenSprite("gfx/editor/ui copy.anm2","лево") end
-function UIs.NextPage() return GenSprite("gfx/editor/ui copy.anm2","право") end
-function UIs.OverlayTab1() return GenSprite("gfx/editor/ui copy.anm2","оверлей_вкладка1") end
-function UIs.OverlayTab2() return GenSprite("gfx/editor/ui copy.anm2","оверлей_вкладка2") end
-function UIs.PopupTextBox() return GenSprite("gfx/editor/ui copy.anm2","контейнер_всплывашки") end
-function UIs.ButtonWide() return GenSprite("gfx/editor/ui copy.anm2","кнопка_широкая") end
-function UIs.Erase() return GenSprite("gfx/editor/ui copy.anm2","стереть") end
-function UIs.TextBoxSmol() return GenSprite("gfx/editor/ui copy.anm2","конт_текста_smol") end
+function UIs.Box48() return GenSprite("gfx/wdm_editor/ui copy.anm2","контейнер") end
+function UIs.PrePage() return GenSprite("gfx/wdm_editor/ui copy.anm2","лево") end
+function UIs.NextPage() return GenSprite("gfx/wdm_editor/ui copy.anm2","право") end
+function UIs.OverlayTab1() return GenSprite("gfx/wdm_editor/ui copy.anm2","оверлей_вкладка1") end
+function UIs.OverlayTab2() return GenSprite("gfx/wdm_editor/ui copy.anm2","оверлей_вкладка2") end
+function UIs.PopupTextBox() return GenSprite("gfx/wdm_editor/ui copy.anm2","контейнер_всплывашки") end
+function UIs.ButtonWide() return GenSprite("gfx/wdm_editor/ui copy.anm2","кнопка_широкая") end
+function UIs.Erase() return GenSprite("gfx/wdm_editor/ui copy.anm2","стереть") end
+function UIs.TextBoxSmol() return GenSprite("gfx/wdm_editor/ui copy.anm2","конт_текста_smol") end
 ]]
-function UIs.Var_Sel() return GenSprite("gfx/editor/ui.anm2","sel_var") end
+function UIs.Var_Sel() return GenSprite("gfx/wdm_editor/ui.anm2","sel_var") end
 --[[
-function UIs.Edit_Button() return GenSprite("gfx/editor/ui copy.anm2","кнопка_редакта") end
-function UIs.FlagBtn() return GenSprite("gfx/editor/ui copy.anm2","кнопка флага") end
-function UIs.TextBox() return GenSprite("gfx/editor/ui copy.anm2","конт_текста") end
-function UIs.BigPlus() return GenSprite("gfx/editor/ui copy.anm2","плюс") end
-function UIs.GridModeOn() return GenSprite("gfx/editor/ui copy.anm2","режим_сетки") end
-function UIs.GridModeOff() return GenSprite("gfx/editor/ui copy.anm2","режим_сетки_выкл") end
-function UIs.PositionSbros() return GenSprite("gfx/editor/ui copy.anm2","сброс поз") end
-function UIs.GridOverlayTab1() return GenSprite("gfx/editor/ui copy.anm2","вкладка1") end
-function UIs.GridOverlayTab2() return GenSprite("gfx/editor/ui copy.anm2","вкладка2") end
+function UIs.Edit_Button() return GenSprite("gfx/wdm_editor/ui copy.anm2","кнопка_редакта") end
+function UIs.FlagBtn() return GenSprite("gfx/wdm_editor/ui copy.anm2","кнопка флага") end
+function UIs.TextBox() return GenSprite("gfx/wdm_editor/ui copy.anm2","конт_текста") end
+function UIs.BigPlus() return GenSprite("gfx/wdm_editor/ui copy.anm2","плюс") end
+function UIs.GridModeOn() return GenSprite("gfx/wdm_editor/ui copy.anm2","режим_сетки") end
+function UIs.GridModeOff() return GenSprite("gfx/wdm_editor/ui copy.anm2","режим_сетки_выкл") end
+function UIs.PositionSbros() return GenSprite("gfx/wdm_editor/ui copy.anm2","сброс поз") end
+function UIs.GridOverlayTab1() return GenSprite("gfx/wdm_editor/ui copy.anm2","вкладка1") end
+function UIs.GridOverlayTab2() return GenSprite("gfx/wdm_editor/ui copy.anm2","вкладка2") end
 ]]
-function UIs.Counter() return GenSprite("gfx/editor/ui copy.anm2","счётчик") end
-function UIs.CounterSmol() return GenSprite("gfx/editor/ui copy.anm2","счётчик_smol") end
-function UIs.CounterUp() return GenSprite("gfx/editor/ui copy.anm2","поднять") end
-function UIs.CounterDown() return GenSprite("gfx/editor/ui copy.anm2","опустить") end
-function UIs.CounterUpSmol() return GenSprite("gfx/editor/ui copy.anm2","поднять_smol") end
-function UIs.CloseBtn() return GenSprite("gfx/editor/ui copy.anm2","закрыть") end
-function UIs.HideWindowBtn() return GenSprite("gfx/editor/ui copy.anm2","свернуть") end
-function UIs.UnHideWindowBtn() return GenSprite("gfx/editor/ui copy.anm2","развернуть") end
-function UIs.CounterDownSmol() return GenSprite("gfx/editor/ui copy.anm2","опустить_smol") end
+function UIs.Counter() return GenSprite("gfx/wdm_editor/ui copy.anm2","счётчик") end
+function UIs.CounterSmol() return GenSprite("gfx/wdm_editor/ui copy.anm2","счётчик_smol") end
+function UIs.CounterUp() return GenSprite("gfx/wdm_editor/ui copy.anm2","поднять") end
+function UIs.CounterDown() return GenSprite("gfx/wdm_editor/ui copy.anm2","опустить") end
+function UIs.CounterUpSmol() return GenSprite("gfx/wdm_editor/ui copy.anm2","поднять_smol") end
+function UIs.CloseBtn() return GenSprite("gfx/wdm_editor/ui copy.anm2","закрыть") end
+function UIs.HideWindowBtn() return GenSprite("gfx/wdm_editor/ui copy.anm2","свернуть") end
+function UIs.UnHideWindowBtn() return GenSprite("gfx/wdm_editor/ui copy.anm2","развернуть") end
+function UIs.CounterDownSmol() return GenSprite("gfx/wdm_editor/ui copy.anm2","опустить_smol") end
 
 local MouseBtnIsPressed = {[0] = 0,0,0}
 function menuTab.IsMouseBtnTriggered(button)
@@ -778,7 +778,7 @@ function menuTab.ShowWindow(menuName, pos, size, color )
 			menuTab.Windows.menus[menuName].plashka = self
 		end
 
-		--UIs.HideWindowBtn() return GenSprite("gfx/editor/ui copy.anm2","свернуть") end
+		--UIs.HideWindowBtn() return GenSprite("gfx/wdm_editor/ui copy.anm2","свернуть") end
 		--function UIs.UnHideWindowBtn()
 		if not menuTab.GetButton(menuTab.Windows.menus[menuName], "__hide") then
 			local self
@@ -981,8 +981,8 @@ function menuTab.AddGragZone(menuName, buttonName, pos, size, sprite, DragFunc, 
     end
 end
 
-function UIs.DefDragBG() return GenSprite("gfx/editor/ui copy.anm2","def_drag") end
-function UIs.DefDragDrager() return  GenSprite("gfx/editor/ui copy.anm2","drag_drager") end
+function UIs.DefDragBG() return GenSprite("gfx/wdm_editor/ui copy.anm2","def_drag") end
+function UIs.DefDragDrager() return  GenSprite("gfx/wdm_editor/ui copy.anm2","drag_drager") end
 
 ---@return EditorButton
 function menuTab.AddGragFloat(menuName, buttonName, pos, size, sprite, dragSpr, DragFunc, renderFunc, startValue, priority)
@@ -1790,7 +1790,7 @@ function menuTab.RenderCustomMenuBack(pos, size, col)
 	end
 end
 
-UIs.TextBoxBG2v = GenSprite("gfx/editor/ui copy.anm2", "custom textbox_bg")
+UIs.TextBoxBG2v = GenSprite("gfx/wdm_editor/ui copy.anm2", "custom textbox_bg")
 
 function menuTab.RenderCustomTextBox(pos, size, isSel)
 	if pos and size then
@@ -1821,7 +1821,7 @@ function menuTab.RenderCustomTextBox(pos, size, isSel)
 	end
 end
 
-UIs.ButtonBG2v = GenSprite("gfx/editor/ui copy.anm2", "custom button_bg")
+UIs.ButtonBG2v = GenSprite("gfx/wdm_editor/ui copy.anm2", "custom button_bg")
 
 function menuTab.RenderCustomButton(pos, size, isSel, color)
 	if pos and size then
@@ -3040,7 +3040,7 @@ function menuTab.CallDelayRenders(callback, param, ...)
 	end
 end
 
-UIs.Hint_MouseMoving_Vert_white = GenSprite("gfx/editor/ui copy.anm2","hint_mouse_move",1)
+UIs.Hint_MouseMoving_Vert_white = GenSprite("gfx/wdm_editor/ui copy.anm2","hint_mouse_move",1)
 UIs.Hint_MouseMoving_Vert_white.Color = Color(0,0,0,1,1,1,1)
 
 function menuTab.LastOrderRender()

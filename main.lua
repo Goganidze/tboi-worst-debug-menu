@@ -251,47 +251,47 @@ end
 
 WORSTDEBUGMENU.UIs = {}
 local UIs = WORSTDEBUGMENU.UIs
-UIs.MenuUp = GenSprite("gfx/editor/ui copy.anm2","фон_вверх")
---function UIs.RoomEditor_debug() return GenSprite("gfx/editor/ui copy.anm2","room_editor_debug") end
---function UIs.luamod_debug() return GenSprite("gfx/editor/ui copy.anm2","luamod_debug") end
-UIs.RoomEditor_debug = GenSprite("gfx/editor/ui copy.anm2","room_editor_debug")
-UIs.luamod_debug = GenSprite("gfx/editor/ui copy.anm2","luamod_debug")
-UIs.Var_Sel = GenSprite("gfx/editor/ui copy.anm2","sel_var", 2)
-UIs.DebugCMD = GenSprite("gfx/editor/ui copy.anm2","debugcmd")
+UIs.MenuUp = GenSprite("gfx/wdm_editor/ui copy.anm2","фон_вверх")
+--function UIs.RoomEditor_debug() return GenSprite("gfx/wdm_editor/ui copy.anm2","room_editor_debug") end
+--function UIs.luamod_debug() return GenSprite("gfx/wdm_editor/ui copy.anm2","luamod_debug") end
+UIs.RoomEditor_debug = GenSprite("gfx/wdm_editor/ui copy.anm2","room_editor_debug")
+UIs.luamod_debug = GenSprite("gfx/wdm_editor/ui copy.anm2","luamod_debug")
+UIs.Var_Sel = GenSprite("gfx/wdm_editor/ui copy.anm2","sel_var", 2)
+UIs.DebugCMD = GenSprite("gfx/wdm_editor/ui copy.anm2","debugcmd")
 for i=1,15 do
-	UIs["debugbtn" .. i] = GenSprite("gfx/editor/ui copy.anm2","debug"..i)
+	UIs["debugbtn" .. i] = GenSprite("gfx/wdm_editor/ui copy.anm2","debug"..i)
 end
-UIs.CloseBtn = GenSprite("gfx/editor/ui copy.anm2","закрыть")
-UIs.textbox_custom = GenSprite("gfx/editor/ui copy.anm2","textbox_custom")
-UIs.Chlen_1 = GenSprite("gfx/editor/ui copy.anm2","1 chel")
-UIs.Chlen_multi = GenSprite("gfx/editor/ui copy.anm2","multi chlen")
-UIs.reset = GenSprite("gfx/editor/ui copy.anm2","reset")
-UIs.nasad = GenSprite("gfx/editor/ui copy.anm2","откат")
-UIs.entspawnerpoint = GenSprite("gfx/editor/ui copy.anm2","точка спавна")
-UIs.EntSpawner = GenSprite("gfx/editor/ui copy.anm2","ent spawn")
-UIs.StageChanger = GenSprite("gfx/editor/ui copy.anm2","stage changer")
-UIs.GrabMainMenu = GenSprite("gfx/editor/ui copy.anm2","хваталка")
+UIs.CloseBtn = GenSprite("gfx/wdm_editor/ui copy.anm2","закрыть")
+UIs.textbox_custom = GenSprite("gfx/wdm_editor/ui copy.anm2","textbox_custom")
+UIs.Chlen_1 = GenSprite("gfx/wdm_editor/ui copy.anm2","1 chel")
+UIs.Chlen_multi = GenSprite("gfx/wdm_editor/ui copy.anm2","multi chlen")
+UIs.reset = GenSprite("gfx/wdm_editor/ui copy.anm2","reset")
+UIs.nasad = GenSprite("gfx/wdm_editor/ui copy.anm2","откат")
+UIs.entspawnerpoint = GenSprite("gfx/wdm_editor/ui copy.anm2","точка спавна")
+UIs.EntSpawner = GenSprite("gfx/wdm_editor/ui copy.anm2","ent spawn")
+UIs.StageChanger = GenSprite("gfx/wdm_editor/ui copy.anm2","stage changer")
+UIs.GrabMainMenu = GenSprite("gfx/wdm_editor/ui copy.anm2","хваталка")
 UIs.GrabMainMenu.Color = Color(1,1,1,.5)
-UIs.HintTextBG1 = GenSprite("gfx/editor/ui copy.anm2","фон_для_вспом_текста")
-UIs.HintTextBG2 = GenSprite("gfx/editor/ui copy.anm2","фон_для_вспом_текста",1)
-UIs.CCCCCCCC = GenSprite("gfx/editor/ui copy.anm2","брос")
-UIs.MouseLockBtn = GenSprite("gfx/editor/ui copy.anm2","mouse lock")
-UIs.MouseIsLocked = GenSprite("gfx/editor/ui copy.anm2","mouseIsLock")
-UIs.GridSpawner = GenSprite("gfx/editor/ui copy.anm2","grid spawn")
-UIs.AnimTaste = GenSprite("gfx/editor/ui copy.anm2","anim test")
-UIs.Editbtn = GenSprite("gfx/editor/ui copy.anm2","editthis")
+UIs.HintTextBG1 = GenSprite("gfx/wdm_editor/ui copy.anm2","фон_для_вспом_текста")
+UIs.HintTextBG2 = GenSprite("gfx/wdm_editor/ui copy.anm2","фон_для_вспом_текста",1)
+UIs.CCCCCCCC = GenSprite("gfx/wdm_editor/ui copy.anm2","брос")
+UIs.MouseLockBtn = GenSprite("gfx/wdm_editor/ui copy.anm2","mouse lock")
+UIs.MouseIsLocked = GenSprite("gfx/wdm_editor/ui copy.anm2","mouseIsLock")
+UIs.GridSpawner = GenSprite("gfx/wdm_editor/ui copy.anm2","grid spawn")
+UIs.AnimTaste = GenSprite("gfx/wdm_editor/ui copy.anm2","anim test")
+UIs.Editbtn = GenSprite("gfx/wdm_editor/ui copy.anm2","editthis")
 
-function UIs.CounterSmol() return GenSprite("gfx/editor/ui copy.anm2","счётчик_smol") end
-function UIs.EmptyBtn() return GenSprite("gfx/editor/ui copy.anm2","empty btn") end
-function UIs.reset() return GenSprite("gfx/editor/ui copy.anm2","reset") end
-function UIs.nasad() return GenSprite("gfx/editor/ui copy.anm2","откат") end
-function UIs.CCCCCCCC() return GenSprite("gfx/editor/ui copy.anm2","брос") end
-function UIs.Chlen_1() return GenSprite("gfx/editor/ui copy.anm2","1 chel") end
-function UIs.CounterUpSmol() return GenSprite("gfx/editor/ui copy.anm2","поднять_smol") end
-function UIs.CounterDownSmol() return GenSprite("gfx/editor/ui copy.anm2","опустить_smol") end
-function UIs.PrePage16() return GenSprite("gfx/editor/ui copy.anm2","лево_smol") end
-function UIs.NextPage16() return GenSprite("gfx/editor/ui copy.anm2","право_smol") end
-function UIs.Flag() return GenSprite("gfx/editor/ui copy.anm2","флажок") end
+function UIs.CounterSmol() return GenSprite("gfx/wdm_editor/ui copy.anm2","счётчик_smol") end
+function UIs.EmptyBtn() return GenSprite("gfx/wdm_editor/ui copy.anm2","empty btn") end
+function UIs.reset() return GenSprite("gfx/wdm_editor/ui copy.anm2","reset") end
+function UIs.nasad() return GenSprite("gfx/wdm_editor/ui copy.anm2","откат") end
+function UIs.CCCCCCCC() return GenSprite("gfx/wdm_editor/ui copy.anm2","брос") end
+function UIs.Chlen_1() return GenSprite("gfx/wdm_editor/ui copy.anm2","1 chel") end
+function UIs.CounterUpSmol() return GenSprite("gfx/wdm_editor/ui copy.anm2","поднять_smol") end
+function UIs.CounterDownSmol() return GenSprite("gfx/wdm_editor/ui copy.anm2","опустить_smol") end
+function UIs.PrePage16() return GenSprite("gfx/wdm_editor/ui copy.anm2","лево_smol") end
+function UIs.NextPage16() return GenSprite("gfx/wdm_editor/ui copy.anm2","право_smol") end
+function UIs.Flag() return GenSprite("gfx/wdm_editor/ui copy.anm2","флажок") end
 
 
 
@@ -443,8 +443,8 @@ self.posfunc = function()
 	self.pos = Vector(1,5+Menu.MainOffset.Y)
 end
 
-UIs.ShowMouse = GenSprite("gfx/editor/ui copy2.anm2","mouse_visible1")
-UIs.ShowMouse1 = GenSprite("gfx/editor/ui copy2.anm2","mouse_visible")
+UIs.ShowMouse = GenSprite("gfx/wdm_editor/ui copy2.anm2","mouse_visible1")
+UIs.ShowMouse1 = GenSprite("gfx/wdm_editor/ui copy2.anm2","mouse_visible")
 local self
 self = WORSTDEBUGMENU.wma.AddButton("__debug_menu", "mouseshow", Vector(4,-25), 16, 16, UIs.ShowMouse, function(button) 
 	if button ~= 0 then return end
@@ -493,11 +493,12 @@ end
 
 
 
-WORSTDEBUGMENU.debugcmd_Menu = {active = false, pos = Vector(0,0), name = "_debugcmd"}
+WORSTDEBUGMENU.debugcmd_Menu = {active = false, pos = Vector(0,0), name = "_debugcmd", debugnum = 14}
 local debugcmd = WORSTDEBUGMENU.debugcmd_Menu
 
 do
-	local sizev =  Vector(14*19,40)
+
+	local sizev =  Vector(4*20,12 + math.ceil(debugcmd.debugnum/4)*19)
 
 	WORSTDEBUGMENU.AddButtonOnDebugBar("debugcmd_Menu", Vector(32,32), UIs.DebugCMD, 
 	function(button) 
@@ -510,24 +511,43 @@ do
 	Menu.wma.ButtonSetHintText("__debug_menu", "debugcmd_Menu", GetStr("debug_cmd_hint"))
 
 	---------
+	local greenCol = Color(.6,1,0.6,1,0,.4)
+	local frameCount
 	local debugflags
-	for i=1,14 do
+	for i=1, debugcmd.debugnum do
+		local ii = i
+		local pos = Vector(((i-1)%4+1)*17-11, 13 + 17*(math.ceil(i/4)-1)) --Vector(i*18-14,13)
 		local self
-		self = WORSTDEBUGMENU.wma.AddButton("_debugcmd", "debug"..i, Vector(i*18-14,13), 18, 17, UIs["debugbtn" .. i] , function(button) 
+		self = WORSTDEBUGMENU.wma.AddButton("_debugcmd", "debug"..i, pos, 18, 17, UIs["debugbtn" .. i] , function(button) 
 			if button ~= 0 then return end
 			Isaac.ExecuteCommand("debug " .. i)
 			self.IsActived = not self.IsActived
 		end, function(pos)
 			if self.IsActived then
-				UIs.Var_Sel:Render(self.pos + Vector(2,12))
+				--UIs.Var_Sel:Render(self.pos + Vector(2,12))
+				local preCol = self.spr.Color
+				self.spr.Color = greenCol
+			else
+				--self.spr:RenderLayer(1,pos)
+				self.spr.Color = Color.Default
+			end
+
+			if REPENTOGON then
+				frameCount = ii==debugcmd.debugnum and Isaac.GetFrameCount() or frameCount
+				if frameCount % 30 == 0 then
+					debugflags = ii==debugcmd.debugnum and game:GetDebugFlags() or debugflags
+					--if debugflags & 1<<(ii-1) ~= 0 then
+						self.IsActived = debugflags & 1<<(ii-1) ~= 0
+					--end
+				end
 			end
 		end)
-		if REPENTOGON then
+		--[[if REPENTOGON then
 			debugflags = debugflags or game:GetDebugFlags()
 			if debugflags & 1<<(i-1) ~= 0 then
 				self.IsActived = true
 			end
-		end
+		end]]
 	end
 
 
@@ -618,7 +638,7 @@ do
 			Menu.wma.LastOrderRender()
 		end
 
-		--local spr = GenSprite("gfx/editor/aaaatest.anm2", "1")
+		--local spr = GenSprite("gfx/wdm_editor/aaaatest.anm2", "1")
 		--spr:Render(Vector(200,200))
 
 	end
@@ -1085,7 +1105,9 @@ do
 		if EntSpawner.SpawnMode > 0 and EntSpawner.wind then
 			local mousePos = Menu.wma.MousePos
 			UIs.entspawnerpoint:Render(mousePos)
+			print("MOUSE", Menu.wma.OnFreePos, Menu.wma.IsMouseBtnTriggered(0))
 			if Menu.wma.OnFreePos and Menu.wma.IsMouseBtnTriggered(0) then
+				print("MOUSE", Menu.wma.OnFreePos)
 				local pos = Input.GetMousePosition(true)
 				local tvs = EntSpawner.TVS
 				
@@ -1508,11 +1530,11 @@ do --UIs.GridSpawner
 end
 
 do
-	function UIs.Box48() return GenSprite("gfx/editor/ui copy.anm2","контейнер") end
-	function UIs.play() return GenSprite("gfx/editor/ui copy.anm2","play btn") end
-	function UIs.pause() return GenSprite("gfx/editor/ui copy.anm2","pause btn") end
-	UIs.ubratOverlay = GenSprite("gfx/editor/ui copy.anm2","erazer")
-	UIs.pomenyatOverlay = GenSprite("gfx/editor/ui copy.anm2","две закруглённые стрелки")
+	function UIs.Box48() return GenSprite("gfx/wdm_editor/ui copy.anm2","контейнер") end
+	function UIs.play() return GenSprite("gfx/wdm_editor/ui copy.anm2","play btn") end
+	function UIs.pause() return GenSprite("gfx/wdm_editor/ui copy.anm2","pause btn") end
+	UIs.ubratOverlay = GenSprite("gfx/wdm_editor/ui copy.anm2","erazer")
+	UIs.pomenyatOverlay = GenSprite("gfx/wdm_editor/ui copy.anm2","две закруглённые стрелки")
 	--WORSTDEBUGMENU.AddButtonOnDebugBar(buttonName, size, sprite, pressFunc, renderFunc)
 
 	Menu.AnimTest = {name = "Anim_Test", subnames = {}, size = Vector(166+24,196), btn = {}, anim = {anm2 = "", animation = "", 
@@ -1520,7 +1542,7 @@ do
 	local AnimTest = Menu.AnimTest
 	local sizev = AnimTest.size 
 
-	AnimTest.anim.spr = GenSprite("gfx/editor/ui copy.anm2","режим_сетки")   --Sprite()
+	AnimTest.anim.spr = GenSprite("gfx/wdm_editor/ui copy.anm2","режим_сетки")   --Sprite()
 	AnimTest.anim.RenderPos = Vector(0,0)
 
 	local self
@@ -1786,12 +1808,12 @@ do
 	end)
 	Menu.wma.ButtonSetHintTextR(self, GetStr("overlaylayerchange"))
 	vG.Y = vG.Y+18 + self.y
-	--UIs.ubratOverlay = GenSprite("gfx/editor/ui copy.anm2","erazer")
+	--UIs.ubratOverlay = GenSprite("gfx/wdm_editor/ui copy.anm2","erazer")
 	--UIs.pomenyatOverlay
 
 
 
-	UIs.ColorDrager = GenSprite("gfx/editor/ui copy.anm2", "color_drag")
+	UIs.ColorDrager = GenSprite("gfx/wdm_editor/ui copy.anm2", "color_drag")
 	UIs.ColorDrager.Scale = Vector(136/140/2,1)
 	local nilspr = Sprite()
 
@@ -2173,7 +2195,7 @@ do
 			--fumo.IsActived = not fumo.IsActived
 			if not fumo.IsActived then
 				fumo.IsActived = true
-				fumo.fumo = GenSprite("gfx/editor/fumo.anm2","fumo")
+				fumo.fumo = GenSprite("gfx/wdm_editor/fumo.anm2","fumo")
 				fumo.fumo.PlaybackSpeed = .5
 			elseif not fumo.mode then
 				fumo.mode = 1
@@ -2479,7 +2501,7 @@ do
 	end)
 	vG.Y = vG.Y+8 + self.y
 
-	local toleftarrow = GenSprite("gfx/editor/ui copy.anm2","play btn")
+	local toleftarrow = GenSprite("gfx/wdm_editor/ui copy.anm2","play btn")
 	toleftarrow.FlipX = true
 	toleftarrow.Offset = Vector(-16,0)
 	local self
@@ -2489,7 +2511,7 @@ do
 		swaplayercallback()
 	end)
 	
-	local torightarrow = GenSprite("gfx/editor/ui copy.anm2","play btn")
+	local torightarrow = GenSprite("gfx/wdm_editor/ui copy.anm2","play btn")
 	local self
 	self = Menu.wma.AddButton(AnimTest.subnames.blend, "layersetR", Vector(30+54+2,vG.Y), 16, 16, torightarrow, function(button) 
 		if button ~= 0 then return end
@@ -2676,9 +2698,9 @@ do
 	local itemsize = config:GetCollectibles().Size
 	local trinkesize = config:GetTrinkets().Size
 	local cardsize = config:GetCards().Size
-	--function UIs.Box48() return GenSprite("gfx/editor/ui copy.anm2","контейнер") end
-	function UIs.poisk() return GenSprite("gfx/editor/ui copy2.anm2","поиск") end
-	UIs.itemlist = GenSprite("gfx/editor/ui copy2.anm2","item list")
+	--function UIs.Box48() return GenSprite("gfx/wdm_editor/ui copy.anm2","контейнер") end
+	function UIs.poisk() return GenSprite("gfx/wdm_editor/ui copy2.anm2","поиск") end
+	UIs.itemlist = GenSprite("gfx/wdm_editor/ui copy2.anm2","item list")
 	--WORSTDEBUGMENU.AddButtonOnDebugBar(buttonName, size, sprite, pressFunc, renderFunc)
 
 	Menu.ItemList = {name = "Item_List", size = Vector(250,156), btn = {}, poisk = {text = ""}, curtype = "col", list = {}, page = 1,
@@ -3096,7 +3118,7 @@ do
 						spr.Scale = v5
 					elseif typ == "card" then
 						if id < 98 then
-							spr = GenSprite("gfx/editor/cards.anm2", "апчхи", id-1)
+							spr = GenSprite("gfx/wdm_editor/cards.anm2", "апчхи", id-1)
 							spr.Scale = v5
 						else
 							spr = ItemList.tryMakeCardSprite(id, conf.HudAnim)
@@ -3282,7 +3304,7 @@ do
 	end)
 	Menu.wma.ButtonSetHintText(ItemList.name, "поиск", GetStr("useless_poisk"))
 
-	UIs.ItemList_col = GenSprite("gfx/editor/ui copy2.anm2","itemlist_collectible")
+	UIs.ItemList_col = GenSprite("gfx/wdm_editor/ui copy2.anm2","itemlist_collectible")
 	local self
 	self = Menu.wma.AddButton(ItemList.name, "collectible", Vector(158,12), 16, 16, UIs.ItemList_col, function(button) 
 		if button ~= 0 then return end
@@ -3298,7 +3320,7 @@ do
 			ItemList.wind:SetSubMenuVisible(ItemList.subnames.fil_card, false)
 		end
 	end)
-	UIs.ItemList_trink = GenSprite("gfx/editor/ui copy2.anm2","itemlist_trinket")
+	UIs.ItemList_trink = GenSprite("gfx/wdm_editor/ui copy2.anm2","itemlist_trinket")
 	local self
 	self = Menu.wma.AddButton(ItemList.name, "trinket", Vector(176,12), 16, 16, UIs.ItemList_trink, function(button) 
 		if button ~= 0 then return end
@@ -3314,7 +3336,7 @@ do
 			ItemList.wind:SetSubMenuVisible(ItemList.subnames.fil_card, false)
 		end
 	end)
-	UIs.ItemList_card = GenSprite("gfx/editor/ui copy2.anm2","itemlist_card")
+	UIs.ItemList_card = GenSprite("gfx/wdm_editor/ui copy2.anm2","itemlist_card")
 	local self
 	self = Menu.wma.AddButton(ItemList.name, "card", Vector(194,12), 16, 16, UIs.ItemList_card, function(button) 
 		if button ~= 0 then return end
@@ -3341,8 +3363,8 @@ do
 		font:DrawStringScaledUTF8(GetStr("playerindex") .. " " .. ItemList.playerindex, pos.X+2,pos.Y+2,.5,.5,Menu.wma.DefTextColor,0,false)
 	end)
 
-	UIs.ActiveSlot = GenSprite("gfx/editor/ui copy2.anm2","slots")
-	UIs.ActiveSlotOverlay = GenSprite("gfx/editor/ui copy2.anm2","slots_ov")
+	UIs.ActiveSlot = GenSprite("gfx/wdm_editor/ui copy2.anm2","slots")
+	UIs.ActiveSlotOverlay = GenSprite("gfx/wdm_editor/ui copy2.anm2","slots_ov")
 	local self
 	self = Menu.wma.AddButton(ItemList.name, "activeslot", Vector(132+32,130), 16, 16, UIs.ActiveSlot, function(button) 
 		if button ~= 0 then return end
@@ -3366,7 +3388,7 @@ do
 	Menu.wma.ButtonSetHintText(ItemList.name, "activeslot", GetStr("activeslot"))
 
 
-	UIs.ItemRock = GenSprite("gfx/editor/ui copy2.anm2","пьедистал")
+	UIs.ItemRock = GenSprite("gfx/wdm_editor/ui copy2.anm2","пьедистал")
 	local self
 	self = Menu.wma.AddButton(ItemList.name, "onrock", Vector(150+32,130), 16, 16, UIs.ItemRock, function(button) 
 		if button ~= 0 then return end
@@ -3442,7 +3464,7 @@ do
 	self.text = ""
 	--ItemList.subnames.trink_e
 
-	UIs.GulpedTrink = GenSprite("gfx/editor/ui copy2.anm2","gulp_trink")
+	UIs.GulpedTrink = GenSprite("gfx/wdm_editor/ui copy2.anm2","gulp_trink")
 	local self
 	self = Menu.wma.AddButton(ItemList.subnames.trink_e, "gulp", Vector(168+32,130), 16, 16, UIs.GulpedTrink, function(button) 
 		if button ~= 0 then return end
@@ -3454,7 +3476,7 @@ do
 		end
 	end)
 	Menu.wma.ButtonSetHintText(ItemList.subnames.trink_e, "gulp", GetStr("itemlist_gulp"))
-	UIs.GoldemTrink = GenSprite("gfx/editor/ui copy2.anm2","gold_trink")
+	UIs.GoldemTrink = GenSprite("gfx/wdm_editor/ui copy2.anm2","gold_trink")
 	local self
 	self = Menu.wma.AddButton(ItemList.subnames.trink_e, "gold", Vector(186+32,130), 16, 16, UIs.GoldemTrink, function(button) 
 		if button ~= 0 then return end
@@ -3468,7 +3490,7 @@ do
 	Menu.wma.ButtonSetHintText(ItemList.subnames.trink_e, "gold", GetStr("itemlist_gold"))
 
 	local line
-	UIs.ItemFilter= GenSprite("gfx/editor/ui copy2.anm2","filter")
+	UIs.ItemFilter= GenSprite("gfx/wdm_editor/ui copy2.anm2","filter")
 	local self
 	self = Menu.wma.AddButton(ItemList.name, "filter", Vector(224.5,12), 16, 16, UIs.ItemFilter, function(button) 
 		if button ~= 0 then return end
@@ -3707,11 +3729,12 @@ do
 
 	--Это может сломать запуск? ДА!
 	function ItemList.TryGenCardpathList()
+		--print("Point first")
 		local calls = Isaac.GetCallbacks(ModCallbacks.MC_USE_CARD)
 		ItemList.CardIdToPath = {}
 		ItemList.ModsPath = {}
 		local mods = {}
-
+		--print("Point second")
 		local precalls = Isaac.GetCallbacks("WORSTDEBUGMENU_GET_MODS_PATH")
 		for i=1, #precalls do
 			local cal = precalls[i]
@@ -3736,7 +3759,7 @@ do
 					local fz,fx = string.find(gg,"mods/[%S%s]-/")
 					if fz and fx then
 						local path = string.sub(gg,fz+5,fx-1)
-						print("found path: ", path)
+						--print("found path: ", path)
 						if path then
 							mods[cal.Mod].path = path
 							ItemList.ModsPath[#ItemList.ModsPath+1] = path
@@ -3813,7 +3836,7 @@ do
 		ItemList.CardIdToPath = ibackthis.CardIdToPath
 	end
 
-	UIs.ThisGuy = GenSprite("gfx/editor/ui copy2.anm2","этого")
+	UIs.ThisGuy = GenSprite("gfx/wdm_editor/ui copy2.anm2","этого")
 	function Menu.ItemListRender()
 		if not ItemList.wind or ItemList.wind.Removed or ItemList.wind.IsHided or not ItemList.playerindex then return end
 		local player = Isaac.GetPlayer(ItemList.playerindex)
@@ -3824,11 +3847,11 @@ do
 end
 
 do
-	UIs.SoundTest = GenSprite("gfx/editor/ui copy2.anm2","sound test")
-	UIs.blockThis = GenSprite("gfx/editor/ui copy2.anm2","blocksy")
-	UIs.playsoundsmol = GenSprite("gfx/editor/ui copy2.anm2","sound play")
+	UIs.SoundTest = GenSprite("gfx/wdm_editor/ui copy2.anm2","sound test")
+	UIs.blockThis = GenSprite("gfx/wdm_editor/ui copy2.anm2","blocksy")
+	UIs.playsoundsmol = GenSprite("gfx/wdm_editor/ui copy2.anm2","sound play")
 	UIs.blockThis.Scale = Vector(.5,.5)
-	--UIs.blockThis = function() return GenSprite("gfx/editor/ui copy2.anm2","blocksy") end
+	--UIs.blockThis = function() return GenSprite("gfx/wdm_editor/ui copy2.anm2","blocksy") end
 
 	Menu.SoundTest = {name = "SoundTest", subnames = {}, size = Vector(220,190), btn = {}, 
 		list = {}, revlist = {}, block = {}, max = 60, showmax = 15, listpos = 0, RecordEnabled = true,
@@ -4158,7 +4181,7 @@ do
 	end)
 	self.textoffset = Vector(0,-1)
 
-	UIs.playsoundbig = function() return GenSprite("gfx/editor/ui copy2.anm2","sound play b") end
+	UIs.playsoundbig = function() return GenSprite("gfx/wdm_editor/ui copy2.anm2","sound play b") end
 	local self
 	self = Menu.wma.AddButton(SoundTest.name, "play manll id", Vector(60 + 34, SoundTest.showmax*9+34), 16, 16, UIs.playsoundbig(), function(button)
 		if button ~= 0 then return end
@@ -4196,10 +4219,10 @@ do
 end
 
 do
-	UIs.EntDebug = GenSprite("gfx/editor/ui copy2.anm2","ent test")
-	--UIs.blockThis = function() return GenSprite("gfx/editor/ui copy2.anm2","blocksy") end
+	UIs.EntDebug = GenSprite("gfx/wdm_editor/ui copy2.anm2","ent test")
+	--UIs.blockThis = function() return GenSprite("gfx/wdm_editor/ui copy2.anm2","blocksy") end
 	for i=0, 7 do
-		UIs["EntDebug_debug" .. i] = GenSprite("gfx/editor/ui copy2.anm2","ent_debug", i)
+		UIs["EntDebug_debug" .. i] = GenSprite("gfx/wdm_editor/ui copy2.anm2","ent_debug", i)
 	end
 
 	Menu.EntDebug = {name = "EntDebug", subnames = {status = "Ent_Debug_Menu_status", info = "Ent_Debug_Menu_info"}, size = Vector(160,80), btn = {}, 
@@ -4402,7 +4425,7 @@ do
 	end
 	Menu:AddCallback(ModCallbacks.MC_POST_UPDATE, EntDebug.PostUpdate)
 
-	UIs.HPBar = GenSprite("gfx/editor/ui copy.anm2","батончик здоровья")
+	UIs.HPBar = GenSprite("gfx/wdm_editor/ui copy.anm2","батончик здоровья")
 	function EntDebug.PostRender()
 		if EntDebug.wind then
 			local rhp = EntDebug.RenderHp
@@ -4646,8 +4669,8 @@ do
 end
 
 do
-	UIs.LevelDebug = GenSprite("gfx/editor/ui copy2.anm2","level_debug")
-	--UIs.blockThis = function() return GenSprite("gfx/editor/ui copy2.anm2","blocksy") end
+	UIs.LevelDebug = GenSprite("gfx/wdm_editor/ui copy2.anm2","level_debug")
+	--UIs.blockThis = function() return GenSprite("gfx/wdm_editor/ui copy2.anm2","blocksy") end
 
 	Menu.LevelDebug = {name = "LevelDebug", subnames = {room = "Level_Debug_Menu_room", level = "Level_Debug_Menu_level"}, 
 		size = Vector(160,100), btn = {}, cur = "room",
@@ -4779,11 +4802,12 @@ do
 			if room and room.GridIndex ~= -1 and not cache[room.SafeGridIndex] then
 				cache[room.SafeGridIndex] = true
 				local tab = {}
-				tab.spr = GenSprite("gfx/editor/minimap1.anm2", "RoomCurrent", room.Data.Shape-1)
+				tab.spr = GenSprite("gfx/wdm_editor/minimap1.anm2", "RoomCurrent", room.Data.Shape-1)
 				tab.spr.Offset = Vector(-2,-2)
 				if typetoicon[room.Data.Type] then
-					tab.icon = GenSprite("gfx/editor/minimap_icons.anm2", typetoicon[room.Data.Type]) 
+					tab.icon = GenSprite("gfx/wdm_editor/minimap_icons.anm2", typetoicon[room.Data.Type]) 
 					tab.icon.Offset = Vector(-2,-2)
+					--print(tab.icon:GetDefaultAnimation())
 				end
 				LevelDebug.map[i] = tab
 				if room.Data.Shape == RoomShape.ROOMSHAPE_LTL then
