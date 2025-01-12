@@ -218,6 +218,9 @@ Menu.strings = {
 
 	["Sound_Test_Menu_hintText"] = {en = "Opens a window for sound test. \n Records used sounds",
 		ru = "Открывает окно для теста звуков. \n Записывает используемые звуки"},
+	
+	["Ent_Debug_Menu_hintText"] = {en = "Opens a window for debugging entities",
+		ru = "Открывает окно для отладки сущностей"},
 
 	["ByType"] = {en = "by type", ru = "по типу"},
 	["itemlist_gulp"] = {en = "add as gulped", ru = "добавить как проглоченный"},
@@ -234,10 +237,22 @@ Menu.strings = {
 	["manual_sound"] = {en = "manually:", ru = "ручной id:"},
 	["sound_record"] = {en = "sounds recording", ru = "запись звуков"},
 
-	["ent_status"] = {en = "status", ru = "статусы"},
+	--["ent_status"] = {en = "status", ru = "статусы"},
+	["ent_status"] = {en = "basic", ru = "базовое"},
+	["info"] = {en = "info", ru = "инфо"},
 
 	["FromMod"] = {en = "From mod", ru = "Из мода"},
 	["BaseGame"] = {en = "Vanilla", ru = "Ванильный"},
+	["mode"] = {en = "Mode", ru = "Режим"},
+
+	["EntDebug_ApplyOnAllHint"] = {en = "Apply on all entities", ru = "Применить ко всем сущностям"},
+	["EntDebug_ApplyOnSelectedHint"] = {en = "Apply on selected entities", ru = "Применить к выбранным сущностям"},
+	["entDebug_hintAddPrintClass"] = {en = "Enter a string to output a value from the entity class \n Example: Position", 
+		ru = "Введи строку для вывода значения из класса сущности \n Пример: Position"},
+	["entDebug_hintAddPrintData"] = {en = "Enter a string to output a value from GetData() \n Example: MyTable.myField", 
+		ru = "Введи строку для вывода значения из GetData() \n Пример: MyTable.myField"},
+	["EntDebug_grabberHint"] = {en = "Hold the left mouse button \n to move a entity", 
+		ru = "Удерживай левую кнопку мыши, \n чтобы двигать сущность"},
 }
 
 local function GetStr(str)
@@ -280,6 +295,7 @@ UIs.MouseIsLocked = GenSprite("gfx/wdm_editor/ui copy.anm2","mouseIsLock")
 UIs.GridSpawner = GenSprite("gfx/wdm_editor/ui copy.anm2","grid spawn")
 UIs.AnimTaste = GenSprite("gfx/wdm_editor/ui copy.anm2","anim test")
 UIs.Editbtn = GenSprite("gfx/wdm_editor/ui copy.anm2","editthis")
+UIs.mouse_grab = GenSprite("gfx/wdm_editor/ui copy.anm2","mouse_grab")
 
 function UIs.CounterSmol() return GenSprite("gfx/wdm_editor/ui copy.anm2","счётчик_smol") end
 function UIs.EmptyBtn() return GenSprite("gfx/wdm_editor/ui copy.anm2","empty btn") end
@@ -293,6 +309,10 @@ function UIs.PrePage16() return GenSprite("gfx/wdm_editor/ui copy.anm2","лев�
 function UIs.NextPage16() return GenSprite("gfx/wdm_editor/ui copy.anm2","право_smol") end
 function UIs.Flag() return GenSprite("gfx/wdm_editor/ui copy.anm2","флажок") end
 
+function UIs.Paint() return GenSprite("gfx/wdm_editor/ent debug.anm2","paint") end
+function UIs.OnAll() return GenSprite("gfx/wdm_editor/ent debug.anm2","apllyall") end
+
+function UIs.EntGrabber() return GenSprite("gfx/wdm_editor/ent debug.anm2","grab") end
 
 
 WORSTDEBUGMENU.MainOffset = Vector(0, 10)
@@ -365,6 +385,9 @@ do
 
 	function Menu.RemoveOlaceModeByName(name)
 		if Menu.PlaceModeData and Menu.PlaceModeData.name == name then
+			if Menu.PlaceModeData.loss then
+				Menu.PlaceModeData.loss()
+			end
 			Menu.PlaceModeData = {}
 		end
 	end
@@ -491,6 +514,18 @@ do
 	Menu.wma.ButtonSetHintText("__debug_menu", "luamod", GetStr("luamod_hintText"))
 end
 
+local greenCol = Color(.6,1,0.6,1,0,.4)
+local function Def_SelectedGreen(btn, selCol, fadeCol)
+	if btn.IsActived then
+		--UIs.Var_Sel:Render(self.pos + Vector(2,12))
+		local preCol = btn.spr.Color
+		btn.spr.Color = selCol or greenCol
+	else
+		--self.spr:RenderLayer(1,pos)
+		btn.spr.Color = fadeCol or Color.Default
+	end
+end
+
 
 
 WORSTDEBUGMENU.debugcmd_Menu = {active = false, pos = Vector(0,0), name = "_debugcmd", debugnum = 14}
@@ -570,10 +605,46 @@ do
 	end
 
 	Menu:AddCallback(ModCallbacks.MC_PRE_GAME_EXIT, function()
-		for i=1,14 do
+		for i=1,15 do
 			Menu.wma.GetButton("_debugcmd", "debug"..i).IsActived = false
 		end
+		pcall(Menu.RemoveCallback, ModCallbacks.MC_PRE_NPC_COLLISION, debugcmd.PlayerIngoreCollision)
+		pcall(Menu.RemoveCallback, ModCallbacks.MC_PRE_PROJECTILE_COLLISION, debugcmd.PlayerIngoreCollision)
+		pcall(Menu.RemoveCallback, ModCallbacks.MC_PRE_PICKUP_COLLISION, debugcmd.PlayerIngoreCollision)
 	end)
+
+	local pos = Vector(((15-1)%4+1)*17-11, 13 + 17*(math.ceil(15/4)-1))
+	local btn15
+	btn15 = Menu.wma.AddButton("_debugcmd", "debug15", pos, 16, 16, UIs.debugbtn15, 
+	function(button)
+		if button ~= 0 then return end
+		btn15.IsActived = not btn15.IsActived
+		if btn15.IsActived then
+			Menu:AddPriorityCallback(ModCallbacks.MC_PRE_NPC_COLLISION, -1000, debugcmd.PlayerIngoreCollision)
+			Menu:AddPriorityCallback(ModCallbacks.MC_PRE_PROJECTILE_COLLISION, -1000, debugcmd.PlayerIngoreCollision)
+			Menu:AddPriorityCallback(ModCallbacks.MC_PRE_PICKUP_COLLISION, -1000, debugcmd.PlayerIngoreCollision)
+		else
+			Menu:RemoveCallback(ModCallbacks.MC_PRE_NPC_COLLISION, debugcmd.PlayerIngoreCollision)
+			Menu:RemoveCallback(ModCallbacks.MC_PRE_PROJECTILE_COLLISION, debugcmd.PlayerIngoreCollision)
+			Menu:RemoveCallback(ModCallbacks.MC_PRE_PICKUP_COLLISION, debugcmd.PlayerIngoreCollision)
+		end
+	end,
+	function(pos)
+		if btn15.IsActived then
+			--UIs.Var_Sel:Render(self.pos + Vector(2,12))
+			local preCol = btn15.spr.Color
+			btn15.spr.Color = greenCol
+		else
+			--self.spr:RenderLayer(1,pos)
+			btn15.spr.Color = Color.Default
+		end
+	end)
+
+	debugcmd.PlayerIngoreCollision = function(_, ent, coll)
+		if btn15.IsActived and coll.Type == EntityType.ENTITY_PLAYER then
+			return true
+		end
+	end
 end
 
 
@@ -1105,9 +1176,9 @@ do
 		if EntSpawner.SpawnMode > 0 and EntSpawner.wind then
 			local mousePos = Menu.wma.MousePos
 			UIs.entspawnerpoint:Render(mousePos)
-			print("MOUSE", Menu.wma.OnFreePos, Menu.wma.IsMouseBtnTriggered(0))
+			--print("MOUSE", Menu.wma.OnFreePos, Menu.wma.IsMouseBtnTriggered(0))
 			if Menu.wma.OnFreePos and Menu.wma.IsMouseBtnTriggered(0) then
-				print("MOUSE", Menu.wma.OnFreePos)
+				--print("MOUSE", Menu.wma.OnFreePos)
 				local pos = Input.GetMousePosition(true)
 				local tvs = EntSpawner.TVS
 				
@@ -4225,8 +4296,9 @@ do
 		UIs["EntDebug_debug" .. i] = GenSprite("gfx/wdm_editor/ui copy2.anm2","ent_debug", i)
 	end
 
-	Menu.EntDebug = {name = "EntDebug", subnames = {status = "Ent_Debug_Menu_status", info = "Ent_Debug_Menu_info"}, size = Vector(160,80), btn = {}, 
-		mode = "all", info = {}, keyinfo = {}
+	Menu.EntDebug = {name = "EntDebug", subnames = {status = "Ent_Debug_Menu_status", info = "Ent_Debug_Menu_info"}, 
+		size = Vector(160,80), mainsize = Vector(160,100), infosize = Vector(160,80), btn = {}, 
+		StatusApplyingMode = "All", info = {}, keyinfo = {}, paintEntList = {}, --StatusApplyingMode = "All"
 	}
 	local EntDebug = Menu.EntDebug
 	local sizev = EntDebug.size
@@ -4241,6 +4313,7 @@ do
 			EntDebug.wind:SetSubMenuVisible(k, false)
 		end
 		EntDebug.wind:SetSubMenuVisible(EntDebug.subnames.status, true)
+		EntDebug.wind:SetSize(EntDebug.mainsize)
 	end, function() if EntDebug.wind and EntDebug.wind.Removed then EntDebug.wind = nil end end)
 	Menu.wma.ButtonSetHintText("__debug_menu", "Ent_Debug_Menu", GetStr("Ent_Debug_Menu_hintText"))
 
@@ -4252,22 +4325,26 @@ do
 			EntDebug.wind:SetSubMenuVisible(k, false)
 		end
 		EntDebug.wind:SetSubMenuVisible(EntDebug.subnames.status, true)
+		EntDebug.wind:SetSize(EntDebug.mainsize)
 	end, function(pos, visible)
 		Menu.wma.RenderCustomButton2(pos, self)
-		font:DrawStringScaledUTF8(GetStr("ent_status"), pos.X+2, pos.Y, .5, .5, Menu.wma.DefTextColor,0,false)
+		Menu.wma.DrawText(0, GetStr("ent_status"), pos.X+23, pos.Y+1, .5, .5, 2)
+		--font:DrawStringScaledUTF8(GetStr("ent_status"), pos.X+2, pos.Y, .5, .5, Menu.wma.DefTextColor,0, true)
 	end)
 	vl.X = vl.X + 49
 
 	local self
-	self = Menu.wma.AddButton(EntDebug.name, "info", vl/1, 28, 12, nilspr, function(button)
+	self = Menu.wma.AddButton(EntDebug.name, "info", vl/1, 30, 12, nilspr, function(button)
 		if button ~= 0 then return end
 		for i,k in pairs(EntDebug.subnames) do
 			EntDebug.wind:SetSubMenuVisible(k, false)
 		end
 		EntDebug.wind:SetSubMenuVisible(EntDebug.subnames.info, true)
+		EntDebug.wind:SetSize(EntDebug.infosize)
 	end, function(pos, visible)
 		Menu.wma.RenderCustomButton2(pos, self)
-		font:DrawStringScaledUTF8(GetStr("info"), pos.X+2, pos.Y, .5, .5, Menu.wma.DefTextColor,0,false)
+		Menu.wma.DrawText(0, GetStr("info"), pos.X+15, pos.Y+1, .5, .5, 2)
+		--font:DrawStringScaledUTF8(GetStr("info"), pos.X+2, pos.Y, .5, .5, Menu.wma.DefTextColor,0,false)
 	end)
 
 
@@ -4277,84 +4354,174 @@ do
 		btn.fear.IsActived = not btn.fear.IsActived
 	end, function(pos, visible)
 		UIs.EntDebug_debug0:Render(pos)
-		if btn.fear.IsActived then
+		Def_SelectedGreen(btn.fear)
+		--[[if btn.fear.IsActived then
 			UIs.Var_Sel:Render(btn.fear.pos + Vector(2,12))
-		end
+		end]]
 	end)
 
-	vg.X = vg.X + 18
+	vg.X = vg.X + 17
 
 	btn.charm = Menu.wma.AddButton(EntDebug.subnames.status, "charm", vg/1, 16, 16, UIs.EmptyBtn(), function(button)
 		if button ~= 0 then return end
 		btn.charm.IsActived = not btn.charm.IsActived
 	end, function(pos, visible)
 		UIs.EntDebug_debug1:Render(pos)
-		if btn.charm.IsActived then
+		Def_SelectedGreen(btn.charm)
+		--[[if btn.charm.IsActived then
 			UIs.Var_Sel:Render(btn.charm.pos + Vector(2,12))
-		end
+		end]]
 	end)
 
-	vg.X = vg.X + 18
+	vg.X = vg.X + 17
 
 	btn.confus = Menu.wma.AddButton(EntDebug.subnames.status, "confus", vg/1, 16, 16, UIs.EmptyBtn(), function(button)
 		if button ~= 0 then return end
 		btn.confus.IsActived = not btn.confus.IsActived
 	end, function(pos, visible)
 		UIs.EntDebug_debug4:Render(pos)
-		if btn.confus.IsActived then
+		Def_SelectedGreen(btn.confus)
+		--[[if btn.confus.IsActived then
 			UIs.Var_Sel:Render(btn.confus.pos + Vector(2,12))
-		end
+		end]]
 	end)
 
-	vg.X = vg.X + 18
+	vg.X = vg.X + 17
 
 	btn.friend = Menu.wma.AddButton(EntDebug.subnames.status, "friend", vg/1, 16, 16, UIs.EmptyBtn(), function(button)
 		if button ~= 0 then return end
 		btn.friend.IsActived = not btn.friend.IsActived
 	end, function(pos, visible)
 		UIs.EntDebug_debug5:Render(pos)
-		if btn.friend.IsActived then
+		Def_SelectedGreen(btn.friend)
+		--[[if btn.friend.IsActived then
 			UIs.Var_Sel:Render(btn.friend.pos + Vector(2,12))
-		end
+		end]]
 	end)
 
-	vg.X = vg.X + 18
+	vg.X = vg.X + 17
 
 	btn.stone = Menu.wma.AddButton(EntDebug.subnames.status, "stone", vg/1, 16, 16, UIs.EmptyBtn(), function(button)
 		if button ~= 0 then return end
 		btn.stone.IsActived = not btn.stone.IsActived
 	end, function(pos, visible)
 		UIs.EntDebug_debug2:Render(pos)
-		if btn.stone.IsActived then
+		Def_SelectedGreen(btn.stone)
+		--[[if btn.stone.IsActived then
 			UIs.Var_Sel:Render(btn.stone.pos + Vector(2,12))
-		end
+		end]]
 	end)
 
-	vg.X = vg.X + 18
+	vg.X = vg.X + 17
 
 	btn.midas = Menu.wma.AddButton(EntDebug.subnames.status, "midas", vg/1, 16, 16, UIs.EmptyBtn(), function(button)
 		if button ~= 0 then return end
 		btn.midas.IsActived = not btn.midas.IsActived
 	end, function(pos, visible)
 		UIs.EntDebug_debug6:Render(pos)
-		if btn.midas.IsActived then
+		Def_SelectedGreen(btn.midas)
+		--[[if btn.midas.IsActived then
 			UIs.Var_Sel:Render(btn.midas.pos + Vector(2,12))
-		end
+		end]]
 	end)
 
-	vg.X = vg.X + 18
+	vg.X = vg.X + 17
 
 	btn.smol = Menu.wma.AddButton(EntDebug.subnames.status, "smol", vg/1, 16, 16, UIs.EmptyBtn(), function(button)
 		if button ~= 0 then return end
 		btn.smol.IsActived = not btn.smol.IsActived
 	end, function(pos, visible)
 		UIs.EntDebug_debug7:Render(pos)
-		if btn.smol.IsActived then
+		Def_SelectedGreen(btn.smol)
+		--[[if btn.smol.IsActived then
 			UIs.Var_Sel:Render(btn.smol.pos + Vector(2,12))
-		end
+		end]]
 	end)
 
-	vg.X = vg.X + 18
+	vg.X = vg.X + 17
+	
+	----------------------------------------
+	vg.X = 6
+	vg.Y = vg.Y + 20
+
+	local grayCol = Color(.7,.7,.7,1)
+	local self
+	self = Menu.wma.AddButton(EntDebug.subnames.status, "JustTextLol", vg/1, 16, 16, nil, nil, 
+	function (pos, visible)
+		if visible then
+			Menu.wma.DrawText(0, GetStr("mode")..":", pos.X, pos.Y+3, 0.5, 0.5, 0)
+			UIs.HintTextBG2.Color = Color(.5,.5,.5, .5)
+			UIs.HintTextBG2.Scale = Vector(55, 1)
+			UIs.HintTextBG2:Render(pos +  Vector(1,19))
+		end
+	end, true)
+	vg.X = vg.X + 37
+
+	local self
+	self = Menu.wma.AddButton(EntDebug.subnames.status, "paintMode", vg/1, 16, 16, UIs.Paint(), 
+	function(button)
+		if button ~= 0 then return end
+		EntDebug.StatusApplyingMode = "Paint"
+		Menu.wma.UpdatePriority(EntDebug.subnames.status, "paintMode", -1)
+		Menu.wma.UpdatePriority(EntDebug.subnames.status, "allMode", 0)
+		Menu.PlaceMode("EntStatusesPaint", nil, EntDebug.PaintLogic, 
+		function ()
+			
+		end)
+	end, function(pos, visible)
+		Def_SelectedGreen(self, Color.Default, grayCol)
+		self.IsActived = EntDebug.StatusApplyingMode == "Paint"
+	end)
+	Menu.wma.ButtonSetHintTextR(self, GetStr"EntDebug_ApplyOnSelectedHint")
+	vg.X = vg.X + 15
+	
+	local self
+	self = Menu.wma.AddButton(EntDebug.subnames.status, "allMode", vg/1, 16, 16, UIs.OnAll(), 
+	function(button)
+		if button ~= 0 then return end
+		EntDebug.StatusApplyingMode = "All"
+		Menu.wma.UpdatePriority(EntDebug.subnames.status, "paintMode", 0)
+		Menu.wma.UpdatePriority(EntDebug.subnames.status, "allMode", -1)
+		Menu.RemoveOlaceModeByName("EntStatusesPaint")
+	end, function(pos, visible)
+		Def_SelectedGreen(self, Color.Default, grayCol)
+		self.IsActived = EntDebug.StatusApplyingMode == "All"
+	end, nil, -1)
+	Menu.wma.ButtonSetHintTextR(self, GetStr"EntDebug_ApplyOnAllHint")
+
+	local function GetClosestEntity(pos, partition)
+		local dist = 9999999
+		local ent
+		local list = Isaac.FindInRadius(pos, 30, partition, 0xFFFFFFFF)
+		for i=1, #list do
+			local e = list[i]
+			local d = e.Position:Distance(pos)
+			if d < dist then
+				dist = d
+				ent = e
+			end
+		end
+		return ent
+	end
+
+	function EntDebug.PaintLogic(MousePos)
+		if EntDebug.StatusApplyingMode == "Paint" then
+			local mp0, mp1 = Input.IsMouseBtnPressed(0), Input.IsMouseBtnPressed(1)
+			local worldpos = Input.GetMousePosition(true)
+			local ent = GetClosestEntity(worldpos, EntityPartition.ENEMY)
+			if (mp0 or mp1) and ent then
+				if mp0 then
+					EntDebug.paintEntList[GetPtrHash(ent)] = ent
+				elseif mp1 then
+					EntDebug.paintEntList[GetPtrHash(ent)] = nil
+				end
+			end
+
+			UIs.entspawnerpoint:Render(MousePos)
+			--UIs.entspawnerpoint:Render(MousePos)
+		end
+	end
+
 
 
 	local fear
@@ -4393,18 +4560,18 @@ do
 		if EntDebug.wind then --and not EntDebug.wind.IsHided then
 			local playerref = EntityRef(Isaac.GetPlayer())
 			local flag = 0
-			 fear = btn.fear.IsActived
-			 charm = btn.charm.IsActived
-			 confus = btn.confus.IsActived
-			 friend = btn.friend.IsActived
-			 stone = btn.stone.IsActived
-			 midas = btn.midas.IsActived
-			 smol = btn.smol.IsActived
+			fear = btn.fear.IsActived
+			charm = btn.charm.IsActived
+			confus = btn.confus.IsActived
+			friend = btn.friend.IsActived
+			stone = btn.stone.IsActived
+			midas = btn.midas.IsActived
+			smol = btn.smol.IsActived
 
 			if btn.fear.IsActived then
 				flag = flag | EntityFlag.FLAG_FEAR
 			end
-			if EntDebug.mode == "all" then
+			if EntDebug.StatusApplyingMode == "All" then
 				local list = Isaac.FindInRadius(Vector(320,280), 600, EntityPartition.ENEMY)
 				for i=1, #list do
 					local ent = list[i]
@@ -4420,10 +4587,53 @@ do
 					end]]
 					ApplyStatusEffects(ent, playerref)
 				end
+			elseif EntDebug.StatusApplyingMode == "Paint" then
+				for i, ent in pairs(EntDebug.paintEntList) do
+					ApplyStatusEffects(ent, playerref)
+				end
 			end
 		end
 	end
 	Menu:AddCallback(ModCallbacks.MC_POST_UPDATE, EntDebug.PostUpdate)
+
+	vg.X = 6
+	vg.Y = vg.Y + 23
+
+	local self
+	self = Menu.wma.AddButton(EntDebug.subnames.status, "EntGrabber", vg/1, 16, 16, UIs.EntGrabber(), 
+	function(button)
+		if button ~= 0 then return end
+		Menu.PlaceMode("EntGrabber", nil, EntDebug.EntGrabberLogic, 
+		function()
+			self.IsActived = false
+		end)
+		self.IsActived = Menu.isPlaceMode("EntGrabber")
+	end, function(pos, visible)
+		Def_SelectedGreen(self)
+	end)
+	function EntDebug.EntGrabberLogic(MousePos)
+		local mp0 = Input.IsMouseBtnPressed(0)
+		if not mp0 then
+			EntDebug.GrabbedEnt = nil
+			UIs.mouse_grab:SetFrame(0)
+		else
+			if not EntDebug.GrabbedEnt then
+				EntDebug.GrabbedEnt = GetClosestEntity(Input.GetMousePosition(true), 0xFFFFFFFF)
+			end
+			if EntDebug.GrabbedEnt then
+				EntDebug.GrabbedEnt.Position = Input.GetMousePosition(true)
+				EntDebug.GrabbedEnt.TargetPosition = EntDebug.GrabbedEnt.Position
+				UIs.mouse_grab:SetFrame(1)
+			end
+		end
+
+		UIs.mouse_grab:Render(MousePos+Vector(16,-16))
+		if Input.IsMouseBtnPressed(1) then
+			Menu.RemoveOlaceModeByName("EntGrabber")
+		end
+	end
+	Menu.wma.ButtonSetHintTextR(self, GetStr"EntDebug_grabberHint")
+
 
 	UIs.HPBar = GenSprite("gfx/wdm_editor/ui copy.anm2","батончик здоровья")
 	function EntDebug.PostRender()
@@ -4482,6 +4692,11 @@ do
 					end
 				end
 			end
+
+			for i, ent in pairs(EntDebug.paintEntList) do
+				local rpos = Isaac.WorldToScreen(ent.Position)
+				UIs.ThisGuy:Render(rpos+Vector(0.5,-40))
+			end
 		end
 	end
 	Menu:AddCallback(ModCallbacks.MC_POST_RENDER, EntDebug.PostRender)
@@ -4521,12 +4736,14 @@ do
 			EntDebug.removeinfo("hp")
 		end]]
 		EntDebug.RenderHp = not EntDebug.RenderHp
+		self.IsActived = EntDebug.RenderHp
 	end, function(pos, visible)
 		Menu.wma.RenderCustomButton(pos, self.size, self.IsSelected)
 		Menu.wma.DrawText(0, GetStr("hp"), pos.X+2, pos.Y+2, .5, .5)
-		if EntDebug.RenderHp then
+		--[[if EntDebug.RenderHp then
 			UIs.Var_Sel:Render(pos + Vector(2,12))
-		end
+		end]]
+		Def_SelectedGreen(self)
 	end)
 	--vg.X = vg.X + 18
 
@@ -4649,6 +4866,7 @@ do
 		
 	end)
 	self.textoffset = Vector(24,0)
+	--Menu.wma.ButtonSetHintTextR(self, GetStr("entDebug_hintAddPrintData"))
 
 	local self
 	self = Menu.wma.AddButton(EntDebug.subnames.info, "DataOrClass", vg/1, 22, 16, nilspr, 
@@ -4657,11 +4875,17 @@ do
 		EntDebug.AddType = (EntDebug.AddType + 1) % 2
 
 		self.x = EntDebug.AddType == 0 and 22 or 27
+		if EntDebug.AddType == 0 then
+			Menu.wma.ButtonSetHintTextR(self, GetStr("entDebug_hintAddPrintData"))
+		elseif EntDebug.AddType == 1 then
+			Menu.wma.ButtonSetHintTextR(self, GetStr("entDebug_hintAddPrintClass"))
+		end
 	end, function(pos, visible)
 		Menu.wma.RenderCustomButton2(pos, self)
 		local extratext = EntDebug.AddType == 0 and "DATA:" or "CLASS:"
 		Menu.wma.DrawText(0, extratext, pos.X+1, pos.Y+2, .4, .5, nil, EntDebug.AddDataBtnCol)
 	end, nil, -1)
+	Menu.wma.ButtonSetHintTextR(self, GetStr("entDebug_hintAddPrintData"))
 
 
 
@@ -4788,10 +5012,24 @@ do
 		[RoomType.ROOM_TREASURE]="IconTreasureRoom", [RoomType.ROOM_ULTRASECRET]="IconUltraSecretRoom",
 		[RoomType.ROOM_SUPERSECRET]="IconSuperSecretRoom",
 	}
+	local ShapeToExtrabtns = {
+		[RoomShape.ROOMSHAPE_1x2] = {{0,0},{0,1}}, [RoomShape.ROOMSHAPE_2x1] = {{0,0},{1,0}}, [RoomShape.ROOMSHAPE_2x2] = {{0,0},{1,0},{0,1},{1,1}},
+		[RoomShape.ROOMSHAPE_IIH] = {{0,0},{1,0}}, [RoomShape.ROOMSHAPE_IIV] = {{0,0},{0,1}},
+		[RoomShape.ROOMSHAPE_LTL] = {{0,0},{0,1},{-1,1}}, 
+		[RoomShape.ROOMSHAPE_LTR] = {{0,0},{0,1},{1,1}}, 
+		[RoomShape.ROOMSHAPE_LBL] = {{0,0},{1,0},{1,1}}, 
+		[RoomShape.ROOMSHAPE_LBR] = {{0,0},{1,0},{0,1}},
+	}
 
 	function LevelDebug.genMap()
 		local level = game:GetLevel()
 
+		if LevelDebug.ToRemove then
+			for i=1,#LevelDebug.ToRemove do
+				Menu.wma.RemoveButton(LevelDebug.subnames.level, LevelDebug.ToRemove[i])
+			end
+		end
+		LevelDebug.ToRemove = {}
 		LevelDebug.map = {}
 		local cache = {}
 		for i = 0, 13*13 do
@@ -4815,21 +5053,57 @@ do
 				end
 
 				--Menu.wma.RemoveButton(LevelDebug.subnames.level, room.SafeGridIndex)
+				if not ShapeToExtrabtns[room.Data.Shape] then
+					local col = (i) % 13
+					local row = math.floor(i/13)
+					local self
+					self = Menu.wma.AddButton(LevelDebug.subnames.level, room.SafeGridIndex, vl/1 + Vector(8*col,7*row+14), 8, 7, nilspr, function(button)
+						game:StartRoomTransition(room.SafeGridIndex, -1, 4)
+						--print(room.SafeGridIndex)
+					end, function(pos, visible)
+						self.IsSelected = self.IsSelected and math.max(10,self.IsSelected)
+						tab.spr:Render(pos)
+						if tab.icon then
+							tab.icon:Render(pos)
+						end
+					end)
+					local text = room.SafeGridIndex .. " col:" .. col .. " row:" .. row 
+					Menu.wma.ButtonSetHintTextR(self, text)
+				else
+					local roomcol = (room.SafeGridIndex) % 13
+					local roomrow = math.floor(room.SafeGridIndex/13)
+					local fisrt = false
+					for _, extPos in ipairs(ShapeToExtrabtns[room.Data.Shape]) do
+						local col = ((i) % 13) +extPos[1]
+						local row = math.floor(i/13)+extPos[2]
 
-				local col = (i) % 13
-				local row = math.floor(i/13)
-				local self
-				self = Menu.wma.AddButton(LevelDebug.subnames.level, room.SafeGridIndex, vl/1 + Vector(8*col,7*row+14), 8, 7, nilspr, function(button)
-					game:StartRoomTransition(room.SafeGridIndex, -1, 4)
-					--print(room.SafeGridIndex)
-				end, function(pos, visible)
-					tab.spr:Render(pos)
-					if tab.icon then
-						tab.icon:Render(pos)
+						local name = tostring(room.SafeGridIndex).." "..extPos[1]..extPos[2]
+						LevelDebug.ToRemove[#LevelDebug.ToRemove+1] = name
+
+						local self
+						self = Menu.wma.AddButton(LevelDebug.subnames.level, name, 
+						vl/1 + Vector(8*col,7*row+14), 8, 7, nilspr, function(button)
+							game:StartRoomTransition(room.SafeGridIndex, -1, 4)
+							--print(room.SafeGridIndex)
+						end)
+						if not fisrt then
+							fisrt = true
+							self.render = function(pos, visible)
+								self.IsSelected = self.IsSelected and math.max(10,self.IsSelected)
+								tab.spr:Render(pos)
+								if tab.icon then
+									tab.icon:Render(pos)
+								end
+							end
+						else
+							self.render = function(pos, visible)
+								self.IsSelected = self.IsSelected and math.max(10,self.IsSelected)
+							end
+						end
+						local text = room.SafeGridIndex .. " col:" .. roomcol .. " row:" .. roomrow 
+						Menu.wma.ButtonSetHintTextR(self, text)
 					end
-				end)
-				local text = room.SafeGridIndex .. " col:" .. col .. " row:" .. row 
-				Menu.wma.ButtonSetHintTextR(self, text)
+				end
 			end
 		end
 	end

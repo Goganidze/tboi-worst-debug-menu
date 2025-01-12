@@ -771,6 +771,21 @@ function menuTab.AddButton(menuName, buttonName, pos, sizeX, sizeY, sprite, pres
     end
 end
 
+function menuTab.UpdatePriority(menu, buttonName, priority)
+	local menu = menuTab.MenuData[menu]
+	if menu then
+		if buttonName and priority then
+			for i=1, #menu.sortList do
+				if menu.sortList[i].btn == buttonName then
+					menu.sortList[i].Priority = priority
+					break
+				end
+			end
+		end
+		table.sort(menu.sortList, function(a,b) return a.Priority < b.Priority end)
+	end
+end
+
 ---@class Window
 ---@field pos Vector
 ---@field size Vector
@@ -788,9 +803,10 @@ end
 ---@field IsHided boolean
 ---@field hide EditorButton
 ---@field unhide EditorButton
----@field unuser boolean --нельзя перемещать и без кнопок Закрыть и Свернуть
+---@field unuser boolean --нельзя перемещать и без кнопок Закрыть и Свернуть| can't move and don't have Close and Hide buttons
 ---@field backcolor Color
----@field backcolornfocus Color --цвет в не фокусе
+---@field backcolornfocus Color --цвет в не фокусе | color in not focus
+---@field OnTop boolean --Первый в приоритете, не затенён | first in render, not faded
 menuTab.WindowMeta = {}
 menuTab.WindowMetaTable = {__index = menuTab.WindowMeta}
 --TSJDNHC.FGrid.__index = TSJDNHC.Grid
@@ -814,50 +830,94 @@ function menuTab.ShowWindow(menuName, pos, size, color )
 
 		menuTab.Windows.menus[menuName] = {name = menuName, pos = pos, size = size, refsize = size/1, color = color, 
 			MouseOldPos = menuTab.MousePos, OldPos = Vector(pos.X,pos.Y)}
+
+		local window = menuTab.Windows.menus[menuName]
 		menuTab.Windows.order[#menuTab.Windows.order+1] = menuName
 
-		if not menuTab.GetButton(menuTab.Windows.menus[menuName], "__close") then
+		if not menuTab.GetButton(window, "__close") then
 			local self
-			self = menuTab.AddButton(menuTab.Windows.menus[menuName], "__close", Vector(size.X-16,0), 16, 8, UIs.CloseBtn() , 
+			self = menuTab.AddButton(window, "__close", Vector(size.X-16 - 1, 0), 16, 8, UIs.CloseBtn() , 
 			function(button) 
 				if button ~= 0 then return end
 				menuTab.CloseWindow(menuName)
+			end,
+			function (pos, visible)
+				if visible then
+					if not window.OnTop then
+						if not self.UsedFadedColor then
+							self.UsedFadedColor = Color.Lerp(self.spr.Color, Color(1,1,1,1),0)
+							self.spr.Color = 
+								Color.Lerp(self.spr.Color,window.backcolornfocus or menuTab.defauldbackcolorunfocus, .5)
+						end
+					elseif self.UsedFadedColor then
+						self.spr.Color = self.UsedFadedColor
+						self.UsedFadedColor = nil
+					end
+				end
 			end)
-			local wind = menuTab.Windows.menus[menuName]
+			--local wind = menuTab.Windows.menus[menuName]
 			self.posfunc = function()
-				self.posref = Vector(wind.size.X-16,0)
+				self.posref = Vector(window.size.X-16 - 1, 0)
 			end
 			menuTab.Windows.menus[menuName].close = self
 		end
-		if not menuTab.GetButton(menuTab.Windows.menus[menuName], "__blockplashka") then
+		if not menuTab.GetButton(window, "__blockplashka") then
 			local self
-			self = menuTab.AddButton(menuTab.Windows.menus[menuName], "__blockplashka", Vector(0,0), size.X, size.Y, nilspr, nilfunc , nil, nil, 10)
+			self = menuTab.AddButton(window, "__blockplashka", Vector(0,0), size.X, size.Y, nilspr, nilfunc , nil, nil, 10)
 			self.BlockPress = true
 			menuTab.Windows.menus[menuName].plashka = self
 		end
 
 		--UIs.HideWindowBtn() return GenSprite("gfx/wdm_editor/ui copy.anm2","свернуть") end
 		--function UIs.UnHideWindowBtn()
-		if not menuTab.GetButton(menuTab.Windows.menus[menuName], "__hide") then
+		if not menuTab.GetButton(window, "__hide") then
 			local self
-			self = menuTab.AddButton(menuTab.Windows.menus[menuName], "__hide", Vector(0,0), 16, 8, UIs.HideWindowBtn(), 
+			self = menuTab.AddButton(window, "__hide", Vector(1,0), 16, 8, UIs.HideWindowBtn(), 
 			function(button)
 				menuTab.WindowMeta.Hide(menuTab.Windows.menus[menuName])
-			end )
+			end,
+			function (pos, visible)
+				if visible then
+					if not window.OnTop then
+						if not self.UsedFadedColor then
+							self.UsedFadedColor = Color.Lerp(self.spr.Color, Color(1,1,1,1),0)
+							self.spr.Color = 
+								Color.Lerp(self.spr.Color,window.backcolornfocus or menuTab.defauldbackcolorunfocus, .5)
+						end
+					elseif self.UsedFadedColor then
+						self.spr.Color = self.UsedFadedColor
+						self.UsedFadedColor = nil
+					end
+				end
+			end)
 			menuTab.Windows.menus[menuName].hide = self
 		end
-		if not menuTab.GetButton(menuTab.Windows.menus[menuName], "__unhide") then
+		if not menuTab.GetButton(window, "__unhide") then
 			local self
-			self = menuTab.AddButton(menuTab.Windows.menus[menuName], "__unhide", Vector(0,0), 16, 8, UIs.UnHideWindowBtn(), 
+			self = menuTab.AddButton(window, "__unhide", Vector(1,0), 16, 8, UIs.UnHideWindowBtn(), 
 			function(button)
 				menuTab.WindowMeta.UnHide(menuTab.Windows.menus[menuName])
-			end )
+			end,
+			function (pos, visible)
+				if visible then
+					if not window.OnTop then
+						if not self.UsedFadedColor then
+							self.UsedFadedColor = Color.Lerp(self.spr.Color, Color(1,1,1,1),0)
+							self.spr.Color = 
+								Color.Lerp(self.spr.Color,window.backcolornfocus or menuTab.defauldbackcolorunfocus, .5)
+						end
+					elseif self.UsedFadedColor then
+						self.spr.Color = self.UsedFadedColor
+						self.UsedFadedColor = nil
+					end
+				end
+			end)
 			menuTab.Windows.menus[menuName].unhide = self
 		end
 
-		setmetatable(menuTab.Windows.menus[menuName], menuTab.WindowMetaTable)
+		setmetatable(window, menuTab.WindowMetaTable)
 
-		return menuTab.Windows.menus[menuName]
+		return window
 	end
 end
 function menuTab.CloseWindow(menuName)
@@ -874,7 +934,7 @@ function menuTab.WindowMeta.SetSize(wind, size)
 		wind.plashka.x = size.X
 		wind.plashka.y = size.Y
 
-		wind.close.posref = Vector(wind.size.X-16,0)
+		wind.close.posref = Vector(wind.size.X-16 - 1,0)
 	end
 end
 
@@ -916,7 +976,7 @@ function menuTab.WindowMeta.Hide(wind)
 	if not wind.IsHided then
 		wind.IsHided = true
 		wind.PreHideSize = wind.size/1
-		wind:SetSize(Vector(wind.size.X, 16))
+		wind:SetSize(Vector(48, 16)) --wind.size.X
 	end
 end
 
@@ -2298,7 +2358,7 @@ function menuTab.MouseButtonDetect(onceTouch)
 						menuTab.DelayRender(function()
 							Isaac.DrawQuad(st, st + Vector(mwz.size.X,0),
 								st + Vector(0, mwz.size.Y), st + mwz.size, 
-								KColor(1,1,1,1), 4
+								KColor(1,1,1,.2), 4
 							)
 							end, menuTab.Callbacks.WINDOW_POST_RENDER
 						)
@@ -2930,6 +2990,12 @@ function menuTab.HandleWindowControl()
 		local window = wind.menus[ menuName ]
 		local unuser = window.unuser
 
+		if order == 1 then
+			window.OnTop = true
+		else
+			window.OnTop = false
+		end
+
 		--menuTab.CurrentWindowControl = window
 		if window.IsHided then
 			--menuTab.DetectButtonsList(menuName, {window.close, window.unhide, window.plashka})
@@ -3035,6 +3101,8 @@ function menuTab.HandleWindowControl()
 	end
 end
 
+menuTab.defauldbackcolor = Color(1,1,1,.5)
+menuTab.defauldbackcolorunfocus = Color(.6,.6,.6,.5)
 
 function menuTab.RenderWindows()
 	local mousePos = menuTab.MousePos
@@ -3055,8 +3123,8 @@ function menuTab.RenderWindows()
 			window.OldPos = window.pos/1
 		end
 
-		local bgcolorfocus = backcolor or Color(1,1,1,.5)
-		local bgcolorunfocus = backcolorunfocus or Color(.6,.6,.6,.5)
+		local bgcolorfocus = backcolor or menuTab.defauldbackcolor -- Color(1,1,1,.5)
+		local bgcolorunfocus = backcolorunfocus or menuTab.defauldbackcolorunfocus -- Color(.6,.6,.6,.5)
 
 		menuTab.CallDelayRenders(menuTab.Callbacks.WINDOW_BACK_PRE_RENDER, menuName, window.pos, window)
 		Isaac.RunCallbackWithParam(menuTab.Callbacks.WINDOW_BACK_PRE_RENDER, menuName, window.pos, window)
