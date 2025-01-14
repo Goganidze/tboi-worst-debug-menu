@@ -1048,6 +1048,10 @@ function menuTab.AddTextBox(menuName, buttonName, pos, size, sprite, resultCheck
 						end
 					end
 				end
+				print("PRESS", menuTab.TextboxPopup.MouseIsSelect)
+				menuTab.TextboxPopup.selection = nil
+				menuTab.TextboxPopup.resetSelectionEdge = true
+				menuTab.TextboxPopup.MouseIsSelect = true
 			else
 				self.TextBoxinFocus = true
 				menuTab.OpenTextbox(menuName, buttonName, onlyNumber, resultCheck, self.text or self.starttext)
@@ -1604,17 +1608,26 @@ function menuTab.OpenTextbox(menu, button, onlyNumber, resultCheckFunc, startTex
 	menuTab.TextboxPopup.TextPos = startText and utf8.len(menuTab.TextboxPopup.Text) or 0
 	menuTab.TextboxPopup.textoffset = menuTab.GetButton(menu, button).textoffset
 	menuTab.TextboxPopup.textcolor = menuTab.GetButton(menu, button).textcolor or menuTab.DefTextColor
+	menuTab.TextboxPopup.history = { {menuTab.TextboxPopup.Text,menuTab.TextboxPopup.TextPos} }
+	menuTab.TextboxPopup.lastPressFrame = Isaac.GetFrameCount()
+	menuTab.TextboxPopup.selection = nil -- {[1]start, [2]end}
+	menuTab.TextboxPopup.MouseIsSelect = false
 	
 	--menuTab.TextboxPopup.TabKey = {tab, key}
 
+	local selectionTriggerEdges
+
 	local ctrlVPressed = false
+	local ctrlZPressed = false
+	local ctrlCPressed = false
 	local TextboxPopup = menuTab.TextboxPopup
 	menuTab.TextboxPopup.KeyLogic = function(MousePos)
 		mousePosi = MousePos
+		local btn = menuTab.GetButton(menu, button)
 
 		if (menuTab.IsMouseBtnTriggered(0) or menuTab.IsMouseBtnTriggered(1)) 
 		--and menuTab.MenuButtons[Menuname].TextBox.spr:GetFrame() == 0 then
-		and not menuTab.GetButton(menu, button).IsSelected
+		and not btn.IsSelected
 		then
 			TextboxPopup.InFocus = false
 
@@ -1623,8 +1636,8 @@ function menuTab.OpenTextbox(menu, button, onlyNumber, resultCheckFunc, startTex
 				menuTab.CloseTextbox()
 			elseif type(result) == "string" then
 				TextboxPopup.errorMes = result
-				menuTab.GetButton(menu, button).errorMes = result
-				menuTab.GetButton(menu, button).showError = 60
+				btn.errorMes = result
+				btn.showError = 60
 				menuTab.CloseTextbox()
 			end
 		end
@@ -1634,8 +1647,8 @@ function menuTab.OpenTextbox(menu, button, onlyNumber, resultCheckFunc, startTex
 				menuTab.CloseTextbox()
 			elseif type(result) == "string" then
 				TextboxPopup.errorMes = result
-				menuTab.GetButton(menu, button).errorMes = result
-				menuTab.GetButton(menu, button).showError = 60
+				btn.errorMes = result
+				btn.showError = 60
 			end
 		end
 		if TextboxPopup.InFocus then
@@ -1658,10 +1671,105 @@ function menuTab.OpenTextbox(menu, button, onlyNumber, resultCheckFunc, startTex
 			elseif menuTab.MouseSprite and menuTab.MouseSprite:GetAnimation() == "mouse_textEd" then
 				menuTab.MouseSprite = nil
 			end]]
-			if menuTab.GetButton(menu, button).IsSelected then
+			
+			if btn.IsSelected then
 				menuTab.MouseSprite = UIs.FakeTextMouse
 			end
 
+			if TextboxPopup.MouseIsSelect then
+				if Input.IsMouseBtnPressed(0) then
+					--print(selectionTriggerEdges, menuTab.TextboxPopup.resetSelectionEdge)
+					if menuTab.TextboxPopup.resetSelectionEdge then
+						menuTab.TextboxPopup.resetSelectionEdge = nil
+						selectionTriggerEdges = nil
+					end
+					if not selectionTriggerEdges then
+						local textoff = btn.textoffset and btn.textoffset.X or 0
+						local mouseClickPos = menuTab.MousePos-btn.pos
+						local TextPos = menuTab.TextboxPopup.TextPos
+
+						if mouseClickPos.X-textoff < 0 then
+							selectionTriggerEdges = {-1, TextBoxFont:GetStringWidthUTF8(utf8_Sub(menuTab.TextboxPopup.Text, 0, 1))/2 }
+						else
+							local mid = TextBoxFont:GetStringWidthUTF8(utf8_Sub(menuTab.TextboxPopup.Text, 0, TextPos))
+							selectionTriggerEdges = {-1, 
+								mid - TextBoxFont:GetStringWidthUTF8(utf8_Sub(menuTab.TextboxPopup.Text, TextPos, TextPos-1))/2,
+								mid + TextBoxFont:GetStringWidthUTF8(utf8_Sub(menuTab.TextboxPopup.Text, TextPos, TextPos+1))/2
+							}
+						end
+						--[[
+						if mouseClickPos.X-textoff < 0 then
+							selectionTriggerEdges = {-1, TextBoxFont:GetStringWidthUTF8(utf8_Sub(menuTab.TextboxPopup.Text, 0, 1)) }
+						else
+							for i = utf8.len(menuTab.TextboxPopup.Text),0,-1 do
+								local CutPos = TextBoxFont:GetStringWidthUTF8(utf8_Sub(menuTab.TextboxPopup.Text, 0, i))
+								if CutPos < mouseClickPos.X-textoff then
+									selectionTriggerEdges = {
+										CutPos,
+										TextBoxFont:GetStringWidthUTF8(utf8_Sub(menuTab.TextboxPopup.Text, 0, i-1)), 
+										TextBoxFont:GetStringWidthUTF8(utf8_Sub(menuTab.TextboxPopup.Text, 0, i+1)) 
+									}
+									break
+								end
+							end
+						end]]
+					else
+						local textoff = btn.textoffset and btn.textoffset.X or 0
+						local mouseClickPos = menuTab.MousePos-btn.pos
+
+						local midle, leftEdge, rightEdge = selectionTriggerEdges[1], selectionTriggerEdges[2], selectionTriggerEdges[3]
+						if leftEdge ~= -1 and leftEdge > mouseClickPos.X-textoff then
+							for i = utf8.len(menuTab.TextboxPopup.Text),0,-1 do
+								local CutPos = TextBoxFont:GetStringWidthUTF8(utf8_Sub(menuTab.TextboxPopup.Text, 0, i))
+								if CutPos < mouseClickPos.X-textoff then
+									if i ~= menuTab.TextboxPopup.TextPos then
+										TextboxPopup.selection = {menuTab.TextboxPopup.TextPos, i}
+									end
+									break
+								end
+							end
+							if mouseClickPos.X-textoff < 0 then
+								TextboxPopup.selection = {menuTab.TextboxPopup.TextPos, 0 }
+							end
+						elseif rightEdge ~= -1 and rightEdge < mouseClickPos.X-textoff then
+							for i = utf8.len(menuTab.TextboxPopup.Text),0,-1 do
+								local CutPos = TextBoxFont:GetStringWidthUTF8(utf8_Sub(menuTab.TextboxPopup.Text, 0, i))
+								if CutPos < mouseClickPos.X-textoff then
+									if i ~= menuTab.TextboxPopup.TextPos then
+										TextboxPopup.selection = {i, menuTab.TextboxPopup.TextPos}
+									end
+									break
+								end
+							end
+							if mouseClickPos.X-textoff < 0 then
+								TextboxPopup.selection = {0, menuTab.TextboxPopup.TextPos }
+							end
+						else
+							TextboxPopup.selection = nil
+						end
+					end
+
+					--[[
+					local textoff = btn.textoffset and btn.textoffset.X or 0
+					local mouseClickPos = menuTab.MousePos-btn.pos
+					local num = 0
+					if mouseClickPos.X-textoff < 0 then
+						menuTab.TextboxPopup.TextPos = 0
+					else
+						--menuTab.TextboxPopup.TextPos = utf8.len(menuTab.TextboxPopup.Text)
+						for i = utf8.len(menuTab.TextboxPopup.Text),0,-1 do
+							local CutPos = TextBoxFont:GetStringWidthUTF8(utf8_Sub(menuTab.TextboxPopup.Text, 0, i))
+							if CutPos < mouseClickPos.X-textoff then
+								menuTab.TextboxPopup.TextPos = i
+								break
+							end
+						end
+					end
+					]]
+				else
+					TextboxPopup.MouseIsSelect = false
+				end
+			end
 
 			local maxN = utf8.len(TextboxPopup.Text)
 			if TextboxPopup.TextPosMoveDelay <= 0 
@@ -1705,6 +1813,7 @@ function menuTab.OpenTextbox(menu, button, onlyNumber, resultCheckFunc, startTex
 			
 			local newChar
 			local remove
+			local backHistory
 			local charTable
 			local ignoreKeybord = false
 
@@ -1735,7 +1844,46 @@ function menuTab.OpenTextbox(menu, button, onlyNumber, resultCheckFunc, startTex
 			--		end
 			--	end
 			--else
-			if not ctrlVPressed and Input.IsButtonPressed(Keyboard.KEY_LEFT_CONTROL,0) and Input.IsButtonPressed(Keyboard.KEY_V,0) then
+			if Input.IsButtonPressed(Keyboard.KEY_LEFT_CONTROL,0) then
+
+				if not ctrlVPressed and Input.IsButtonPressed(Keyboard.KEY_V,0) then
+					ctrlVPressed = true
+					ignoreKeybord = true
+					newChar = Isaac.GetClipboard and Isaac.GetClipboard()
+				elseif Input.IsButtonPressed(Keyboard.KEY_V,0) then
+					ignoreKeybord = true
+				else
+					ctrlVPressed = false
+				end
+
+				if not ctrlZPressed and Input.IsButtonPressed(Keyboard.KEY_Z,0) then
+					ctrlZPressed = true
+					ignoreKeybord = true
+					backHistory = true
+				elseif Input.IsButtonPressed(Keyboard.KEY_Z,0) then
+					ignoreKeybord = true
+				else
+					ctrlZPressed = false
+				end
+
+				if not ctrlCPressed and Input.IsButtonPressed(Keyboard.KEY_C,0) then
+					ctrlCPressed = true
+					ignoreKeybord = true
+					if menuTab.TextboxPopup.selection and Isaac.SetClipboard then
+						local sf,se = math.min(menuTab.TextboxPopup.selection[1], menuTab.TextboxPopup.selection[2]), math.max(menuTab.TextboxPopup.selection[1], menuTab.TextboxPopup.selection[2])
+						Isaac.SetClipboard(utf8_Sub(menuTab.TextboxPopup.Text, sf+1, se))
+					end
+				elseif Input.IsButtonPressed(Keyboard.KEY_C,0) then
+					ignoreKeybord = true
+				else
+					ctrlCPressed = false
+				end
+
+			else
+				ctrlVPressed = false
+				ctrlZPressed = false
+			end
+			--[[if not ctrlVPressed and Input.IsButtonPressed(Keyboard.KEY_LEFT_CONTROL,0) and Input.IsButtonPressed(Keyboard.KEY_V,0) then
 				ctrlVPressed = true
 				ignoreKeybord = true
 				newChar = Isaac.GetClipboard and Isaac.GetClipboard()
@@ -1743,7 +1891,7 @@ function menuTab.OpenTextbox(menu, button, onlyNumber, resultCheckFunc, startTex
 				ctrlVPressed = false
 			else
 				ignoreKeybord = true
-			end
+			end]]
 			--LongDelay = 30, shortDelay = 10, Delay = 0,
 			if TextboxPopup.Delay > 0 then
 				TextboxPopup.Delay = TextboxPopup.Delay - 1
@@ -1802,14 +1950,47 @@ function menuTab.OpenTextbox(menu, button, onlyNumber, resultCheckFunc, startTex
 				local firstPart = utf8_Sub(TextboxPopup.Text, 0, curjspos)
 				local secondPart = utf8_Sub(TextboxPopup.Text, secoPos)
 				if newChar == -1 then
-					if TextboxPopup.TextPos>0 then
-						TextboxPopup.Text = utf8_Sub(firstPart, 0, utf8.len(firstPart)-1) .. secondPart
-						TextboxPopup.TextPos = TextboxPopup.TextPos - 1
+					--if TextboxPopup.TextPos>0 then
+					if TextboxPopup.selection then
+						local sfirst,send = math.min(TextboxPopup.selection[1], TextboxPopup.selection[2]), math.max(TextboxPopup.selection[1], TextboxPopup.selection[2])
+						
+						TextboxPopup.Text =
+							utf8_Sub(TextboxPopup.Text, 0, sfirst) .. 
+							utf8_Sub(TextboxPopup.Text, send+1)
+						TextboxPopup.TextPos = sfirst
+						TextboxPopup.selection = nil
+						TextboxPopup.MouseIsSelect = nil
+					else
+						if TextboxPopup.TextPos>0 then
+							TextboxPopup.Text = utf8_Sub(firstPart, 0, utf8.len(firstPart)-1) .. secondPart
+							TextboxPopup.TextPos = TextboxPopup.TextPos - 1
+						end
 					end
 				else
-					TextboxPopup.Text = firstPart .. newChar .. secondPart
-					TextboxPopup.TextPos = TextboxPopup.TextPos + utf8.len(newChar)
+					local curFrame = Isaac.GetFrameCount()
+					if utf8.len(newChar) > 1 or TextboxPopup.lastPressFrame + 50 < curFrame then
+						TextboxPopup.lastPressFrame = curFrame
+						TextboxPopup.history[#TextboxPopup.history+1] = {menuTab.TextboxPopup.Text,menuTab.TextboxPopup.TextPos}
+					end
+					if TextboxPopup.selection then
+						local sfirst,send = math.min(TextboxPopup.selection[1], TextboxPopup.selection[2]), math.max(TextboxPopup.selection[1], TextboxPopup.selection[2])
+						
+						TextboxPopup.Text =
+							utf8_Sub(TextboxPopup.Text, 0, sfirst) .. newChar ..
+							utf8_Sub(TextboxPopup.Text, send+1)
+						TextboxPopup.TextPos = sfirst + utf8.len(newChar)
+						TextboxPopup.selection = nil
+						TextboxPopup.MouseIsSelect = nil
+					else
+						TextboxPopup.Text = firstPart .. newChar .. secondPart
+						TextboxPopup.TextPos = TextboxPopup.TextPos + utf8.len(newChar)
+					end
 				end
+			end
+			if backHistory and #TextboxPopup.history > 1 then
+				TextboxPopup.Text = TextboxPopup.history[#TextboxPopup.history][1]
+				TextboxPopup.TextPos = TextboxPopup.history[#TextboxPopup.history][2]
+				TextboxPopup.history[#TextboxPopup.history] = nil
 			end
 		end
 	end
@@ -1859,6 +2040,10 @@ function menuTab.CloseTextbox()
 	menuTab.TextboxPopup.TargetBtn = nil
 	menuTab.TextboxPopup.Delay = 0
 	menuTab.TextboxPopup.DelayOn = true
+	menuTab.TextboxPopup.history = nil
+	menuTab.TextboxPopup.lastPressFrame = nil
+	menuTab.TextboxPopup.selection = nil -- {[1]start, [2]end}
+	menuTab.TextboxPopup.MouseIsSelect = nil
 
 
 	menuTab:RemoveCallback(ModCallbacks.MC_INPUT_ACTION, menuTab.InputFilter)
@@ -1873,6 +2058,26 @@ function menuTab.RenderTextBoxButton(button, pos)
 		local poloskaPos = TextBoxFont:GetStringWidthUTF8(utf8_Sub(menuTab.TextboxPopup.Text, 0, menuTab.TextboxPopup.TextPos))
 		UIs.TextEdPos:Render(pos+Vector(3+poloskaPos+textoffset.X, 1+textoffset.Y))
 		UIs.TextEdPos:Update()
+
+		if menuTab.TextboxPopup.selection then
+			UIs.HintTextBG1.Color = Color(.5,.5,1,0.5)
+			local sf,se = math.min(menuTab.TextboxPopup.selection[1], menuTab.TextboxPopup.selection[2]), math.max(menuTab.TextboxPopup.selection[1], menuTab.TextboxPopup.selection[2])
+			
+			local subtext = utf8_Sub(menuTab.TextboxPopup.Text, sf+1, se)
+
+			UIs.HintTextBG1.Scale = Vector(TextBoxFont:GetStringWidthUTF8(
+				subtext),
+				TextBoxFont:GetLineHeight()*1+2) / 2
+
+			--local sf = math.min(menuTab.TextboxPopup.selection[1], menuTab.TextboxPopup.selection[2])
+			local subtextoffset = TextBoxFont:GetStringWidthUTF8(utf8_Sub(menuTab.TextboxPopup.Text, 0, sf))
+			UIs.HintTextBG1:Render(pos + textoffset + 
+				Vector(3+subtextoffset, 0))
+
+			local revcol = KColor(1-col.Red, 1-col.Green, 1-col.Blue, col.Alpha)
+			TextBoxFont:DrawStringScaledUTF8(subtext, pos.X + 3 + textoffset.X + subtextoffset, pos.Y + textoffset.Y, 
+			1,1, revcol,0,false)
+		end
 	end
 	
 end
@@ -3671,6 +3876,24 @@ if WORSTGUI then
 		WORSTGUI.Instances[path] = menuTab
 	end
 	WORSTGUI.HasMultiMenus = true
+
+	if not WORSTGUI.HookDSS and DeadSeaScrollsMenu then
+		local oldfunc = DeadSeaScrollsMenu.IsMenuSafe
+		WORSTGUI.HookDSS = oldfunc
+		DeadSeaScrollsMenu.IsMenuSafe = function(...)
+			for _, localmenu in pairs(WORSTGUI.Instances) do
+				if localmenu.TextboxPopup and localmenu.TextboxPopup.InFocus then
+					return false
+				end
+			end
+			return oldfunc(...)
+		end
+
+		menuTab:AddCallback(ModCallbacks.MC_PRE_MOD_UNLOAD, function ()
+			DeadSeaScrollsMenu.IsMenuSafe = oldfunc
+			WORSTGUI.HookDSS = nil
+		end)
+	end
 else
 	WORSTGUI = menuTab
 	WORSTGUI.gameframe = 0
@@ -3682,9 +3905,9 @@ else
 		--print(WORSTGUI.Name)
 
 	end
-	menuTab:AddCallback(ModCallbacks.MC_POST_MODS_LOADED, function()
-		WORSTGUI.LastLoadCall()
-	end)
+	--menuTab:AddCallback(ModCallbacks.MC_POST_MODS_LOADED, function()
+	--	WORSTGUI.LastLoadCall()
+	--end)
 
 	function WORSTGUI.GlobalButtonDetect()
 		local mousetouch = false
@@ -3712,6 +3935,23 @@ else
 			--print("print2", mousetouch)
 			WORSTGUI.CachedDetect = {}
 		end
+	end
+
+	if not WORSTGUI.HookDSS and DeadSeaScrollsMenu then
+		local oldfunc = DeadSeaScrollsMenu.IsMenuSafe
+		WORSTGUI.HookDSS = oldfunc
+		DeadSeaScrollsMenu.IsMenuSafe = function(...)
+			for _, localmenu in pairs(WORSTGUI.Instances) do
+				if localmenu.TextboxPopup and localmenu.TextboxPopup.InFocus then
+					return false
+				end
+			end
+			return oldfunc(...)
+		end
+		menuTab:AddCallback(ModCallbacks.MC_PRE_MOD_UNLOAD, function ()
+			DeadSeaScrollsMenu.IsMenuSafe = oldfunc
+			WORSTGUI.HookDSS = nil
+		end)
 	end
 end
 

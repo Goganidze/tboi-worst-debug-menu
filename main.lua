@@ -4773,34 +4773,24 @@ do
 	---@param str string
 	local printClassFieldStr = function(str)
 		-- Проверка, что это строка с вызовом
-		local isCall = str:match("^([%a_][%w_]*%s*%([^%)]*%))$")
-		local Params
+		local isCall = str:match("%s*(%S+%s*%([%s%S]+%))")
 		if isCall then
-			local funcName = str:match("^([%a_][%w_]*)%s*%([^%)]*%)$")
-			Params = {}
-			local conteiner = str:match("%([^%)]*%)"):sub(2,-2)..","
-			for i in conteiner:gmatch("%s?(.-)[,]") do
-				if i ~= ""  then
-					local fu = load("return " .. i .. ")")
-					if type(fu) == "function" then
-						Params[#Params+1] = fu()
-					end
-				end
+			local funcWrapper = "return function(ent) return ent:" .. isCall .. " end"
+			local func = load(funcWrapper)
+			if type(func) == "function" then
+				func = func()
 			end
-
 			return function(ent, data)
-				local value
 				local isPlayer = ent:ToPlayer()
 				local isNPC = ent:ToNPC()
-				if isNPC then
-					return tostring(isNPC[funcName] and isNPC[funcName](isNPC, table.unpack(Params)))
-				end
 				if isPlayer then
-					return tostring(isPlayer[funcName] and isPlayer[funcName](isPlayer,table.unpack(Params)))
+					local err, value = pcall(func, isPlayer)
+					return err and value or ""
+				elseif isNPC then
+					local err, value = pcall(func, isNPC)
+					return err and value or ""
 				end
-				value = tostring(value)  --value or value == false and "false" or "nil"
-				return "" --value
-				--Menu.wma.DrawText(1, value, pos.X, pos.Y, .5, .5)
+				return ""
 			end
 		end
 
